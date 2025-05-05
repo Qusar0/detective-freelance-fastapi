@@ -1,0 +1,95 @@
+[flake8]
+# Список правил:  http://flake8-codes.nic.etu/wemake-python-styleguide/0.15.3/index.html
+
+# Отключение части правил
+ignore =
+    WPS210, WPS111, WPS305, WPS306, I001, I004, I005, WPS226, I003, WPS115,
+    # Проверки докстрок через darglint, возможно стоит включить со временем
+    DAR,
+    #P101 format string does contain unindexed parameters - Часто удобно использовать {} без имени
+    P101,
+    # WPS111 Found too short name - Иногда удобно иметь переменные 'r', 'e', 'x' и т.д.
+    WPS111,
+    # WPS115 Found upper-case constant in a class: - Конфликтует с рекомендацией PEP про Enum
+    WPS115,
+    # WPS323 Found % string formatting - Мешает форматировать логи
+    WPS323,
+    # WPS326 Found implicit string concatenation - Ругается на переносы строк через скобки: ("qwe" \n "rty")
+    WPS326,
+    # WPS348 Found a line that starts with a dot - С точки удобно записывать цепочки вызовов: (obj \n .select() \n .filter() \n ...)
+    WPS348,
+    # WPS457 Found an infinite while loop - Иногда нужно запустить вечный цикл
+    WPS457,
+    # отключено из-за ложных срабатываний
+    I001,I002,I003,I004,I005,
+    # WPS306 Found class without a base class - Достаточно страное правило основаное только на мнении, что не писать базовый класс для наследования от object не единообразно
+    WPS306,
+
+# скопировано т.к. были ложные срабатывания
+extend-ignore =
+    # Google Python style is not RST until after processed by Napoleon
+    # See https://github.com/peterjc/flake8-rst-docstrings/issues/17
+    RST201,RST203,RST301,
+
+exclude = 
+    .git, 
+    __pycache__, 
+    venv, 
+    .venv, 
+    build, 
+    dist,
+    ui*,
+    resources*
+    alembic,
+    env
+
+# Настройки кавычек
+
+# Упрощение строгих правил, для плавного входа
+# В идеале, стремимся к стандартным значениям
+# Так как проверяется только новый код из МРов, будет не так сложно
+
+# Стандартно: 5
+max-returns = 6
+
+# Стандартно: 5
+max-local-variables = 15
+
+# Стандартно: 9
+max-expressions = 18
+
+# Стандартно: 7
+max-module-members = 9
+
+# Стандартно: 14
+max-line-complexity = 16
+
+# Стандартно: 12
+max-jones-score = 16
+
+# Стандартно: 1
+max-try-body-length = 5
+
+# Стандартно: 4
+max-function-expression = 10
+
+# Стандартно: 12
+max-cognitive-score = 16
+
+# Стандартно: 8
+max-cognitive-average = 12
+
+# Стандартно: 3
+max-call-level = 4
+
+# Стандартно: 7
+max-methods = 8
+
+# in PEP8 79
+max-line-length = 120
+
+[isort]
+multi_line_output = 3
+include_trailing_comma = true
+use_parentheses = true
+line_length = 120 # in PEP8 79
