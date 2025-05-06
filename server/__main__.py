@@ -4,6 +4,7 @@ from server.api.handlers.auth import router as auth_router
 from server.api.handlers.users import router as user_router
 from server.api.handlers.query import router as query_router
 from server.api.handlers.telegram import router as telegram_router
+from server.api.admin.router import router as admin_router, setup_admin
 from fastapi.responses import StreamingResponse
 import asyncio
 from server.api.scripts.sse_manager import (
@@ -14,6 +15,10 @@ from server.api.scripts.sse_manager import (
 )
 
 app = FastAPI()
+
+
+# Setup admin panel
+setup_admin(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +32,7 @@ app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(query_router)
 app.include_router(telegram_router)
+app.include_router(admin_router)
 
 @app.on_event("startup")
 async def startup_event():
