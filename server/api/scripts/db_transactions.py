@@ -95,7 +95,7 @@ async def change_query_status(user_query, query_type, db):
 
 
 async def send_sse_notification(user_query, channel, db):
-    from server.__main__ import publish_event
+    from server.api.scripts.sse_manager import publish_event
     event_data = {
         "message": {
             "status": user_query.query_status,
