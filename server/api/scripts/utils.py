@@ -145,7 +145,7 @@ async def generate_sse_message_type(user_id: int, db=None) -> str:
 
 
 async def renew_xml_balance(db):
-    url = f"{settings.xml_river_url}/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
+    url = f"http://xmlriver.com/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
