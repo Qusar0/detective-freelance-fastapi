@@ -66,7 +66,7 @@ def get_confirmation_email(email: str, confirm_url: str) -> dict:
             
             <div class="footer">
                 <p>Если вы не регистрировались, проигнорируйте это письмо.</p>
-                <p>© Detective Freelance {datetime.now().year}</p>
+                <p>Информационно-аналитическая система «Детектив» | Служба поддержки: support@ias-detective.io</p>
             </div>
         </div>
     </body>
@@ -81,7 +81,7 @@ def get_confirmation_email(email: str, confirm_url: str) -> dict:
     
     Если вы не регистрировались, проигнорируйте это письмо.
     
-    © Detective Freelance {datetime.now().year}
+    Информационно-аналитическая система «Детектив» | Служба поддержки: support@ias-detective.io
     """
     
     return {
@@ -178,7 +178,7 @@ def get_already_registered_email(email: str, login_url: str) -> dict:
             </ul>
             
             <div class="footer">
-                <p>© Detective Freelance {datetime.now().year} | Служба поддержки: support@detective-freelance.com</p>
+                <p>Информационно-аналитическая система «Детектив» | Служба поддержки: support@ias-detective.io</p>
             </div>
         </div>
     </body>
@@ -198,8 +198,7 @@ def get_already_registered_email(email: str, login_url: str) -> dict:
     - Проигнорируйте это письмо
     - Измените пароль, если есть подозрения о несанкционированном доступе
     
-    © Detective Freelance {datetime.now().year}
-    Служба поддержки: support@detective-freelance.com
+    Информационно-аналитическая система «Детектив» | Служба поддержки: support@ias-detective.io
     """
     
     return {

@@ -1,11 +1,11 @@
 import datetime
 import os
 import re
-import json
 import threading
 import time
 from threading import Thread
 from urllib.parse import urlparse
+from phonenumbers import parse, NumberParseException
 
 import aiofiles
 import httpx
@@ -16,7 +16,6 @@ from celery import shared_task
 from typing import List
 import asyncio
 from pathlib import Path
-import logging
 from server.api.error.errors import CustomError
 from server.api.scripts.lampyre_num_script import Lampyre
 from server.api.scripts import lampyre_email_script
@@ -526,7 +525,7 @@ def handle_xmlriver_response(
 
         banned_site_status = False
         for site in prohibited_sites:
-            if site.lower() in site_url.lower():
+            if site.lower() in site_url.lower() or site_uri.lower() in site.lower():
                 banned_site_status = True
                 break
 
@@ -1067,7 +1066,6 @@ def form_yandex_query_num(num: str, page_num):
 
 
 def form_google_query(phone_num: str):
-    phone_num = phone_num.replace("+", "%2B")
     search_keys = []
     query_variants = format_phone_number(phone_num)
     for query in query_variants:
@@ -1077,10 +1075,24 @@ def form_google_query(phone_num: str):
     return search_keys
 
 
-def format_phone_number(number):
-    formatted_numbers_query1 = [f'{number}', f'+7%28{number[2:5]}%29{number[5:12]}']
+def format_phone_number(raw_number: str):
+    try:
+        number = parse(raw_number, None)
 
-    return formatted_numbers_query1
+        raw = raw_number.replace("+", "%2B")
+
+        country_code = number.country_code
+        national_number = str(number.national_number)
+
+        operator_code_len = 3 if len(national_number) > 6 else 2
+        operator_code = national_number[:operator_code_len]
+        subscriber_number = national_number[operator_code_len:]
+
+        formatted = f"%2B{country_code}%28{operator_code}%29{subscriber_number}"
+        return [raw, formatted]
+
+    except NumberParseException:
+        return [raw_number]
 
 
 def form_yandex_query_email(email: str, page_num):
