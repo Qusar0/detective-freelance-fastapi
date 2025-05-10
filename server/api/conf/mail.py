@@ -65,6 +65,6 @@ async def check_user_confirmation(user_id: int, db: AsyncSession) -> bool:
 
 async def send_confirmation_email(user: Users):
     token = generate_conformation_token(user.email)
-    confirm_url = f'http://localhost:5173/confirm-email?token={token}'
+    confirm_url = f'{settings.frontend_url}/confirm-email?token={token}'
     email_content = get_confirmation_email(user.email, confirm_url)
     await send_email(**email_content)

@@ -1,9 +1,12 @@
 import requests
 import json
+import asyncio
+import aiohttp
 
 import base64
 
 from datetime import datetime
+from server.api.conf.config import settings
 
 account_search_methods = [
     "email_haveibeenpwned_v1",
@@ -100,10 +103,9 @@ test_account_check_methods = ["email_twitter_checker_v1"]
 
 class LampyreMail:
     def __init__(self):
-        self.token = "a05b0f96-008d-4e81-b5ea-b0792c764a1d"
+        self.token = settings.utils_token
         self.lampyre_handler = LampyreResultsHandler()
         self.tasks = []
-        # сделано чтобы методы у которых нет результатов были снизу в html. Типа сортировка
         self.no_results_html = ""
 
     def main(self, email, methods_name):
@@ -711,7 +713,7 @@ def get_files(file_ids):
     for file_id in file_ids:
         url = f"https://api.lighthouse.lampyre.io/api/1.0/files/{file_id}"
 
-        resp = requests.get(url, params={"token": "a05b0f96-008d-4e81-b5ea-b0792c764a1d"})
+        resp = requests.get(url, params={"token": settings.utils_token})
 
         image_data = "data:image;base64," + base64.b64encode(resp.content).decode()
         images_data += f'<img width="150" src="{image_data}" alt="Фото">'

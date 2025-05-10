@@ -29,10 +29,11 @@ from server.api.scripts import utils, db_transactions
 from server.bots.notification_bot import send_notification
 from server.api.conf.celery_worker import celery_app
 from server.api.database.database import async_session
+from server.api.conf.config import settings
 
 
-url_google = 'http://xmlriver.com/search/xml?user=6165&key=8b7dcc19466adf84447f59b1772f8c38570c800a&query='  # Здесь урл XMLRiver для гугла
-url_yandex = "http://xmlriver.com/search_yandex/xml?user=6165&key=8b7dcc19466adf84447f59b1772f8c38570c800a&groupby=10&query="
+url_google = f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query='
+url_yandex = f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query='
 
 FoundInfo = recordtype("FoundInfo", "title snippet url uri weight kwd word_type kwds_list fullname soc_type doc_type")
 NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
@@ -507,15 +508,12 @@ def handle_xmlriver_response(
 
         parsed_url = urlparse(site_uri)
         path = parsed_url.path
-        # Получаем расширение файла из пути URL
         file_extension = os.path.splitext(path)[1].lower()
 
-        # соц сеть
         for key, value in soc_urls.items():
             if site_url == key:
                 soc_type = value
 
-        # документы
         for key, value in doc_urls.items():
             if key == file_extension:
                 doc_type = value
@@ -523,9 +521,7 @@ def handle_xmlriver_response(
         if info_snippet is None:
             info_snippet = ''
 
-        if name_case is None:
-            pass
-        else:
+        if name_case is not None:
             colored_snippet = color_keywords(name_case, info_snippet, keyword)
 
         banned_site_status = False
@@ -1458,7 +1454,3 @@ async def start_search_by_telegram(self, search_filters):
     chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id)
     if chat_id:
         await send_notification(chat_id, user_query.query_title)
-
-    # if money_to_return > 0:
-    #     print('Returned', money_to_return)
-    #     db_transactions.return_balance(user_query.user_id, user_query.query_id, money_to_return, channel)

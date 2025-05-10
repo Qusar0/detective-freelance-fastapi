@@ -1,17 +1,16 @@
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ParseMode
 import asyncio
+from server.api.conf.config import settings
 
-API_TOKEN = "7998886482:AAGjvLBeMR2r9KBcmYMz9wb_uGNm5d_L8jM"
-
-bot = Bot(token=API_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(token=settings.notification_bot_token, parse_mode=ParseMode.HTML)
 dp = Dispatcher(bot)
 
 
 @dp.message_handler(commands=['start'])
 async def send_connects(message: Message):
     chat_id = message.chat.id
-    url = f"http://ias-detective.io/api/connect_tg?chat={chat_id}"
+    url = f"{settings.frontend_url}/api/connect_tg?chat={chat_id}"
     await message.reply(f"Привет, для подписки на уведомления перейди по ссылке: {url}")
 
 

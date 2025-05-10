@@ -144,17 +144,14 @@ class UserQueriesAdmin(ModelView, model=UserQueries):
     async def get_list_query(self, request) -> Any:
         query = await super().get_list_query(request)
         
-        # Фильтр по категории
         category = request.query_params.get("category")
         if category:
             query = query.where(UserQueries.query_category == category)
             
-        # Фильтр по статусу
         status = request.query_params.get("status")
         if status:
             query = query.where(UserQueries.query_status == status)
             
-        # Фильтр по дате
         date_range = request.query_params.get("date_range")
         if date_range:
             now = datetime.utcnow()

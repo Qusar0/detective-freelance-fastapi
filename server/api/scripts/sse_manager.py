@@ -2,9 +2,10 @@ import json
 import redis
 import asyncio
 from typing import Dict, List
+from server.api.conf.config import settings
 
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0, password='1')
+r = redis.StrictRedis.from_url(settings.redis_url)
 
 
 subscribers: Dict[str, List[asyncio.Queue]] = {}

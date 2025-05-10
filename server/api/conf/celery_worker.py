@@ -1,11 +1,12 @@
 from celery import Celery
+from server.api.conf.config import settings
 
 
 def create_celery() -> Celery:
     celery_app = Celery(
         "ias_detective",
-        broker="redis://:1@localhost:6379",
-        backend="redis://:1@localhost:6379",
+        broker=settings.redis_url,
+        backend=settings.redis_url,
     )
 
     celery_app.conf.update(

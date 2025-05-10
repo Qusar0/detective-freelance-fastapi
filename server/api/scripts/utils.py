@@ -15,6 +15,7 @@ from server.api.database.database import get_db
 import base64
 import httpx
 from datetime import datetime
+from server.api.conf.config import settings
 
 
 async def get_default_keywords(
@@ -66,7 +67,7 @@ async def calculate_name_price(
     keywords: list[str],
     default_keywords_type: str
 ) -> float:
-    NAME_CASES = 5  # Варианты склонения
+    NAME_CASES = 5
 
     len_user_kwds = len(keywords)
     default_kwds = await get_default_keywords(db, default_keywords_type, count=True)
@@ -144,7 +145,7 @@ async def generate_sse_message_type(user_id: int, db=None) -> str:
 
 
 async def renew_xml_balance(db):
-    url = "https://xmlriver.com/api/get_balance/?user=6165&key=8b7dcc19466adf84447f59b1772f8c38570c800a"
+    url = f"{settings.xml_river_url}/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(url)
@@ -162,8 +163,8 @@ async def renew_xml_balance(db):
 
 
 async def renew_lampyre_balance(db):
-    token = 'a05b0f96-008d-4e81-b5ea-b0792c764a1d'
-    url = "https://api.lighthouse.lampyre.io/api/1.0/balance"
+    token = settings.utils_token
+    url = settings.lampyre_url
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, params={"token": token})
@@ -283,6 +284,14 @@ def calculate_email_price(methods_type):
 
 
 async def save_user_and_chat(user_id, chat_id, db):
+    result = await db.execute(
+        select(TelegramNotifications).filter_by(user_id=user_id, chat_id=chat_id)
+    )
+    existing_chat = result.scalar_one_or_none()
+    
+    if existing_chat:
+        return False
+        
     db.add(
         TelegramNotifications(
             user_id=user_id,
@@ -290,3 +299,4 @@ async def save_user_and_chat(user_id, chat_id, db):
         ),
     )
     await db.commit()
+    return True

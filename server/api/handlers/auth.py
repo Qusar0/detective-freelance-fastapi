@@ -22,6 +22,7 @@ from server.api.templates.email_message import (
     get_already_registered_email,
 )
 import logging
+from server.api.conf.config import settings
 
 
 router = APIRouter(prefix="/v1/auth", tags=['auth'])
@@ -69,7 +70,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if existing_user:
         email_content = get_already_registered_email(
             data.email,
-            login_url="https://yourapp.com/login",
+            login_url=f"{settings.frontend_url}/login",
         )
         await send_email(**email_content)
         return {
@@ -93,7 +94,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
     token = generate_conformation_token(data.email)
 
-    confirm_url = f'http://localhost:5173/confirm-email?token={token}'
+    confirm_url = f'{settings.frontend_url}/confirm-email?token={token}'
     email_content = get_confirmation_email(data.email, confirm_url)
     await send_email(**email_content)
 

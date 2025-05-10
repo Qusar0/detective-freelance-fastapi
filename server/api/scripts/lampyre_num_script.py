@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from server.api.conf.config import settings
 import requests
 import json
 
@@ -669,21 +669,8 @@ def get_files(file_ids):
     for file_id in file_ids:
         url = f"https://api.lighthouse.lampyre.io/api/1.0/files/{file_id}"
 
-        resp = requests.get(url, params={"token": "a05b0f96-008d-4e81-b5ea-b0792c764a1d"})
+        resp = requests.get(url, params={"token": settings.utils_token})
 
         image_data = "data:image;base64," + base64.b64encode(resp.content).decode()
         images_data += f'<img width="150" src="{image_data}" alt="Фото">'
     return images_data
-
-
-if __name__ == "__main__":
-    # +79506779955 - рос
-    # +18004699269 - амер
-    # +420604199473 чешский
-    test_obj = Lampyre()
-    k = test_obj.main("+79506779955")
-    print("[RESULT]", k)
-    # print(get_files("882e5e711eddf3ad9b693fa94f87c409"))
-
-# phone_telegram_v1 {'firstname': 'Алексей', 'username': 'a79506779955', 'telegram_profile_uid': '234343072', 'avatar_fileid': ['882e5e711eddf3ad9b693fa94f87c409']}
-# phone_telegram_v1 {'firstname': 'Dmitry', 'lastname': 'Ovchinnikov', 'lastseen': 1687420917, 'telegram_profile_uid': '349330686', 'avatar_fileid': ['39c7adae05abf5989af040b311977092']}

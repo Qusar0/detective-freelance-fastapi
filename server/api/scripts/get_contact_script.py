@@ -1,11 +1,12 @@
 import requests
+from server.api.conf.config import settings
 
 
 def get_tags_in_getcontact(number):
     headers = {
-        'x-bot-id': '234343072',
-        'x-bot-token': 'RQjogf9Sh1k/V/evxNGoa5PtTWuy5ODz0kdH6crzomg=',
-        'x-api-key': 'iKKjHjnPOr9QoL93PtAIZ7gHhSpyxA2a24qN4Xrt',
+        'x-bot-id': settings.telegram_api_id,
+        'x-bot-token': settings.telegram_api_hash,
+        'x-api-key': settings.telegram_db_encryption_key,
         'Content-Type': 'application/json',
     }
 
@@ -30,17 +31,3 @@ def get_tags_in_getcontact(number):
                 print(f"Для номера {number} теги не найдены.")
 
     return list_tags, requests_left
-
-
-if __name__ == "__main__":
-    leaks, requests = get_tags_in_getcontact('+79276030425')
-    print(leaks)
-    test = []
-    i = 0
-    for item in leaks:
-        if item in test:
-            print(item)
-            i += 1
-        test.append(item)
-    print('\n')
-    print(requests)

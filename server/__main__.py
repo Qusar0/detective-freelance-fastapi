@@ -17,7 +17,6 @@ from server.api.scripts.sse_manager import (
 app = FastAPI()
 
 
-# Setup admin panel
 setup_admin(app)
 
 app.add_middleware(

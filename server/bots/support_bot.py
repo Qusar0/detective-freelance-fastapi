@@ -1,10 +1,9 @@
 from aiogram import Bot
 from aiogram.types import ParseMode
+from server.api.conf.config import settings
 
 
-API_TOKEN = "7795862625:AAGJDT5fCOlBCyU3-veuX19ea-6mbDqEcCU"
-
-bot = Bot(token=API_TOKEN, parse_mode=ParseMode.HTML)
+bot = Bot(token=settings.support_bot_token, parse_mode=ParseMode.HTML)
 
 SUPPORT_CHAT_ID = 637166903
 

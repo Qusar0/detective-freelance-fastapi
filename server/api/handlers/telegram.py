@@ -10,6 +10,7 @@ from server.api.schemas.telegram import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import get_db
+from server.api.conf.config import settings
 
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
@@ -29,12 +30,16 @@ async def connect_tg(
         raise HTTPException(status_code=422, detail="Invalid token")
 
     try:
-        await utils.save_user_and_chat(user_id, chat, db)
+        success = await utils.save_user_and_chat(user_id, chat, db)
+        if not success:
+            raise HTTPException(status_code=422, detail="Пользователь уже привязан")
+    except HTTPException:
+        raise
     except Exception as e:
         logging.warning("Ошибка при сохранении связи: " + str(e))
         raise HTTPException(status_code=422, detail="Неверные данные")
 
-    return RedirectResponse(url="http://217.107.219.154:49456")
+    return RedirectResponse(url=settings.frontend_url)
 
 
 @router.post("/write_support", response_model=WriteSupportResponse)

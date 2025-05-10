@@ -112,7 +112,7 @@ async def send_query_data(
         user_queries = await utils.get_queries_page([user_id, query_category], page, db=db)
 
         result_list = []
-        query_ids = [str(q.query_id) for q in user_queries]  # Получаем все query_id для дальнейшего запроса баланса
+        query_ids = [str(q.query_id) for q in user_queries]
 
         for q in user_queries:
             result_list.append({
@@ -143,7 +143,7 @@ async def send_query_data(
         raise HTTPException(status_code=500, detail="Failed to retrieve query data")
 
 
-@router.post("/find_by_name", response_model=List[SearchResponseModel])
+@router.post("/find_by_name")
 async def find_by_name(
     request_data: FindByNameModel,
     Authorize: AuthJWT = Depends(),
@@ -215,24 +215,12 @@ async def find_by_name(
 
         start_search_by_name.apply_async((search_filters,), queue='name_tasks')
 
-        result_list = [
-            {
-                "query_id": user_query.query_id,
-                "query_title": user_query.query_title,
-                "query_status": user_query.query_status,
-                "query_created_at": user_query.query_created_at,
-                "balance": price,
-            }
-        ]
-
-        return result_list
-
     except Exception as e:
         logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
-@router.post("/find_by_number", response_model=List[SearchResponseModel])
+@router.post("/find_by_number")
 async def find_by_number(
     request_data: FindByNumberModel,
     Authorize: AuthJWT = Depends(),
@@ -277,22 +265,12 @@ async def find_by_number(
 
         start_search_by_num.apply_async((search_filters), queue='num_tasks')
 
-        return [
-            {
-                "query_id": user_query.query_id,
-                "query_title": user_query.query_title,
-                "query_status": user_query.query_status,
-                "query_created_at": user_query.query_created_at,
-                "balance": price,
-            }
-        ]
-
     except Exception as e:
         logging.error(f"Failed to process the phone number query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
-@router.post("/find_by_email", response_model=List[SearchResponseModel])
+@router.post("/find_by_email")
 async def find_by_email(
     request_data: FindByEmailModel,
     Authorize: AuthJWT = Depends(),
@@ -349,22 +327,12 @@ async def find_by_email(
             queue='email_tasks',
         )
 
-        return [
-            {
-                "query_id": user_query.query_id,
-                "query_title": user_query.query_title,
-                "query_status": user_query.query_status,
-                "query_created_at": user_query.query_created_at,
-                "balance": price,
-            }
-        ]
-
     except Exception as e:
         logging.error(f"Failed to process the email query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
-@router.post("/find_by_company", response_model=List[SearchResponseModel])
+@router.post("/find_by_company")
 async def find_by_company(
     request_data: FindByCompanyModel,
     Authorize: AuthJWT = Depends(),
@@ -431,16 +399,6 @@ async def find_by_company(
             (search_filters,),
             queue="company_tasks",
         )
-
-        return [
-            {
-                "query_id": user_query.query_id,
-                "query_title": user_query.query_title,
-                "query_status": user_query.query_status,
-                "query_created_at": user_query.query_created_at,
-                "balance": price,
-            }
-        ]
 
     except Exception as e:
         logging.error(f"Failed to process the company query: {e}")
