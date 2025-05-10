@@ -70,6 +70,7 @@ async def _start_search_by_name_async(search_filters):
     query_id = search_filters[7]
     price = search_filters[8]
     use_yandex = search_filters[9]
+    languages = search_filters[10] if len(search_filters) > 10 else None
 
     async with async_session() as db:
         user_query = await db_transactions.get_user_query(query_id, db)
@@ -78,11 +79,12 @@ async def _start_search_by_name_async(search_filters):
 
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords_from_db: dict = await get_default_keywords(
+            keywords: dict = await get_default_keywords(
                 db,
                 default_keywords_type,
             )
 
+            keywords_from_db = keywords[1]
             len_keywords_from_user = len(keywords_from_user)
             len_keywords_from_db = len(keywords_from_db)
 
@@ -97,7 +99,6 @@ async def _start_search_by_name_async(search_filters):
                     name_case,
                     len_keywords_from_user,
                 )
-
                 for search_key in search_keys:
                     if len_keywords_from_user == 0 and len_keywords_from_db == 0:
                         generation_type = "standard"
@@ -1268,11 +1269,12 @@ async def _start_search_by_company_async(search_filters):
 
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords_from_db: dict = await get_default_keywords(
+            keywords: dict = await get_default_keywords(
                 db,
                 default_keywords_type,
             )
 
+            keywords_from_db = keywords[1]
             len_keywords_from_user = len(keywords_from_user)
             len_keywords_from_db = len(keywords_from_db)
 

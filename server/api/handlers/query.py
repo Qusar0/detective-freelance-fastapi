@@ -161,6 +161,7 @@ async def find_by_name(
         keywords: List[str] = request_data.keywords
         default_keywords_type = request_data.default_keywords_type.strip()
         use_yandex = request_data.use_yandex
+        languages = request_data.languages
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -196,7 +197,8 @@ async def find_by_name(
             default_keywords_type,
             user_query.query_id,
             price,
-            use_yandex
+            use_yandex,
+            # languages
         )
 
         await utils.subtract_balance(user_id, price, channel, db)
@@ -233,6 +235,7 @@ async def find_by_number(
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
         use_yandex = request_data.use_yandex
+        languages = request_data.languages
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
         price = utils.calculate_num_price(methods_type)
@@ -261,6 +264,7 @@ async def find_by_number(
             methods_type,
             user_query.query_id,
             use_yandex,
+            # languages
         )
 
         start_search_by_num.apply_async((search_filters), queue='num_tasks')
@@ -283,6 +287,7 @@ async def find_by_email(
         email = request_data.email.strip()
         methods_type = request_data.methods_type
         use_yandex = request_data.use_yandex
+        languages = request_data.languages
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
         price = utils.calculate_email_price(methods_type)
@@ -319,7 +324,8 @@ async def find_by_email(
             email,
             methods_type,
             user_query.query_id,
-            use_yandex
+            use_yandex,
+            # languages
         )
 
         start_search_by_email.apply_async(
@@ -350,11 +356,12 @@ async def find_by_company(
         plus_words = request_data.search_plus.strip()
         minus_words = request_data.search_minus.strip()
         use_yandex = request_data.use_yandex
+        languages = request_data.languages
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
         price = 10
 
-        query_created_at = datetime.strptime("1980/01/01 00:00:00", "%Y/%m/%d %H:%M:%S")
+        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
         user_query = UserQueries(
             user_id=user_id,
@@ -393,6 +400,7 @@ async def find_by_company(
             user_query.query_id,
             price,
             use_yandex,
+            # languages
         )
 
         start_search_by_company.apply_async(

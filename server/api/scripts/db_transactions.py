@@ -3,6 +3,7 @@ from server.api.models.models import Users, UserQueries, QueriesBalance, Events,
 from server.api.database.database import get_db
 from server.api.scripts import utils
 from sqlalchemy import select
+from server.api.scripts.sse_manager import publish_event
 
 
 async def get_user_query(query_id, db):
@@ -54,8 +55,6 @@ async def save_query_balance(query_id, price, db):
 
 
 async def return_balance(user_id, query_id, amount, channel, db):
-    from server.__main__ import publish_event
-
     result = await db.execute(
         select(BalanceHistory)
         .filter_by(
@@ -95,7 +94,6 @@ async def change_query_status(user_query, query_type, db):
 
 
 async def send_sse_notification(user_query, channel, db):
-    from server.api.scripts.sse_manager import publish_event
     event_data = {
         "message": {
             "status": user_query.query_status,

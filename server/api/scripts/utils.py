@@ -16,19 +16,20 @@ import base64
 import httpx
 from datetime import datetime
 from server.api.conf.config import settings
+from server.api.scripts.sse_manager import publish_event
 
 
 async def get_default_keywords(
     db: AsyncSession,
     default_keywords_type: str,
     count: bool = False,
-) -> Tuple[Dict, bool]:
+):
     splitted_kws = default_keywords_type.split(", ")
     named_keywords = {}
     counter = 0
 
     if '' in splitted_kws:
-        return (counter, {}) if count else named_keywords
+        return (counter, {})
 
     if 'report' in splitted_kws:
         types_belongs_report = ['reputation', 'negativ', 'relations']
@@ -38,7 +39,7 @@ async def get_default_keywords(
             keywords = [kwd.word for kwd in result.scalars()]
             counter += len(keywords)
             named_keywords[kwd_type] = keywords
-        return (counter, named_keywords) if not count else counter
+        return (counter, named_keywords)
 
     elif 'company_report' in splitted_kws:
         types_belongs_report = ['company_reputation', 'company_negativ', 'company_relations']
@@ -48,17 +49,18 @@ async def get_default_keywords(
             keywords = [kwd.word for kwd in result.scalars()]
             counter += len(keywords)
             named_keywords[kwd_type] = keywords
-        return (counter, named_keywords) if not count else counter
+        return (counter, named_keywords)
 
     else:
         for splitted_kwd in splitted_kws:
-            query = select(Keywords.word).filter_by(word_type=splitted_kwd)
-            result = await db.execute(query)
-            keywords = [kwd.word for kwd in result.scalars()]
-            counter += len(keywords)
-            named_keywords[splitted_kwd] = keywords
+            if (splitted_kwd != 'use_yandex'):
+                query = select(Keywords.word).filter_by(word_type=splitted_kwd)
+                result = await db.execute(query)
+                keywords = [kwd.word for kwd in result.scalars()]
+                counter += len(keywords)
+                named_keywords[splitted_kwd] = keywords
 
-        return (counter, named_keywords) if not count else counter
+        return (counter, named_keywords)
 
 
 async def calculate_name_price(
@@ -220,7 +222,6 @@ async def get_queries_page(filter: tuple, page: int = 0, page_size: int = 20, db
 
 
 async def subtract_balance(user_id: int, amount: float, channel: str, db: AsyncSession):
-    from server.__main__ import publish_event
     result = await db.execute(
         select(UserBalances)
         .filter_by(user_id=user_id),
