@@ -6,7 +6,8 @@ from server.api.admin.views import (
     UserBalancesAdmin,
     PaymentHistoryAdmin,
     ServicesBalanceAdmin,
-    EventsAdmin
+    EventsAdmin,
+    KeywordsAdmin,
 )
 
 
@@ -22,5 +23,6 @@ def setup_admin(app: FastAPI):
     admin.add_view(PaymentHistoryAdmin)
     admin.add_view(ServicesBalanceAdmin)
     admin.add_view(EventsAdmin)
-    
+    admin.add_view(KeywordsAdmin)
+
     router.mount("/admin", admin) 

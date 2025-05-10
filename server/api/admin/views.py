@@ -1,26 +1,22 @@
 from datetime import datetime, timedelta
 from sqladmin import ModelView
-from sqladmin.forms import ModelConverter
 from server.api.models.models import (
     Users, UserQueries, UserBalances, PaymentHistory,
-    ServicesBalance, UserRole, Events, BalanceHistory
+    ServicesBalance, UserRole, Events, Keywords
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import async_session
 from fastapi_jwt_auth import AuthJWT
-from typing import Any, Optional
+from typing import Any
 from contextlib import asynccontextmanager
+
 
 @asynccontextmanager
 async def get_session():
     async with async_session() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+        yield session
+
 
 async def get_role_id_by_name(role_name: str, session: AsyncSession) -> int | None:
     result = await session.execute(
@@ -28,6 +24,7 @@ async def get_role_id_by_name(role_name: str, session: AsyncSession) -> int | No
     )
     role = result.scalar_one_or_none()
     return role.id if role else None
+
 
 async def is_admin(user_id: int, session: AsyncSession) -> bool:
     admin_role_id = await get_role_id_by_name("admin", session)
@@ -43,12 +40,27 @@ async def is_admin(user_id: int, session: AsyncSession) -> bool:
     user = result.scalar_one_or_none()
     return user is not None
 
+
 async def get_user_roles_choices(session: AsyncSession) -> list[tuple[int, str]]:
     result = await session.execute(select(UserRole))
     roles = result.scalars().all()
     return [(role.id, role.role_name) for role in roles]
 
-class UserAdmin(ModelView, model=Users):
+
+class AdminProtectedView(ModelView):
+    async def is_accessible(self, request) -> bool:
+        try:
+            auth = AuthJWT(request)
+            auth.jwt_required()
+            user_id = int(auth.get_jwt_subject())
+
+            async with get_session() as session:
+                return await is_admin(user_id, session)
+        except Exception:
+            return False
+
+
+class UserAdmin(AdminProtectedView, model=Users):
     name = "Пользователь"
     name_plural = "Пользователи"
     icon = "fa-solid fa-user"
@@ -74,24 +86,14 @@ class UserAdmin(ModelView, model=Users):
     can_delete = True
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
-
     async def get_form_choices(self, request, field_name: str) -> list[tuple]:
         if field_name == "user_role_id":
             async with get_session() as session:
                 return await get_user_roles_choices(session)
         return []
 
-class UserQueriesAdmin(ModelView, model=UserQueries):
+
+class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
     name = "Запрос"
     name_plural = "Запросы"
     icon = "fa-solid fa-magnifying-glass"
@@ -130,17 +132,6 @@ class UserQueriesAdmin(ModelView, model=UserQueries):
     can_delete = True
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
-
     async def get_list_query(self, request) -> Any:
         query = await super().get_list_query(request)
         
@@ -169,7 +160,8 @@ class UserQueriesAdmin(ModelView, model=UserQueries):
                 
         return query
 
-class UserBalancesAdmin(ModelView, model=UserBalances):
+
+class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
     name = "Баланс пользователя"
     name_plural = "Балансы пользователей"
     icon = "fa-solid fa-wallet"
@@ -191,18 +183,8 @@ class UserBalancesAdmin(ModelView, model=UserBalances):
     can_delete = False
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
 
-class PaymentHistoryAdmin(ModelView, model=PaymentHistory):
+class PaymentHistoryAdmin(AdminProtectedView, model=PaymentHistory):
     name = "История платежей"
     name_plural = "История платежей"
     icon = "fa-solid fa-credit-card"
@@ -245,18 +227,8 @@ class PaymentHistoryAdmin(ModelView, model=PaymentHistory):
     can_delete = False
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
 
-class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
+class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
     name = "Баланс сервисов"
     name_plural = "Балансы сервисов"
     icon = "fa-solid fa-server"
@@ -278,18 +250,8 @@ class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     can_delete = False
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
 
-class EventsAdmin(ModelView, model=Events):
+class EventsAdmin(AdminProtectedView, model=Events):
     name = "Событие"
     name_plural = "События"
     icon = "fa-solid fa-calendar"
@@ -326,13 +288,28 @@ class EventsAdmin(ModelView, model=Events):
     can_delete = True
     can_view_details = True
 
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-            
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
+
+class KeywordsAdmin(AdminProtectedView, model=Keywords):
+    name = "Ключевое слово"
+    name_plural = "Ключевые слова"
+    icon = "fa-solid fa-key"
+    
+    column_list = [Keywords.id, Keywords.word, Keywords.word_type]
+    column_labels = {
+        Keywords.id: "ID",
+        Keywords.word: "Слово",
+        Keywords.word_type: "Тип слова"
+    }
+    column_searchable_list = [Keywords.word, Keywords.word_type]
+    column_sortable_list = [Keywords.id, Keywords.word]
+    
+    form_columns = [Keywords.word, Keywords.word_type]
+    form_labels = {
+        Keywords.word: "Слово",
+        Keywords.word_type: "Тип слова"
+    }
+    
+    can_create = True
+    can_edit = True
+    can_delete = True
+    can_view_details = True

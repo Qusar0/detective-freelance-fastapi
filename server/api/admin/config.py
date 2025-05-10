@@ -44,6 +44,7 @@ class AdminAuth(AuthenticationBackend):
         except Exception:
             return False
 
+
 def init_admin(app: FastAPI) -> Admin:
     admin = Admin(
         app=app,
@@ -51,6 +52,5 @@ def init_admin(app: FastAPI) -> Admin:
         authentication_backend=AdminAuth(secret_key=settings.secret_key),
         templates_dir="templates",
         title="Admin Panel",
-        logo_url="https://example.com/logo.png",
     )
     return admin 
