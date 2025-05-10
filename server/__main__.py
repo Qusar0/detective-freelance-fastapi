@@ -11,7 +11,6 @@ from server.api.scripts.sse_manager import (
     event_generator,
     add_subscriber,
     redis_listener,
-    publish_event
 )
 
 app = FastAPI()

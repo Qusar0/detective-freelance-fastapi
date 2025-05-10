@@ -20,6 +20,8 @@ from server.api.models.models import (
     Users,
 )
 from server.api.conf.mail import send_confirmation_email
+from server.api.scripts.sse_manager import publish_event
+from server.api.scripts.utils import generate_sse_message_type
 
 
 router = APIRouter(
@@ -231,6 +233,13 @@ async def top_up_balance(
 
         await db.commit()
 
+        channel = await generate_sse_message_type(user_id, db)
+        
+        await publish_event(channel, {
+            "event_type": "balance",
+            "balance": user_balance.balance,
+        })
+
         return {
             "status": "success",
             "message": "Баланс успешно пополнен",
@@ -246,5 +255,4 @@ async def top_up_balance(
 
     except Exception as e:
         logging.warning(f"Invalid input: {e}")
-        raise e
         raise HTTPException(status_code=422, detail="Invalid input")
