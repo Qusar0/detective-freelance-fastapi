@@ -33,7 +33,7 @@ async def get_default_keywords(
     if 'report' in splitted_kws:
         types_belongs_report = ['reputation', 'negativ', 'relations']
         for kwd_type in types_belongs_report:
-            query = select(Keywords.word).filter_by(word_language='ru', word_type=kwd_type)
+            query = select(Keywords.word).filter_by(word_type=kwd_type)
             result = await db.execute(query)
             keywords = [kwd.word for kwd in result.scalars()]
             counter += len(keywords)
@@ -43,7 +43,7 @@ async def get_default_keywords(
     elif 'company_report' in splitted_kws:
         types_belongs_report = ['company_reputation', 'company_negativ', 'company_relations']
         for kwd_type in types_belongs_report:
-            query = select(Keywords.word).filter_by(word_language='ru', word_type=kwd_type)
+            query = select(Keywords.word).filter_by(word_type=kwd_type)
             result = await db.execute(query)
             keywords = [kwd.word for kwd in result.scalars()]
             counter += len(keywords)
@@ -52,7 +52,7 @@ async def get_default_keywords(
 
     else:
         for splitted_kwd in splitted_kws:
-            query = select(Keywords.word).filter_by(word_language='ru', word_type=splitted_kwd)
+            query = select(Keywords.word).filter_by(word_type=splitted_kwd)
             result = await db.execute(query)
             keywords = [kwd.word for kwd in result.scalars()]
             counter += len(keywords)

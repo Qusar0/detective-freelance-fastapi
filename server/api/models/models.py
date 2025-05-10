@@ -89,7 +89,6 @@ class Keywords(Base):
         autoincrement=True,
     )
     word: Mapped[Optional[str]] = mapped_column(String(75))
-    word_language: Mapped[Optional[str]] = mapped_column(String(5))
     word_type: Mapped[Optional[str]] = mapped_column(String(20))
 
 
