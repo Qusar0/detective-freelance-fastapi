@@ -6,14 +6,16 @@ import time
 from threading import Thread
 from urllib.parse import urlparse
 from phonenumbers import parse, NumberParseException
+from abc import ABC, abstractmethod
 
 import aiofiles
 import httpx
 import requests
 import xmltodict
 from recordtype import recordtype
+from server.api.conf.celery_worker import celery_app
 from celery import shared_task
-from typing import List
+from typing import List, Dict, Any, Optional, Tuple
 import asyncio
 from pathlib import Path
 from server.api.error.errors import CustomError
@@ -26,7 +28,6 @@ from server.api.scripts.utils import get_default_keywords
 from server.api.scripts.html_work import response_template, response_num_template, response_email_template, response_company_template, response_tg_template
 from server.api.scripts import utils, db_transactions
 from server.bots.notification_bot import send_notification
-from server.api.conf.celery_worker import celery_app
 from server.api.database.database import async_session
 from server.api.conf.config import settings
 
@@ -47,187 +48,268 @@ def get_event_loop():
     return loop
 
 
-@shared_task(bind=True, acks_late=True)
-def start_search_by_name(self, search_filters):
-    loop = get_event_loop()
-    loop.run_until_complete(_start_search_by_name_async(search_filters))
+class BaseSearchTask(ABC):
+    def __init__(self, query_id: int, price: float):
+        self.query_id = query_id
+        self.price = price
+        self.money_to_return = 0
 
+    async def execute(self):
+        async with async_session() as db:
+            user_query = await db_transactions.get_user_query(self.query_id, db)
+            if user_query.query_status == "done":
+                return
 
-async def _start_search_by_name_async(search_filters):
-    print(f"STARTED search_by_name {search_filters[0]}")
-    threads: List[Thread] = []
-    all_found_info: List[FoundInfo] = []
-    request_input_pack: List[tuple] = []
-    urls = []
+            try:
+                await self._process_search(db)
+                await self._handle_success(user_query, db)
+            except Exception as e:
+                print(e)
+                await self._handle_error(user_query, db)
 
-    search_name = search_filters[0]
-    search_surname = search_filters[1]
-    search_patronymic = search_filters[2]
-    search_plus = search_filters[3]
-    search_minus = search_filters[4]
-    keywords_from_user = search_filters[5]
-    default_keywords_type = search_filters[6]
-    query_id = search_filters[7]
-    price = search_filters[8]
-    use_yandex = search_filters[9]
-    languages = search_filters[10] if len(search_filters) > 10 else None
+    @abstractmethod
+    async def _process_search(self, db):
+        pass
 
-    async with async_session() as db:
-        user_query = await db_transactions.get_user_query(query_id, db)
-        if user_query.query_status == "done":
-            return
+    async def _handle_success(self, user_query, db):
+        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
+        await db_transactions.change_query_status(user_query, "done", db)
+        await db_transactions.send_sse_notification(user_query, channel, db)
+        
+        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
+        if chat_id:
+            await send_notification(chat_id, user_query.query_title)
 
-        try:
-            prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords: dict = await get_default_keywords(
-                db,
-                default_keywords_type,
-            )
-
-            keywords_from_db = keywords[1]
-            len_keywords_from_user = len(keywords_from_user)
-            len_keywords_from_db = len(keywords_from_db)
-
-            if search_patronymic == "":
-                full_name = [search_name, search_surname]
-            else:
-                full_name = [search_name, search_surname, search_patronymic]
-            full_name_length = len(full_name)
-            name_cases = await form_name_cases(full_name)
-            for name_case in name_cases:
-                search_keys = form_search_key(
-                    name_case,
-                    len_keywords_from_user,
-                )
-                for search_key in search_keys:
-                    if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                        generation_type = "standard"
-                        form_input_pack(
-                            request_input_pack, search_key,
-                            "", "free word",
-                            name_case, search_plus,
-                            search_minus, generation_type,
-                            full_name_length, url_google,
-                        )
-                        if use_yandex:
-                            form_input_pack(
-                                request_input_pack, search_key,
-                                "", "free word",
-                                name_case, search_plus,
-                                search_minus, generation_type,
-                                full_name_length, url_yandex,
-                            )
-                    else:
-                        for kwd_from_user in keywords_from_user:
-                            generation_type = "standard"
-                            form_input_pack(
-                                request_input_pack, search_key,
-                                kwd_from_user, "free word",
-                                name_case, search_plus,
-                                search_minus, generation_type,
-                                full_name_length, url_google,
-                            )
-                            if use_yandex:
-                                form_input_pack(
-                                    request_input_pack, search_key,
-                                    kwd_from_user, "free word",
-                                    name_case, search_plus,
-                                    search_minus, generation_type,
-                                    full_name_length, url_yandex,
-                                )
-                        for words_type, words in keywords_from_db.items():
-                            for kwd_from_db in words:
-                                generation_type = "system_keywords"
-                                form_input_pack(
-                                    request_input_pack, search_key,
-                                    kwd_from_db, words_type,
-                                    name_case, search_plus,
-                                    search_minus, generation_type,
-                                    full_name_length, url_google,
-                                )
-                                if use_yandex:
-                                    form_input_pack(
-                                        request_input_pack, search_key,
-                                        kwd_from_db, words_type,
-                                        name_case, search_plus,
-                                        search_minus, generation_type,
-                                        full_name_length, url_yandex,
-                                    )
-
-            for input_data in request_input_pack:
-                url = input_data[0]
-                urls.append(url)
-                keyword = input_data[1]
-                keyword_type = input_data[2]
-                name_case = input_data[3]
-
-                threads.append(Thread(
-                    target=do_request_to_xmlriver,
-                    args=(
-                        url, all_found_info,
-                        prohibited_sites_list, keyword,
-                        name_case, keyword_type
-                    )
-                ))
-
-            manage_threads(threads)
-
-            titles = form_titles(
-                full_name,
-                default_keywords_type,
-                keywords_from_user,
-                search_minus,
-                search_plus,
-            )
-
-            items, filters, fullname_counters = form_response_html(
-                all_found_info,
-            )
-
-            html = response_template(titles, items, filters, fullname_counters)
-            await db_transactions.save_html(html, query_id, db)
-        except Exception as e:
-            print(e)
-            channel = await utils.generate_sse_message_type(
-                user_id=user_query.user_id,
-                db=db,
-            )
-            await db_transactions.change_query_status(user_query, "failed", db)
-            await db_transactions.send_sse_notification(user_query, channel, db)
+    async def _handle_error(self, user_query, db):
+        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
+        await db_transactions.change_query_status(user_query, "failed", db)
+        await db_transactions.send_sse_notification(user_query, channel, db)
+        
+        if self.money_to_return > 0:
             await db_transactions.return_balance(
                 user_query.user_id,
                 user_query.query_id,
-                price,
+                self.money_to_return,
                 channel,
                 db,
             )
 
-            await write_urls(urls, "name")
-            await utils.renew_xml_balance(db)
 
-            return {
-                "query_id": user_query.query_id,
-                "query_status": user_query.query_status,
-            }
+class NameSearchTask(BaseSearchTask):
+    def __init__(self, search_filters: Tuple):
+        super().__init__(search_filters[7], search_filters[8])
+        self.search_name = search_filters[0]
+        self.search_surname = search_filters[1]
+        self.search_patronymic = search_filters[2]
+        self.search_plus = search_filters[3]
+        self.search_minus = search_filters[4]
+        self.keywords_from_user = search_filters[5]
+        self.default_keywords_type = search_filters[6]
+        self.use_yandex = search_filters[9]
+        self.languages = search_filters[10] if len(search_filters) > 10 else None
 
+    async def _process_search(self, db):
+        threads: List[Thread] = []
+        all_found_info: List[FoundInfo] = []
+        request_input_pack: List[tuple] = []
+        urls = []
+
+        try:
+            prohibited_sites_list = await utils.add_sites_from_db([], db)
+            keywords: dict = await get_default_keywords(db, self.default_keywords_type)
+
+            keywords_from_db = keywords[1]
+            len_keywords_from_user = len(self.keywords_from_user)
+            len_keywords_from_db = len(keywords_from_db)
+
+            if self.search_patronymic == "":
+                full_name = [self.search_name, self.search_surname]
+            else:
+                full_name = [self.search_name, self.search_surname, self.search_patronymic]
+
+            name_cases = await form_name_cases(full_name)
+            await self._form_search_requests(
+                name_cases,
+                len_keywords_from_user,
+                len_keywords_from_db,
+                keywords_from_db,
+                request_input_pack,
+            )
+
+            await self._process_search_requests(
+                request_input_pack,
+                threads,
+                all_found_info,
+                prohibited_sites_list,
+                urls,
+            )
+
+            titles = form_titles(
+                full_name,
+                self.default_keywords_type,
+                self.keywords_from_user,
+                self.search_minus,
+                self.search_plus,
+            )
+
+            items, filters, fullname_counters = form_response_html(all_found_info)
+            html = response_template(titles, items, filters, fullname_counters)
+            await db_transactions.save_html(html, self.query_id, db)
+
+        except Exception as e:
+            print(e)
+            self.money_to_return = self.price
+            raise e
+
+    async def _form_search_requests(
+        self,
+        name_cases,
+        len_keywords_from_user,
+        len_keywords_from_db,
+        keywords_from_db,
+        request_input_pack,
+    ):
+        for name_case in name_cases:
+            search_keys = form_search_key(name_case, len_keywords_from_user)
+            for search_key in search_keys:
+                if len_keywords_from_user == 0 and len_keywords_from_db == 0:
+                    self._add_standard_search(request_input_pack, search_key, name_case)
+                else:
+                    await self._add_keyword_searches(
+                        request_input_pack,
+                        search_key,
+                        name_case,
+                        keywords_from_db,
+                    )
+
+    def _add_standard_search(self, request_input_pack, search_key, name_case):
+        form_input_pack(
+            request_input_pack,
+            search_key,
+            "",
+            "free word",
+            name_case,
+            self.search_plus,
+            self.search_minus,
+            "standard",
+            len(name_case),
+            url_google,
+        )
+        if self.use_yandex:
+            form_input_pack(
+                request_input_pack,
+                search_key,
+                "",
+                "free word",
+                name_case,
+                self.search_plus,
+                self.search_minus,
+                "standard",
+                len(name_case),
+                url_yandex,
+            )
+
+    async def _add_keyword_searches(
+        self,
+        request_input_pack,
+        search_key,
+        name_case,
+        keywords_from_db,
+    ):
+        for kwd_from_user in self.keywords_from_user:
+            form_input_pack(
+                request_input_pack,
+                search_key,
+                kwd_from_user,
+                "free word",
+                name_case,
+                self.search_plus,
+                self.search_minus,
+                "standard",
+                len(name_case),
+                url_google,
+            )
+            if self.use_yandex:
+                form_input_pack(
+                    request_input_pack,
+                    search_key,
+                    kwd_from_user,
+                    "free word",
+                    name_case,
+                    self.search_plus,
+                    self.search_minus,
+                    "standard",
+                    len(name_case),
+                    url_yandex,
+                )
+
+        for words_type, words in keywords_from_db.items():
+            for kwd_from_db in words:
+                form_input_pack(
+                    request_input_pack,
+                    search_key,
+                    kwd_from_db,
+                    words_type,
+                    name_case,
+                    self.search_plus,
+                    self.search_minus,
+                    "system_keywords",
+                    len(name_case),
+                    url_google,
+                )
+                if self.use_yandex:
+                    form_input_pack(
+                        request_input_pack,
+                        search_key,
+                        kwd_from_db,
+                        words_type,
+                        name_case,
+                        self.search_plus,
+                        self.search_minus,
+                        "system_keywords",
+                        len(name_case),
+                        url_yandex,
+                    )
+
+    async def _process_search_requests(
+        self,
+        request_input_pack,
+        threads,
+        all_found_info,
+        prohibited_sites_list,
+        urls,
+    ):
+        for input_data in request_input_pack:
+            url = input_data[0]
+            urls.append(url)
+            keyword = input_data[1]
+            keyword_type = input_data[2]
+            name_case = input_data[3]
+
+            threads.append(
+                Thread(
+                    target=do_request_to_xmlriver,
+                    args=(
+                        url,
+                        all_found_info,
+                        prohibited_sites_list,
+                        keyword,
+                        name_case,
+                        keyword_type,
+                    ),
+                ),
+            )
+
+        manage_threads(threads)
         await write_urls(urls, "name")
         await utils.renew_xml_balance(db)
 
-        channel = await utils.generate_sse_message_type(
-            user_id=user_query.user_id,
-            db=db,
-        )
-        await db_transactions.change_query_status(user_query, "done", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
 
-        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
-        if chat_id:
-            await send_notification(chat_id, user_query.query_title.title())
-
-        return {
-            "query_id": user_query.query_id,
-            "query_status": user_query.query_status,
-        }
+@shared_task(bind=True, acks_late=True, queue='name_tasks')
+def start_search_by_name(self, search_filters):
+    loop = get_event_loop()
+    task = NameSearchTask(search_filters)
+    loop.run_until_complete(task.execute())
 
 
 async def write_urls(urls, type):
@@ -825,14 +907,14 @@ def form_response_html(found_info_test) -> str:
         doc_kwds,
     )
     items = form_var_items(
-        all_js_objs,
-        main_js_objs,
-        free_js_objs,
-        negative_js_objs,
-        reputation_js_objs,
-        relations_js_objs,
-        soc_js_objs,
-        doc_js_objs,
+        all_obj=all_js_objs,
+        main=main_js_objs,
+        free=free_js_objs,
+        negative=negative_js_objs,
+        reputation=reputation_js_objs,
+        relation=relations_js_objs,
+        socials=soc_js_objs,
+        documents=doc_js_objs,
     )
 
     fullname_counters = {
@@ -944,58 +1026,44 @@ def form_var_filters(
     return filters
 
 
-@shared_task(bind=True, acks_late=True)
-def start_search_by_num(self, phone_num, methods_type, query_id, use_yandex=False):
-    loop = get_event_loop()
-    loop.run_until_complete(_start_search_by_num_async(phone_num, methods_type, query_id, use_yandex))
+class NumberSearchTask(BaseSearchTask):
+    def __init__(self, phone_num: str, methods_type: List[str], query_id: int, price: float, use_yandex: bool):
+        super().__init__(query_id, price)
+        self.phone_num = phone_num
+        self.methods_type = methods_type
+        self.use_yandex = use_yandex
 
+    async def _process_search(self, db):
+        items, filters = '', ''
+        lampyre_html, leaks_html, acc_search_html = '', '', ''
+        tags = []
 
-async def _start_search_by_num_async(phone_num, methods_type, query_id, use_yandex):
-    print(f"start search num {phone_num}")
-    _, items, filters, lampyre_html, leaks_html, acc_search_html = '', '', '', '', '', ''
-    _, tags = [], []
-    filters = {"free_kwds": ""}
-    items = {"all": ""}
-
-    money_to_return = 0
-
-    async with async_session() as db:
-        user_query = await db_transactions.get_user_query(query_id, db)
-
-        if user_query.query_status == "done":
-            return
-
-        if 'mentions' in methods_type:
+        if 'mentions' in self.methods_type:
             try:
-                items, filters = await xmlriver_num_do_request(
-                    phone_num,
-                    use_yandex,
-                )
+                items, filters = await xmlriver_num_do_request(self.phone_num, self.use_yandex)
                 await utils.renew_xml_balance(db)
             except Exception as e:
-                money_to_return += 5
+                self.money_to_return += 5
                 print(e)
-                pass
-        if 'bindings' in methods_type:
+
+        if 'bindings' in self.methods_type:
             try:
-                lampyre_html = lampyre_num_do_request(phone_num)
+                lampyre_html = lampyre_num_do_request(self.phone_num)
                 await utils.renew_lampyre_balance(db)
             except Exception as e:
-                money_to_return += 65
+                self.money_to_return += 65
                 print(e)
-                pass
 
-        if 'tags' in methods_type:
+        if 'tags' in self.methods_type:
             try:
-                tags, requests_getcontact_left = get_tags_in_getcontact(phone_num)
+                tags, requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
                 await utils.renew_getcontact_balance(requests_getcontact_left, db)
             except Exception as e:
-                money_to_return += 25
+                self.money_to_return += 25
                 print(e)
-                pass
 
         html = response_num_template(
-            phone_num,
+            self.phone_num,
             items,
             filters,
             lampyre_html,
@@ -1004,26 +1072,279 @@ async def _start_search_by_num_async(phone_num, methods_type, query_id, use_yand
             acc_search_html,
         )
 
-        await db_transactions.save_html(html, query_id, db)
-        channel = await utils.generate_sse_message_type(
-            user_id=user_query.user_id,
-            db=db,
-        )
-        await db_transactions.change_query_status(user_query, "done", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
-        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
-        if chat_id:
-            await send_notification(chat_id, user_query.query_title)
+        await db_transactions.save_html(html, self.query_id, db)
 
-        if money_to_return > 0:
-            print('Returned', money_to_return)
-            await db_transactions.return_balance(
-                user_query.user_id,
-                user_query.query_id,
-                money_to_return,
-                channel,
-                db,
+
+class EmailSearchTask(BaseSearchTask):
+    def __init__(self, email: str, methods_type: List[str], query_id: int, price: float, use_yandex: bool):
+        super().__init__(query_id, price)
+        self.email = email
+        self.methods_type = methods_type
+        self.use_yandex = use_yandex
+
+    async def _process_search(self, db):
+        mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
+        filters = {"free_kwds": ""}
+        mentions_html = {"all": ""}
+
+        if 'mentions' in self.methods_type:
+            try:
+                mentions_html, filters = await xmlriver_email_do_request(self.email, self.use_yandex)
+                await utils.renew_xml_balance(db)
+            except Exception as e:
+                self.money_to_return += 5
+                print(e)
+
+        if 'acc checker' in self.methods_type:
+            try:
+                lampyre_email = lampyre_email_script.LampyreMail()
+                acc_checker = lampyre_email.main(self.email, ['acc checker'])
+                await utils.renew_lampyre_balance(db)
+            except Exception as e:
+                self.money_to_return += 130
+                print(e)
+
+        html = response_email_template(
+            self.email,
+            mentions_html,
+            filters,
+            leaks_html,
+            acc_search_html,
+            fitness_tracker,
+            acc_checker,
+        )
+
+        await db_transactions.save_html(html, self.query_id, db)
+
+
+class CompanySearchTask(BaseSearchTask):
+    def __init__(self, search_filters: Tuple):
+        super().__init__(search_filters[7], search_filters[8])
+        self.company_names = [search_filters[0], search_filters[1]]
+        self.location = search_filters[2]
+        self.keywords_from_user = search_filters[3]
+        self.default_keywords_type = search_filters[4]
+        self.plus_words = search_filters[5]
+        self.minus_words = search_filters[6]
+        self.use_yandex = search_filters[9]
+
+    async def _process_search(self, db):
+        threads: List[Thread] = []
+        all_found_info: List[FoundInfo] = []
+        request_input_pack: List[tuple] = []
+        urls = []
+
+        try:
+            prohibited_sites_list = await utils.add_sites_from_db([], db)
+            keywords: dict = await get_default_keywords(db, self.default_keywords_type)
+
+            keywords_from_db = keywords[1]
+            len_keywords_from_user = len(self.keywords_from_user)
+            len_keywords_from_db = len(keywords_from_db)
+
+            for company_name in self.company_names:
+                if company_name == '':
+                    break
+                if len_keywords_from_user == 0 and len_keywords_from_db == 0:
+                    form_input_pack_company(
+                        request_input_pack,
+                        company_name,
+                        "",
+                        "free word",
+                        self.location,
+                        self.plus_words,
+                        self.minus_words,
+                        url_google,
+                    )
+                    if self.use_yandex:
+                        form_input_pack_company(
+                            request_input_pack,
+                            company_name,
+                            "",
+                            "free word",
+                            self.location,
+                            self.plus_words,
+                            self.minus_words,
+                            url_yandex,
+                        )
+                else:
+                    for kwd_from_user in self.keywords_from_user:
+                        form_input_pack_company(
+                            request_input_pack,
+                            company_name,
+                            kwd_from_user,
+                            "free word",
+                            self.location,
+                            self.plus_words,
+                            self.minus_words,
+                            url_google,
+                        )
+                        if self.use_yandex:
+                            form_input_pack_company(
+                                request_input_pack,
+                                company_name,
+                                kwd_from_user,
+                                "free word",
+                                self.location,
+                                self.plus_words,
+                                self.minus_words,
+                                url_yandex,
+                            )
+
+                    for words_type, words in keywords_from_db.items():
+                        for kwd_from_db in words:
+                            form_input_pack_company(
+                                request_input_pack,
+                                company_name,
+                                kwd_from_db,
+                                words_type,
+                                self.location,
+                                self.plus_words,
+                                self.minus_words,
+                                url_google,
+                            )
+                            if self.use_yandex:
+                                form_input_pack_company(
+                                    request_input_pack,
+                                    company_name,
+                                    kwd_from_db,
+                                    words_type,
+                                    self.location,
+                                    self.plus_words,
+                                    self.minus_words,
+                                    url_yandex,
+                                )
+
+            for input_data in request_input_pack:
+                url = input_data[0]
+                urls.append(url)
+                keyword = input_data[1]
+                keyword_type = input_data[2]
+
+                threads.append(
+                    Thread(
+                        target=do_request_to_xmlriver,
+                        args=(
+                            url,
+                            all_found_info,
+                            prohibited_sites_list,
+                            keyword,
+                            None,
+                            keyword_type,
+                        ),
+                    ),
+                )
+
+            manage_threads(threads)
+
+            company_titles = form_extra_titles(self.company_names[1], self.location)
+            titles = form_titles(
+                self.company_names[0],
+                self.default_keywords_type,
+                self.keywords_from_user,
+                self.minus_words,
+                self.plus_words,
+                'company',
             )
+
+            items, filters, fullname_counters = form_response_html(all_found_info)
+
+            html = response_company_template(
+                titles,
+                items,
+                filters,
+                fullname_counters,
+                company_titles,
+            )
+            await db_transactions.save_html(html, self.query_id, db)
+
+        except Exception as e:
+            print(e)
+            self.money_to_return = self.price
+            raise e
+
+        await write_urls(urls, "company")
+        await utils.renew_xml_balance(db)
+
+
+class TelegramSearchTask(BaseSearchTask):
+    def __init__(self, search_filters: Tuple):
+        super().__init__(search_filters[2], 0)  # Цена не используется для Telegram поиска
+        self.username = search_filters[0]
+        self.tg_user_id = str(search_filters[1])
+        self.methods_type = search_filters[4]
+
+    async def _process_search(self, db):
+        interests_html, groups1_html, groups2_html, profiles_html, phones_html = '', '', '', '', ''
+
+        if 'interests' in self.methods_type:
+            try:
+                interests_html = get_interests(self.tg_user_id)
+            except Exception as e:
+                print(e)
+
+        if 'groups_1' in self.methods_type:
+            try:
+                groups1_html = get_groups_ibhldr_method(self.tg_user_id)
+            except Exception as e:
+                print(e)
+
+        if 'groups_2' in self.methods_type:
+            try:
+                groups2_html = get_groups_tgdev_method(self.tg_user_id)
+            except Exception as e:
+                print(e)
+
+        if 'profile_history' in self.methods_type:
+            try:
+                profiles_html = get_profiles(self.tg_user_id)
+            except Exception as e:
+                print(e)
+
+        if "phone_number" in self.methods_type:
+            try:
+                phones_html = get_phones(self.tg_user_id)
+            except Exception as e:
+                print(e)
+
+        html = response_tg_template(
+            self.username + "ID" + self.tg_user_id if self.username != "" else self.tg_user_id,
+            interests_html,
+            groups1_html,
+            groups2_html,
+            profiles_html,
+            phones_html,
+        )
+
+        await db_transactions.save_html(html, self.query_id, db)
+
+
+@shared_task(bind=True, acks_late=True)
+def start_search_by_num(self, phone_num, methods_type, query_id, use_yandex=False):
+    loop = get_event_loop()
+    task = NumberSearchTask(phone_num, methods_type, query_id, 0, use_yandex)
+    loop.run_until_complete(task.execute())
+
+
+@shared_task(bind=True, acks_late=True)
+def start_search_by_email(self, email, methods_type, query_id, use_yandex=False):
+    loop = get_event_loop()
+    task = EmailSearchTask(email, methods_type, query_id, 0, use_yandex)
+    loop.run_until_complete(task.execute())
+
+
+@shared_task(bind=True, acks_late=True)
+def start_search_by_company(self, search_filters):
+    loop = get_event_loop()
+    task = CompanySearchTask(search_filters)
+    loop.run_until_complete(task.execute())
+
+
+@shared_task(bind=True, acks_late=True)
+def start_search_by_telegram(self, search_filters):
+    loop = get_event_loop()
+    task = TelegramSearchTask(search_filters)
+    loop.run_until_complete(task.execute())
 
 
 def lampyre_num_do_request(phone_num):
@@ -1161,220 +1482,6 @@ async def xmlriver_email_do_request(email, use_yandex=False):
     return items, filters
 
 
-@shared_task(bind=True, acks_late=True)
-def start_search_by_email(
-    self,
-    email,
-    methods_type,
-    query_id,
-    use_yandex=False,
-):
-    loop = get_event_loop()
-    loop.run_until_complete(
-        _start_search_by_email_async(
-            email,
-            methods_type,
-            query_id,
-            use_yandex,
-        ),
-    )
-
-
-async def _start_search_by_email_async(email, methods_type, query_id, use_yandex):
-    print(f"start search email {email}")
-    mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
-    filters = {"free_kwds": ""}
-    mentions_html = {"all": ""}
-
-    money_to_return = 0
-
-    async with async_session() as db:
-        user_query = await db_transactions.get_user_query(query_id, db)
-
-        if user_query.query_status == "done":
-            return
-
-        if 'mentions' in methods_type:
-            try:
-                mentions_html, filters = await xmlriver_email_do_request(
-                    email,
-                    use_yandex,
-                )
-                await utils.renew_xml_balance(db)
-            except Exception as e:
-                money_to_return += 5
-                print(e)
-                pass
-
-        if 'acc checker' in methods_type:
-            try:
-                lampyre_email = lampyre_email_script.LampyreMail()
-                acc_checker = lampyre_email.main(email, ['acc checker'])
-                await utils.renew_lampyre_balance(db)
-            except Exception as e:
-                money_to_return += 130
-                print(e)
-                pass
-
-        html = response_email_template(
-            email,
-            mentions_html,
-            filters,
-            leaks_html,
-            acc_search_html,
-            fitness_tracker,
-            acc_checker,
-        )
-
-        await db_transactions.save_html(html, query_id, db)
-        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
-        await db_transactions.change_query_status(user_query, "done", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
-        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
-        if chat_id:
-            await send_notification(chat_id, user_query.query_title)
-
-        if money_to_return > 0:
-            print('Returned', money_to_return)
-            await db_transactions.return_balance(user_query.user_id, user_query.query_id, money_to_return, channel, db)
-
-
-@shared_task(bind=True, acks_late=True)
-def start_search_by_company(self, search_filters):
-    loop = get_event_loop()
-    loop.run_until_complete(_start_search_by_company_async(search_filters))
-
-
-async def _start_search_by_company_async(search_filters):
-    print(f"start search company {search_filters[0]}")
-    threads: List[Thread] = []
-    all_found_info: List[FoundInfo] = []
-    request_input_pack: List[tuple] = []
-    urls = []
-
-    company_names = [search_filters[0], search_filters[1]]
-    location = search_filters[2]
-    keywords_from_user = search_filters[3]
-    default_keywords_type = search_filters[4]
-    plus_words = search_filters[5]
-    minus_words = search_filters[6]
-    query_id = search_filters[7]
-    price = search_filters[8]
-    use_yandex = search_filters[9]
-
-    async with async_session() as db:
-        user_query = await db_transactions.get_user_query(query_id, db)
-        if user_query.query_status == "done":
-            return
-
-        try:
-            prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords: dict = await get_default_keywords(
-                db,
-                default_keywords_type,
-            )
-
-            keywords_from_db = keywords[1]
-            len_keywords_from_user = len(keywords_from_user)
-            len_keywords_from_db = len(keywords_from_db)
-
-            for company_name in company_names:
-                if company_name == '':
-                    break
-                if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                    form_input_pack_company(request_input_pack, company_name, "", "free word", location, plus_words, minus_words, url_google)
-                    if use_yandex:
-                        form_input_pack_company(request_input_pack, company_name, "", "free word", location, plus_words, minus_words, url_yandex)
-                else:
-                    for kwd_from_user in keywords_from_user:
-                        form_input_pack_company(request_input_pack, company_name, kwd_from_user, "free word", location, plus_words, minus_words, url_google)
-                        if use_yandex:
-                            form_input_pack_company(request_input_pack, company_name, kwd_from_user, "free word", location, plus_words, minus_words, url_yandex)
-
-                    for words_type, words in keywords_from_db.items():
-                        for kwd_from_db in words:
-                            form_input_pack_company(request_input_pack, company_name, kwd_from_db, words_type, location, plus_words, minus_words, url_google)
-                            if use_yandex:
-                                form_input_pack_company(request_input_pack, company_name, kwd_from_db, words_type, location, plus_words, minus_words, url_yandex)
-
-            for input_data in request_input_pack:
-                url = input_data[0]
-                urls.append(url)
-                keyword = input_data[1]
-                keyword_type = input_data[2]
-
-                threads.append(
-                    Thread(
-                        target=do_request_to_xmlriver,
-                        args=(
-                            url,
-                            all_found_info,
-                            prohibited_sites_list,
-                            keyword,
-                            None,
-                            keyword_type,
-                        ),
-                    ),
-                )
-
-            manage_threads(threads)
-
-            company_titles = form_extra_titles(search_filters[1], location)
-            titles = form_titles(
-                search_filters[0],
-                default_keywords_type,
-                keywords_from_user,
-                minus_words,
-                plus_words,
-                'company',
-            )
-
-            items, filters, fullname_counters = form_response_html(all_found_info)
-
-            html = response_company_template(
-                titles,
-                items,
-                filters,
-                fullname_counters,
-                company_titles,
-            )
-            await db_transactions.save_html(html, query_id, db)
-        except Exception as e:
-            print(e)
-            channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
-            await db_transactions.change_query_status(user_query, "failed", db)
-            await db_transactions.send_sse_notification(user_query, channel, db)
-            await db_transactions.return_balance(
-                user_query.user_id,
-                user_query.query_id,
-                price,
-                channel,
-                db,
-            )
-
-            await write_urls(urls, "name")
-            await utils.renew_xml_balance(db)
-            return {
-                "query_id": user_query.query_id,
-                "query_status": user_query.query_status,
-            }
-
-        await write_urls(urls, "company")
-        await utils.renew_xml_balance(db)
-
-        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
-        await db_transactions.change_query_status(user_query, "done", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
-        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
-        if chat_id:
-            await send_notification(chat_id, user_query.query_title.title())
-
-        return {
-            "query_id": user_query.query_id,
-            "query_status": user_query.query_status,
-        }
-
-
 def form_input_pack_company(
     input_pack,
     company_name: str,
@@ -1411,60 +1518,3 @@ def form_extra_titles(second_name, location):
         extra_titles += f'<span class="max-text-length" title="Местонахождение: {location}"><b>Местонахождение:</b> {location}</span>'
 
     return extra_titles
-
-
-@shared_task(bind=True, acks_late=True)
-async def start_search_by_telegram(self, search_filters):
-    username = search_filters[0]
-    tg_user_id = search_filters[1]
-    query_id = search_filters[2]
-    _ = search_filters[3]
-    methods_type = search_filters[4]
-
-    interests_html, groups1_html, groups2_html, profiles_html, phones_html = '', '', '', '', ''
-
-    tg_user_id = str(tg_user_id)
-    user_query = db_transactions.get_user_query(query_id)
-    if user_query.query_status == "done":
-        return
-
-    if 'interests' in methods_type:
-        try:
-            interests_html = get_interests(tg_user_id)
-        except Exception as e:
-            print(e)
-            pass
-    if 'groups_1' in methods_type:
-        try:
-            groups1_html = get_groups_ibhldr_method(tg_user_id)
-        except Exception as e:
-            print(e)
-            pass
-    if 'groups_2' in methods_type:
-        try:
-            groups2_html = get_groups_tgdev_method(tg_user_id)
-        except Exception as e:
-            print(e)
-            pass
-    if 'profile_history' in methods_type:
-        try:
-            profiles_html = get_profiles(tg_user_id)
-        except Exception as e:
-            print(e)
-            pass
-    if "phone_number" in methods_type:
-        try:
-            phones_html = get_phones(tg_user_id)
-        except Exception as e:
-            print(e)
-            pass
-
-    html = response_tg_template(username + "ID" + tg_user_id if username != "" else tg_user_id, interests_html, groups1_html, groups2_html, profiles_html, phones_html)
-
-    await db_transactions.save_html(html, query_id)
-    channel = await utils.generate_sse_message_type(user_id=user_query.user_id)
-    await db_transactions.change_query_status(user_query, "done")
-    await db_transactions.send_sse_notification(user_query, channel)
-    chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id)
-    if chat_id:
-        await send_notification(chat_id, user_query.query_title)

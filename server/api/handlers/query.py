@@ -215,7 +215,7 @@ async def find_by_name(
             db,
         )
 
-        start_search_by_name.apply_async((search_filters,), queue='name_tasks')
+        start_search_by_name.apply_async(args=[search_filters], queue='name_tasks')
 
     except Exception as e:
         logging.error(f"Failed to process the query: {e}")
