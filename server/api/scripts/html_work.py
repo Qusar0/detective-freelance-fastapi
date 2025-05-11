@@ -527,7 +527,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 this?.classList?.remove(className)
             }}
 
-            let filterable_tabs = [2, 3, 4, 5, 6, 7]
+            let filterable_tabs = [2, 3, 4, 5, 6, 7, 8]
             const items = {{
                     main: [
                         {items.get("main")}
@@ -639,8 +639,6 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     documents: {fullname_counters.get("documents")},
                     all_materials: {fullname_counters.get("all_materials")},
                 }}
-
-            // items.forEach
 
             const fullname_filter = {{
                 main: 0,
@@ -812,6 +810,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     5: {{ {filters.get("rel_kwds")} }},
                     6: {{ {filters.get("soc_kwds")} }},
                     7: {{ {filters.get("doc_kwds")} }},
+                    8: {{ {filters.get("free_kwds")} }},
                 }}
 
             let social_types = {{
@@ -1931,7 +1930,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                 this?.classList?.remove(className)
             }}
 
-            let filterable_tabs = [2, 3, 4, 5, 6, 7]
+            let filterable_tabs = [2, 3, 4, 5, 6, 7, 8]
             const items = {{
                     main: [
                         {items.get("main")}
@@ -2217,6 +2216,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                     5: {{ {filters.get("rel_kwds")} }},
                     6: {{ {filters.get("soc_kwds")} }},
                     7: {{ {filters.get("doc_kwds")} }},
+                    8: {{ {filters.get("free_kwds")} }}, 
                 }}
 
             let social_types = {{
