@@ -31,6 +31,7 @@ from server.api.scripts import utils, db_transactions
 from server.bots.notification_bot import send_notification
 from server.api.database.database import async_session
 from server.api.conf.config import settings
+from server.api.services.file_storage import FileStorageService
 
 
 url_google = f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query='
@@ -156,10 +157,14 @@ class NameSearchTask(BaseSearchTask):
                 self.search_minus,
                 self.search_plus,
             )
-
+            # FIXME:
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
-            await db_transactions.save_html(html, self.query_id, db)
+
+            file_storage = FileStorageService()
+            # file_path = await file_storage.save_query_data(self.query_id, html)
+
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             print(e)
@@ -913,7 +918,6 @@ def form_response_html(found_info_test) -> str:
         soc_kwds,
         doc_kwds,
     )
-    # FIXME:
     items = form_var_items(
         all_obj=all_js_objs,
         main=main_js_objs,

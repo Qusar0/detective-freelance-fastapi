@@ -83,7 +83,7 @@ async def return_balance(user_id, query_id, amount, channel, db):
             "balance": user_balance.balance
         })
 
-
+# FIXME:
 async def save_html(html, query_id, db, file_storage: FileStorageService):
     file_path = await file_storage.save_query_data(query_id, html)
 

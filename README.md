@@ -18,7 +18,13 @@ cd ./server && touch .env
 cp .env.example .env
 ```
 
-3. Выполните создание и поднятие контейнера проекта
+3. Проведите миграции через alembic
+
+```bash
+python -m alembic upgrade head
+```
+
+4. Выполните создание и поднятие контейнера проекта
 
 ```bash
 sudo docker-compose build
