@@ -13,16 +13,12 @@ class FileStorageService:
     async def save_query_data(self, query_id: int, data: str) -> str:
         try:
             today = datetime.now()
-            file_path = self.storage_root / str(today.year) / f"{today.month:02d}" / f"{today.day:02d}"
-            file_path.mkdir(parents=True, exist_ok=True)
+            file_path = self.storage_root / f"query_{query_id}.txt"
             
-            filename = f"query_{query_id}.txt"
-            full_path = file_path / filename
-            
-            with open(full_path, 'w', encoding='utf-8') as f:
+            with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(data)
             
-            return str(full_path)
+            return str(file_path)
         except Exception as e:
             logging.error(f"Failed to save query data to file: {e}")
             raise HTTPException(status_code=500, detail="Failed to save query data")
