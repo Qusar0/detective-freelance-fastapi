@@ -68,6 +68,8 @@ class BaseSearchTask(ABC):
             except Exception as e:
                 print(e)
                 await self._handle_error(user_query, db)
+            finally:
+                await self._update_balances(db)
 
     @abstractmethod
     async def _process_search(self, db):
@@ -96,6 +98,10 @@ class BaseSearchTask(ABC):
                 db,
             )
 
+    @abstractmethod 
+    async def _update_balances(self, db):
+        pass
+
 
 class NameSearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -112,9 +118,7 @@ class NameSearchTask(BaseSearchTask):
         
         logging.debug(f"DEBUG - search_filters: {search_filters}")
 
-    async def _process_search(self, db):
-        await utils.renew_xml_balance(db)
-        
+    async def _process_search(self, db):        
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -169,6 +173,9 @@ class NameSearchTask(BaseSearchTask):
             print(e)
             self.money_to_return = self.price
             raise e
+
+    async def _update_balances(self, db):
+        await utils.renew_xml_balance(db)
 
     async def _form_search_requests(
         self,
@@ -1045,8 +1052,6 @@ class NumberSearchTask(BaseSearchTask):
         self.use_yandex = use_yandex
 
     async def _process_search(self, db):
-        await utils.renew_xml_balance(db)
-        
         items, filters = {}, {}
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
@@ -1090,6 +1095,11 @@ class NumberSearchTask(BaseSearchTask):
             logging.error(f"{str(e)}")
             self.money_to_return = self.price
             raise e
+    
+    async def _update_balances(self, db):
+        await utils.renew_xml_balance(db)
+        await utils.renew_lampyre_balance(db)
+        await utils.renew_getcontact_balance(db)
 
 
 class EmailSearchTask(BaseSearchTask):
@@ -1100,8 +1110,6 @@ class EmailSearchTask(BaseSearchTask):
         self.use_yandex = use_yandex
 
     async def _process_search(self, db):
-        await utils.renew_xml_balance(db)
-        
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
         filters = {"free_kwds": ""}
         mentions_html = {"all": ""}
@@ -1135,6 +1143,10 @@ class EmailSearchTask(BaseSearchTask):
 
         await db_transactions.save_html(html, self.query_id, db, file_storage)
 
+    async def _update_balances(self, db):
+        await utils.renew_xml_balance(db)
+        await utils.renew_lampyre_balance(db)
+
 
 class CompanySearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -1148,8 +1160,6 @@ class CompanySearchTask(BaseSearchTask):
         self.use_yandex = search_filters[9]
 
     async def _process_search(self, db):
-        await utils.renew_xml_balance(db)
-        
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -1287,6 +1297,8 @@ class CompanySearchTask(BaseSearchTask):
             raise e
 
         await write_urls(urls, "company")
+
+    async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
 
 
@@ -1298,8 +1310,6 @@ class TelegramSearchTask(BaseSearchTask):
         self.methods_type = search_filters[4]
 
     async def _process_search(self, db):
-        await utils.renew_xml_balance(db)
-        
         interests_html, groups1_html, groups2_html, profiles_html, phones_html = '', '', '', '', ''
 
         if 'interests' in self.methods_type:
