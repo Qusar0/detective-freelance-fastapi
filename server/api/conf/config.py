@@ -14,10 +14,9 @@ class Settings(BaseSettings):
     db_pass: str = Field(..., env="DB_PASS")
 
     @property
-    def get_db_url(self) -> str:
+    def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.db_user}:{self.db_pass}@{self.db_host}:{self.db_port}/{self.db_name}"
     
-    database_url: str = get_db_url
     sqlalchemy_track_modifications: bool = Field(True, env="SQLALCHEMY_TRACK_MODIFICATIONS")
 
     # JWT
@@ -77,9 +76,6 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Override database_url to use asyncpg driver
-        if self.database_url.startswith('postgresql://'):
-            self.database_url = self.database_url.replace('postgresql://', 'postgresql+asyncpg://', 1)
 
 
 settings = Settings()

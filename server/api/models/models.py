@@ -3,8 +3,8 @@ from typing import List, Optional
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Double,
     ForeignKey,
+    Double,
     Integer,
     Numeric,
     String,
@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
 import datetime
 import decimal
 
@@ -193,7 +193,8 @@ class TextData(Base):
         ForeignKey('user_queries.query_id'),
         nullable=False,
     )
-    query_data: Mapped[Optional[str]] = mapped_column(Text)
+    file_path: Mapped[Optional[str]] = mapped_column(String(255))
+    # query_data: Mapped[Optional[str]] = mapped_column(Text)
 
     query: Mapped['UserQueries'] = relationship(
         'UserQueries',

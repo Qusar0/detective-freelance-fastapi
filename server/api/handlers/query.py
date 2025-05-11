@@ -30,6 +30,7 @@ from server.celery_tasks import (
 )
 from server.api.scripts import utils
 from server.api.scripts import db_transactions
+from server.api.services.file_storage import FileStorageService
 import logging
 
 
@@ -44,10 +45,20 @@ async def delete_query(
     query_id: int = Query(..., description="ID запроса для удаления"),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
+    file_storage: FileStorageService = Depends(),
 ):
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
+
+        text_data_result = await db.execute(
+            select(TextData)
+            .where(TextData.query_id == query_id)
+        )
+        text_data = text_data_result.scalar_one_or_none()
+
+        if text_data and text_data.file_path:
+            await file_storage.delete_query_data(text_data.file_path)
 
         result = await db.execute(
             select(UserQueries)
@@ -437,7 +448,8 @@ async def calculate_price(
 async def download_query(
     data: DownloadQueryRequest,
     db: AsyncSession = Depends(get_db),
-    Authorize: AuthJWT = Depends()
+    Authorize: AuthJWT = Depends(),
+    file_storage: FileStorageService = Depends(),
 ):
     try:
         Authorize.jwt_required()
@@ -468,13 +480,15 @@ async def download_query(
             await db.commit()
 
         text_result = await db.execute(
-            select(TextData.query_data).where(TextData.query_id == query_id)
+            select(TextData.file_path).where(TextData.query_id == query_id)
         )
-        query_text = text_result.scalar_one_or_none()
+        file_path = text_result.scalar_one_or_none()
 
-        if not query_text:
+        if not file_path:
             raise HTTPException(status_code=404, detail="Query data not found")
-
+        
+        query_text = await file_storage.get_query_data(file_path)
+        
         return PlainTextResponse(content=query_text, media_type='text/plain; charset=UTF-8')
 
     except Exception as e:

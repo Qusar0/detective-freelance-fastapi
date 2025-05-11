@@ -3,6 +3,7 @@ import os
 import re
 import threading
 import time
+import logging
 from threading import Thread
 from urllib.parse import urlparse
 from phonenumbers import parse, NumberParseException
@@ -107,7 +108,8 @@ class NameSearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[6]
         self.use_yandex = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
-
+        
+        logging.debug(f"DEBUG - search_filters: {search_filters}")
     async def _process_search(self, db):
         await utils.renew_xml_balance(db)
         
@@ -445,6 +447,8 @@ def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
     """
     name = name_case[0]
     surname = name_case[1]
+
+    logging.debug(f"DEBUG - name_case: {name_case}")
 
     if len(name_case) == 3:
         patronymic = name_case[2]
@@ -909,13 +913,14 @@ def form_response_html(found_info_test) -> str:
         soc_kwds,
         doc_kwds,
     )
+    # FIXME:
     items = form_var_items(
         all_obj=all_js_objs,
         main=main_js_objs,
         free=free_js_objs,
         negative=negative_js_objs,
         reputation=reputation_js_objs,
-        relation=relations_js_objs,
+        relations=relations_js_objs,
         socials=soc_js_objs,
         documents=doc_js_objs,
     )

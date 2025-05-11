@@ -3,7 +3,9 @@ from server.api.models.models import Users, UserQueries, QueriesBalance, Events,
 from server.api.database.database import get_db
 from server.api.scripts import utils
 from sqlalchemy import select
+
 from server.api.scripts.sse_manager import publish_event
+from server.api.services.file_storage import FileStorageService
 
 
 async def get_user_query(query_id, db):
@@ -82,8 +84,10 @@ async def return_balance(user_id, query_id, amount, channel, db):
         })
 
 
-async def save_html(html, query_id, db):
-    text_data = TextData(query_id=query_id, query_data=html)
+async def save_html(html, query_id, db, file_storage: FileStorageService):
+    file_path = await file_storage.save_query_data(query_id, html)
+
+    text_data = TextData(query_id=query_id, file_path=file_path)
     db.add(text_data)
     await db.commit()
 
