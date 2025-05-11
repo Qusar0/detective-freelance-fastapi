@@ -157,12 +157,10 @@ class NameSearchTask(BaseSearchTask):
                 self.search_minus,
                 self.search_plus,
             )
-            # FIXME:
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
 
             file_storage = FileStorageService()
-            # file_path = await file_storage.save_query_data(self.query_id, html)
 
             await db_transactions.save_html(html, self.query_id, db, file_storage)
 
@@ -1048,7 +1046,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _process_search(self, db):
         await utils.renew_xml_balance(db)
         
-        items, filters = '', ''
+        items, filters = {}, {}
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
 
@@ -1083,7 +1081,14 @@ class NumberSearchTask(BaseSearchTask):
             acc_search_html,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        try:
+            file_storage = FileStorageService()
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
+
+        except Exception as e:
+            logging.error(f"{str(e)}")
+            self.money_to_return = self.price
+            raise e
 
 
 class EmailSearchTask(BaseSearchTask):
@@ -1125,7 +1130,9 @@ class EmailSearchTask(BaseSearchTask):
             acc_checker,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        file_storage = FileStorageService()
+
+        await db_transactions.save_html(html, self.query_id, db, file_storage)
 
 
 class CompanySearchTask(BaseSearchTask):
@@ -1269,7 +1276,9 @@ class CompanySearchTask(BaseSearchTask):
                 fullname_counters,
                 company_titles,
             )
-            await db_transactions.save_html(html, self.query_id, db)
+            file_storage = FileStorageService()
+
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             print(e)
@@ -1331,7 +1340,9 @@ class TelegramSearchTask(BaseSearchTask):
             phones_html,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        file_storage = FileStorageService()
+
+        await db_transactions.save_html(html, self.query_id, db, file_storage)
 
 
 @shared_task(bind=True, acks_late=True)

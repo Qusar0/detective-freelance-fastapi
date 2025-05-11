@@ -9,7 +9,7 @@ class FileStorageService:
     def __init__(self, storage_root: str = "query_data"):
         self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
-    # FIXME:
+
     async def save_query_data(self, query_id: int, data: str) -> str:
         try:
             today = datetime.now()

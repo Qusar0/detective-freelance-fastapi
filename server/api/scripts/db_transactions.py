@@ -3,6 +3,7 @@ from server.api.models.models import Users, UserQueries, QueriesBalance, Events,
 from server.api.database.database import get_db
 from server.api.scripts import utils
 from sqlalchemy import select
+import logging
 
 from server.api.scripts.sse_manager import publish_event
 from server.api.services.file_storage import FileStorageService
@@ -83,13 +84,20 @@ async def return_balance(user_id, query_id, amount, channel, db):
             "balance": user_balance.balance
         })
 
-# FIXME:
-async def save_html(html, query_id, db, file_storage: FileStorageService):
-    file_path = await file_storage.save_query_data(query_id, html)
 
-    text_data = TextData(query_id=query_id, file_path=file_path)
-    db.add(text_data)
-    await db.commit()
+async def save_html(html, query_id, db, file_storage: FileStorageService):
+    try:
+        file_path = await file_storage.save_query_data(query_id, html)
+        
+        text_data = TextData(query_id=query_id, file_path=file_path)
+        db.add(text_data)
+        await db.commit()
+        
+        return file_path
+    except Exception as e:
+        logging.error(f"Failed to save HTML for query {query_id}: {str(e)}")
+        await db.rollback()
+        raise
 
 
 async def change_query_status(user_query, query_type, db):
