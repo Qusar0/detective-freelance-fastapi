@@ -128,6 +128,18 @@ services:
       - redis
       - web
 
+  db_backup:
+    image: postgres:14-alpine
+    env_file: ./server/.env
+    volumes:
+      - ./backups:/backups
+      - ./backup_script.sh:/backup_script.sh
+    command: >
+      sh -c 'ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime && 
+            echo "0 3 * * * /backup_script.sh" > /etc/crontabs/root &&
+            crond -f'
+    restart: unless-stopped
+
 volumes:
   redis_data:
   tdlib_data:

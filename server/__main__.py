@@ -12,9 +12,15 @@ from server.api.scripts.sse_manager import (
     add_subscriber,
     redis_listener,
 )
+from server.api.services.file_storage import FileStorageService
+
 
 app = FastAPI()
 
+def get_file_storage() -> FileStorageService:
+    return FileStorageService()
+
+app.dependency_overrides[FileStorageService] = get_file_storage
 
 setup_admin(app)
 

@@ -10,7 +10,8 @@ from api.conf.config import settings
 # access to the values within the .ini file in use.
 config = context.config
 # Override sqlalchemy.url with the value from settings
-config.set_main_option("sqlalchemy.url", settings.database_url.replace("+asyncpg", ''))
+db_url = settings.database_url.replace('%', '%%')
+config.set_main_option("sqlalchemy.url", f"{db_url}?async_fallback=True")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

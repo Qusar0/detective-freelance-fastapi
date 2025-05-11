@@ -1,20 +1,26 @@
 import requests
+import logging
 from server.api.conf.config import settings
 
 
 def get_tags_in_getcontact(number):
     headers = {
-        'x-bot-id': settings.telegram_api_id,
-        'x-bot-token': settings.telegram_api_hash,
-        'x-api-key': settings.telegram_db_encryption_key,
+        'x-bot-id': str(settings.telegram_api_id),
+        'x-bot-token': str(settings.telegram_api_hash),
+        'x-api-key': str(settings.telegram_db_encryption_key),
         'Content-Type': 'application/json',
     }
 
-    r = requests.post(
-        'https://r0cyk3wpdg.execute-api.us-east-2.amazonaws.com/default/apiv2',
-        headers=headers,
-        json={"phone": number}
-    )
+    try:
+        r = requests.post(
+            'https://r0cyk3wpdg.execute-api.us-east-2.amazonaws.com/default/apiv2',
+            headers=headers,
+            json={"phone": str(number)}
+        )
+        r.raise_for_status
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request failed: {e}")
+        return [], 0
 
     contacs_json = r.json()
     requests_left = contacs_json['data']['subscription']['remainingRequestCount']
