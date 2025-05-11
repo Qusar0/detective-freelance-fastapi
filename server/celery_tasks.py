@@ -109,6 +109,8 @@ class NameSearchTask(BaseSearchTask):
         self.languages = search_filters[10] if len(search_filters) > 10 else None
 
     async def _process_search(self, db):
+        await utils.renew_xml_balance(db)
+        
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -142,6 +144,7 @@ class NameSearchTask(BaseSearchTask):
                 all_found_info,
                 prohibited_sites_list,
                 urls,
+                db,
             )
 
             titles = form_titles(
@@ -278,6 +281,7 @@ class NameSearchTask(BaseSearchTask):
         all_found_info,
         prohibited_sites_list,
         urls,
+        db,
     ):
         for input_data in request_input_pack:
             url = input_data[0]
@@ -302,7 +306,6 @@ class NameSearchTask(BaseSearchTask):
 
         manage_threads(threads)
         await write_urls(urls, "name")
-        await utils.renew_xml_balance(db)
 
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')
@@ -1034,6 +1037,8 @@ class NumberSearchTask(BaseSearchTask):
         self.use_yandex = use_yandex
 
     async def _process_search(self, db):
+        await utils.renew_xml_balance(db)
+        
         items, filters = '', ''
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
@@ -1041,7 +1046,6 @@ class NumberSearchTask(BaseSearchTask):
         if 'mentions' in self.methods_type:
             try:
                 items, filters = await xmlriver_num_do_request(self.phone_num, self.use_yandex)
-                await utils.renew_xml_balance(db)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1049,7 +1053,6 @@ class NumberSearchTask(BaseSearchTask):
         if 'bindings' in self.methods_type:
             try:
                 lampyre_html = lampyre_num_do_request(self.phone_num)
-                await utils.renew_lampyre_balance(db)
             except Exception as e:
                 self.money_to_return += 65
                 print(e)
@@ -1057,7 +1060,6 @@ class NumberSearchTask(BaseSearchTask):
         if 'tags' in self.methods_type:
             try:
                 tags, requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
-                await utils.renew_getcontact_balance(requests_getcontact_left, db)
             except Exception as e:
                 self.money_to_return += 25
                 print(e)
@@ -1083,6 +1085,8 @@ class EmailSearchTask(BaseSearchTask):
         self.use_yandex = use_yandex
 
     async def _process_search(self, db):
+        await utils.renew_xml_balance(db)
+        
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
         filters = {"free_kwds": ""}
         mentions_html = {"all": ""}
@@ -1090,7 +1094,6 @@ class EmailSearchTask(BaseSearchTask):
         if 'mentions' in self.methods_type:
             try:
                 mentions_html, filters = await xmlriver_email_do_request(self.email, self.use_yandex)
-                await utils.renew_xml_balance(db)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1099,7 +1102,6 @@ class EmailSearchTask(BaseSearchTask):
             try:
                 lampyre_email = lampyre_email_script.LampyreMail()
                 acc_checker = lampyre_email.main(self.email, ['acc checker'])
-                await utils.renew_lampyre_balance(db)
             except Exception as e:
                 self.money_to_return += 130
                 print(e)
@@ -1129,6 +1131,8 @@ class CompanySearchTask(BaseSearchTask):
         self.use_yandex = search_filters[9]
 
     async def _process_search(self, db):
+        await utils.renew_xml_balance(db)
+        
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -1275,6 +1279,8 @@ class TelegramSearchTask(BaseSearchTask):
         self.methods_type = search_filters[4]
 
     async def _process_search(self, db):
+        await utils.renew_xml_balance(db)
+        
         interests_html, groups1_html, groups2_html, profiles_html, phones_html = '', '', '', '', ''
 
         if 'interests' in self.methods_type:
