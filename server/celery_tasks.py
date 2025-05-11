@@ -3,6 +3,7 @@ import os
 import re
 import threading
 import time
+import logging
 from threading import Thread
 from urllib.parse import urlparse
 from phonenumbers import parse, NumberParseException
@@ -30,6 +31,7 @@ from server.api.scripts import utils, db_transactions
 from server.bots.notification_bot import send_notification
 from server.api.database.database import async_session
 from server.api.conf.config import settings
+from server.api.services.file_storage import FileStorageService
 
 
 url_google = f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query='
@@ -107,6 +109,8 @@ class NameSearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[6]
         self.use_yandex = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
+        
+        logging.debug(f"DEBUG - search_filters: {search_filters}")
 
     async def _process_search(self, db):
         await utils.renew_xml_balance(db)
@@ -154,10 +158,12 @@ class NameSearchTask(BaseSearchTask):
                 self.search_minus,
                 self.search_plus,
             )
-
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
-            await db_transactions.save_html(html, self.query_id, db)
+
+            file_storage = FileStorageService()
+
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             print(e)
@@ -445,6 +451,8 @@ def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
     """
     name = name_case[0]
     surname = name_case[1]
+
+    logging.debug(f"DEBUG - name_case: {name_case}")
 
     if len(name_case) == 3:
         patronymic = name_case[2]
@@ -915,7 +923,7 @@ def form_response_html(found_info_test) -> str:
         free=free_js_objs,
         negative=negative_js_objs,
         reputation=reputation_js_objs,
-        relation=relations_js_objs,
+        relations=relations_js_objs,
         socials=soc_js_objs,
         documents=doc_js_objs,
     )
@@ -1039,7 +1047,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _process_search(self, db):
         await utils.renew_xml_balance(db)
         
-        items, filters = '', ''
+        items, filters = {}, {}
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
 
@@ -1074,7 +1082,14 @@ class NumberSearchTask(BaseSearchTask):
             acc_search_html,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        try:
+            file_storage = FileStorageService()
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
+
+        except Exception as e:
+            logging.error(f"{str(e)}")
+            self.money_to_return = self.price
+            raise e
 
 
 class EmailSearchTask(BaseSearchTask):
@@ -1116,7 +1131,9 @@ class EmailSearchTask(BaseSearchTask):
             acc_checker,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        file_storage = FileStorageService()
+
+        await db_transactions.save_html(html, self.query_id, db, file_storage)
 
 
 class CompanySearchTask(BaseSearchTask):
@@ -1260,7 +1277,9 @@ class CompanySearchTask(BaseSearchTask):
                 fullname_counters,
                 company_titles,
             )
-            await db_transactions.save_html(html, self.query_id, db)
+            file_storage = FileStorageService()
+
+            await db_transactions.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             print(e)
@@ -1322,7 +1341,9 @@ class TelegramSearchTask(BaseSearchTask):
             phones_html,
         )
 
-        await db_transactions.save_html(html, self.query_id, db)
+        file_storage = FileStorageService()
+
+        await db_transactions.save_html(html, self.query_id, db, file_storage)
 
 
 @shared_task(bind=True, acks_late=True)
@@ -1430,7 +1451,6 @@ def form_yandex_query_email(email: str, page_num):
 
 def read_needless_sites():
     file_path = Path(__file__).parent / "phone minus sites.txt"
-    print(file_path)
     with file_path.open("r", encoding="utf-8") as f:
         sites = f.readlines()
     minus_sites = [i.strip() for i in sites]
