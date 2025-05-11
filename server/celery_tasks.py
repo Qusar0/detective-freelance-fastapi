@@ -111,6 +111,7 @@ class NameSearchTask(BaseSearchTask):
         self.languages = search_filters[10] if len(search_filters) > 10 else None
         
         logging.debug(f"DEBUG - search_filters: {search_filters}")
+
     async def _process_search(self, db):
         await utils.renew_xml_balance(db)
         
@@ -1450,7 +1451,6 @@ def form_yandex_query_email(email: str, page_num):
 
 def read_needless_sites():
     file_path = Path(__file__).parent / "phone minus sites.txt"
-    print(file_path)
     with file_path.open("r", encoding="utf-8") as f:
         sites = f.readlines()
     minus_sites = [i.strip() for i in sites]

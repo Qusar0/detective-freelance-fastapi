@@ -23,6 +23,6 @@ if [ $? -ne 0 ]; then
 fi
 
 # Удаление старых бэкапов
-ls -1t /backups/backup_${DB_NAME}_*.sql.gz | tail -n +8 | xargs rm -f
+ls -1t /backups/backup_${DB_NAME}_*.sql.gz | tail -n +30 | xargs rm -f
 
 echo "Backup completed: ${BACKUP_FILE}"

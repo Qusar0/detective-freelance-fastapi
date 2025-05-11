@@ -194,7 +194,6 @@ class TextData(Base):
         nullable=False,
     )
     file_path: Mapped[Optional[str]] = mapped_column(String(255))
-    # query_data: Mapped[Optional[str]] = mapped_column(Text)
 
     query: Mapped['UserQueries'] = relationship(
         'UserQueries',

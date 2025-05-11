@@ -1,9 +1,8 @@
-# server/api/services/file_storage.py
-import os
-from datetime import datetime
 from pathlib import Path
 from fastapi import HTTPException
 import logging
+import aiofiles
+
 
 class FileStorageService:
     def __init__(self, storage_root: str = "query_data"):
@@ -12,12 +11,9 @@ class FileStorageService:
 
     async def save_query_data(self, query_id: int, data: str) -> str:
         try:
-            today = datetime.now()
             file_path = self.storage_root / f"query_{query_id}.txt"
-            
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(data)
-            
+            async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+                await f.write(data)
             return str(file_path)
         except Exception as e:
             logging.error(f"Failed to save query data to file: {e}")
@@ -28,9 +24,8 @@ class FileStorageService:
             path = Path(file_path)
             if not path.exists():
                 raise HTTPException(status_code=404, detail="Query data file not found")
-            
-            with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
+            async with aiofiles.open(path, 'r', encoding='utf-8') as f:
+                return await f.read()
         except Exception as e:
             logging.error(f"Failed to read query data from file: {e}")
             raise HTTPException(status_code=500, detail="Failed to read query data")

@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     zlib1g-dev \
     libssl-dev \
-        cron \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка рабочей директории
