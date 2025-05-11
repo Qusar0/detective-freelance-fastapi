@@ -2810,7 +2810,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
     return report_html
 
 
-def response_num_template(title, items, filters, lampyre_html, leak_html, tags, osint_html) -> str:
+def response_num_template(title, items, filters, lampyre_html, tags, osint_html) -> str:
     report_html = f"""<!DOCTYPE html>
         <html lang="en">
 
