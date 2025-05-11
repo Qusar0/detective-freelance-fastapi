@@ -27,6 +27,7 @@ from server.celery_tasks import (
     start_search_by_email,
     start_search_by_company,
     start_search_by_telegram,
+    search_engines,
 )
 from server.api.scripts import utils
 from server.api.scripts import db_transactions
@@ -237,6 +238,10 @@ async def find_by_number(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
+        # Проверяем доступность поисковых систем
+        if use_yandex and not search_engines['yandex']['enabled']:
+            raise HTTPException(status_code=400, detail="Yandex search is currently disabled")
+
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
         price = utils.calculate_num_price(methods_type)
 
@@ -253,24 +258,34 @@ async def find_by_number(
 
         db.add(user_query)
         await db.commit()
-        await db.refresh(user_query)
-
-        await utils.subtract_balance(user_id, price, channel, db)
-        await db_transactions.save_payment_to_history(user_id, price, user_query.query_id, db)
-        await db_transactions.save_query_balance(user_query.query_id, price, db)
 
         search_filters = (
             search_number,
             methods_type,
             user_query.query_id,
+            price,
             use_yandex,
-            # languages
+            languages
         )
 
-        start_search_by_num.apply_async((search_filters), queue='num_tasks')
+        await utils.subtract_balance(user_id, price, channel, db)
+
+        await db_transactions.save_payment_to_history(
+            user_id,
+            price,
+            user_query.query_id,
+            db,
+        )
+        await db_transactions.save_query_balance(
+            user_query.query_id,
+            price,
+            db,
+        )
+
+        start_search_by_num.apply_async((search_filters,), queue='number_tasks')
 
     except Exception as e:
-        logging.error(f"Failed to process the phone number query: {e}")
+        logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -289,6 +304,10 @@ async def find_by_email(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
+        # Проверяем доступность поисковых систем
+        if use_yandex and not search_engines['yandex']['enabled']:
+            raise HTTPException(status_code=400, detail="Yandex search is currently disabled")
+
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
         price = utils.calculate_email_price(methods_type)
 
@@ -305,7 +324,15 @@ async def find_by_email(
 
         db.add(user_query)
         await db.commit()
-        await db.refresh(user_query)
+
+        search_filters = (
+            email,
+            methods_type,
+            user_query.query_id,
+            price,
+            use_yandex,
+            languages
+        )
 
         await utils.subtract_balance(user_id, price, channel, db)
         await db_transactions.save_payment_to_history(
@@ -320,21 +347,10 @@ async def find_by_email(
             db,
         )
 
-        search_filters = (
-            email,
-            methods_type,
-            user_query.query_id,
-            use_yandex,
-            # languages
-        )
-
-        start_search_by_email.apply_async(
-            (search_filters),
-            queue='email_tasks',
-        )
+        start_search_by_email.apply_async((search_filters,), queue='email_tasks')
 
     except Exception as e:
-        logging.error(f"Failed to process the email query: {e}")
+        logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -349,17 +365,17 @@ async def find_by_company(
         user_id = int(Authorize.get_jwt_subject())
 
         company_name = request_data.company_name.strip()
-        extra_name = request_data.extra_name.strip()
-        location = request_data.location.strip()
-        keywords = request_data.keywords
-        default_keywords_type = request_data.default_keywords_type.strip()
-        plus_words = request_data.search_plus.strip()
-        minus_words = request_data.search_minus.strip()
+        extra_name = request_data.extra_name.strip() if request_data.extra_name else ""
+        location = request_data.location.strip() if request_data.location else ""
+        keywords = request_data.keywords if request_data.keywords else []
+        default_keywords_type = request_data.default_keywords_type.strip() if request_data.default_keywords_type else ""
+        search_plus = request_data.search_plus.strip() if request_data.search_plus else ""
+        search_minus = request_data.search_minus.strip() if request_data.search_minus else ""
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
-        price = 10
+        price = utils.calculate_company_price(keywords, default_keywords_type)
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
@@ -369,14 +385,28 @@ async def find_by_company(
             query_created_at=datetime.now(),
             query_title=company_name,
             query_status="pending",
-            query_category="company",
+            query_category="company"
         )
 
         db.add(user_query)
         await db.commit()
-        await db.refresh(user_query)
+
+        search_filters = (
+            company_name,
+            extra_name,
+            location,
+            keywords,
+            default_keywords_type,
+            search_plus,
+            search_minus,
+            user_query.query_id,
+            price,
+            use_yandex,
+            languages
+        )
 
         await utils.subtract_balance(user_id, price, channel, db)
+
         await db_transactions.save_payment_to_history(
             user_id,
             price,
@@ -389,27 +419,10 @@ async def find_by_company(
             db,
         )
 
-        search_filters = (
-            company_name,
-            extra_name,
-            location,
-            keywords,
-            default_keywords_type,
-            plus_words,
-            minus_words,
-            user_query.query_id,
-            price,
-            use_yandex,
-            # languages
-        )
-
-        start_search_by_company.apply_async(
-            (search_filters,),
-            queue="company_tasks",
-        )
+        start_search_by_company.apply_async((search_filters,), queue='company_tasks')
 
     except Exception as e:
-        logging.error(f"Failed to process the company query: {e}")
+        logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
