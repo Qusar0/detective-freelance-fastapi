@@ -126,8 +126,8 @@ class NameSearchTask(BaseSearchTask):
 
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords: dict = await get_default_keywords(db, self.default_keywords_type)
-
+            keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
+            
             keywords_from_db = keywords[1]
             len_keywords_from_user = len(self.keywords_from_user)
             len_keywords_from_db = len(keywords_from_db)
@@ -1158,6 +1158,7 @@ class CompanySearchTask(BaseSearchTask):
         self.plus_words = search_filters[5]
         self.minus_words = search_filters[6]
         self.use_yandex = search_filters[9]
+        self.languages = search_filters[10] if len(search_filters) > 10 else None
 
     async def _process_search(self, db):
         threads: List[Thread] = []
@@ -1167,7 +1168,7 @@ class CompanySearchTask(BaseSearchTask):
 
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords: dict = await get_default_keywords(db, self.default_keywords_type)
+            keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
 
             keywords_from_db = keywords[1]
             len_keywords_from_user = len(self.keywords_from_user)
