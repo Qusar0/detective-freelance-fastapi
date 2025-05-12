@@ -172,10 +172,8 @@ async def find_by_name(
         search_minus = request_data.search_minus.strip()
         keywords: List[str] = request_data.keywords
         default_keywords_type = request_data.default_keywords_type.strip()
-        use_yandex = request_data.use_yandex
+        search_engines = request_data.search_engines
         languages = request_data.languages
-
-        SEARCH_ENGINES['yandex']['enabled'] = use_yandex
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -212,7 +210,7 @@ async def find_by_name(
             default_keywords_type,
             user_query.query_id,
             price,
-            use_yandex,
+            search_engines,
             languages
         )
 

@@ -33,16 +33,12 @@ from server.api.database.database import async_session
 from server.api.conf.config import settings
 from server.api.services.file_storage import FileStorageService
 
+
 SEARCH_ENGINES = {
-    'google': {
-        'url': f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query=',
-        'enabled': True
-    },
-    'yandex': {
-        'url': f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query=',
-        'enabled': False
-    }
+    'google': f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query=',
+    'yandex': f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query=',
 }
+
 
 FoundInfo = recordtype("FoundInfo", "title snippet url uri weight kwd word_type kwds_list fullname soc_type doc_type")
 NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
@@ -120,12 +116,8 @@ class NameSearchTask(BaseSearchTask):
         self.search_minus = search_filters[4]
         self.keywords_from_user = search_filters[5]
         self.default_keywords_type = search_filters[6]
-        self.use_yandex = search_filters[9]
+        self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
-        
-        # Обновляем статус Yandex в словаре браузеров
-        if self.use_yandex:
-            SEARCH_ENGINES['yandex']['enabled'] = True
         
         logging.debug(f"DEBUG - search_filters: {search_filters}")
 
@@ -210,8 +202,8 @@ class NameSearchTask(BaseSearchTask):
                     )
 
     def _add_standard_search(self, request_input_pack, search_key, name_case):
-        for engine_name, engine_data in SEARCH_ENGINES.items():
-            if engine_data['enabled']:
+        for engine in self.search_engines:
+            if url := SEARCH_ENGINES.get(engine):
                 form_input_pack(
                     request_input_pack,
                     search_key,
@@ -222,7 +214,7 @@ class NameSearchTask(BaseSearchTask):
                     self.search_minus,
                     "standard",
                     len(name_case),
-                    engine_data['url'],
+                    url,
                 )
 
     async def _add_keyword_searches(
@@ -233,8 +225,8 @@ class NameSearchTask(BaseSearchTask):
         keywords_from_db,
     ):
         for kwd_from_user in self.keywords_from_user:
-            for engine_name, engine_data in SEARCH_ENGINES.items():
-                if engine_data['enabled']:
+            for engine in self.search_engines:
+                if url := SEARCH_ENGINES.get(engine):
                     form_input_pack(
                         request_input_pack,
                         search_key,
@@ -245,13 +237,13 @@ class NameSearchTask(BaseSearchTask):
                         self.search_minus,
                         "standard",
                         len(name_case),
-                        engine_data['url'],
+                        url,
                     )
 
         for words_type, words in keywords_from_db.items():
             for kwd_from_db in words:
-                for engine_name, engine_data in SEARCH_ENGINES.items():
-                    if engine_data['enabled']:
+                for engine in self.search_engines:
+                    if url := SEARCH_ENGINES.get(engine):
                         form_input_pack(
                             request_input_pack,
                             search_key,
@@ -262,7 +254,7 @@ class NameSearchTask(BaseSearchTask):
                             self.search_minus,
                             "system_keywords",
                             len(name_case),
-                            engine_data['url'],
+                            url,
                         )
 
     async def _process_search_requests(
