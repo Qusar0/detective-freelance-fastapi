@@ -15,7 +15,7 @@ async def send_email(
     html: str = None,
 ):
     message = EmailMessage()
-    message["From"] = f"{settings.mail_from_name} <{settings.mail_from}>"
+    message["From"] = f"{settings.mail_username} <{settings.mail_from}>"
     message["To"] = ", ".join(recipients)
     message["Subject"] = subject
     message.set_content(body)

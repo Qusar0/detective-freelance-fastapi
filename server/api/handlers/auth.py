@@ -11,6 +11,7 @@ from server.api.schemas.users import (
     LoginRequest,
     AuthResponse,
     StatusMessage,
+    ResetPasswordRequest
 )
 from server.api.conf.mail import (
     send_email,
@@ -20,6 +21,7 @@ from server.api.conf.mail import (
 from server.api.templates.email_message import (
     get_confirmation_email,
     get_already_registered_email,
+    get_reset_password_email,
 )
 import logging
 from server.api.conf.config import settings
@@ -141,3 +143,48 @@ async def logout(Authorize: AuthJWT = Depends()):
     response = JSONResponse({"message": "logout successful"})
     Authorize.unset_jwt_cookies(response)
     return response
+
+
+@router.post("/forgot_password", response_model=StatusMessage)
+async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Users).where(Users.email == email))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    token = generate_conformation_token(email)
+
+    reset_url = f"{settings.frontend_url}/reset-password?token={token}"
+    email_content = get_reset_password_email(email, reset_url)
+    await send_email(**email_content)
+
+    return {
+        "status": "success",
+        "message": "Ссылка для сброса пароля отправлена на ваш email",
+    }
+
+
+@router.post("/reset_password", response_model=StatusMessage)
+async def reset_password(
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        email = confirm_token(data.token)
+        if not email:
+            raise HTTPException(status_code=400, detail="Недействительный или просроченный токен")
+
+        result = await db.execute(select(Users).where(Users.email == email))
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        user.password = bcrypt.hash(data.new_password)
+        await db.commit()
+
+        return {"status": "success", "message": "Пароль успешно изменён"}
+
+    except Exception as e:
+        logging.error(f"Ошибка при сбросе пароля: {str(e)}")
+        raise HTTPException(status_code=422, detail="Неверный ввод")

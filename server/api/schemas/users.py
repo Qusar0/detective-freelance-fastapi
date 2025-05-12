@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, constr
 from typing import Optional, List
 from datetime import datetime
 
@@ -66,3 +66,13 @@ class ConfirmResponse(BaseModel):
 
 class ChangeEventStatusRequest(BaseModel):
     event_id: int = Field(..., description="ID события")
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: constr(min_length=8) = Field(..., description="Старый пароль (минимум 8 символов)")
+    new_password: constr(min_length=8) = Field(..., description="Новый пароль (минимум 8 символов)")
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

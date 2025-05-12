@@ -9,9 +9,11 @@ from server.api.schemas.users import (
     TopUpBalanceQueryParams,
     ConfirmResponse,
     ChangeEventStatusRequest,
+    ChangePasswordRequest,
 )
 import logging
 from typing import Dict
+from passlib.hash import bcrypt
 from server.api.models.models import (
     Events,
     UserQueries,
@@ -19,7 +21,8 @@ from server.api.models.models import (
     PaymentHistory,
     Users,
 )
-from server.api.conf.mail import send_confirmation_email
+from server.api.conf.mail import send_confirmation_email, send_email
+from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import publish_event
 from server.api.scripts.utils import generate_sse_message_type
 
@@ -256,3 +259,34 @@ async def top_up_balance(
     except Exception as e:
         logging.warning(f"Invalid input: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
+
+
+@router.post("/change_password")
+async def change_password(
+    data: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends()
+):
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    result = await db.execute(select(Users).where(Users.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    if not bcrypt.verify(data.old_password, user.password):
+        raise HTTPException(status_code=403, detail="Неверный текущий пароль")
+
+    user.password = bcrypt.hash(data.new_password)
+    db.add(user)
+    await db.commit()
+
+    email_content = get_password_changed_email(user.email)
+    await send_email(**email_content)
+
+    return {"status": "success", "message": "Пароль успешно изменён"}
