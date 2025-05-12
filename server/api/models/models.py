@@ -34,7 +34,7 @@ class BalanceHistory(Base):
     amount: Mapped[Optional[float]] = mapped_column(Double(53))
     timestamp: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
     query_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('user_queries.query_id'),
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
 
@@ -66,7 +66,7 @@ class Events(Base):
     event_type: Mapped[Optional[str]] = mapped_column(String(50))
     event_status: Mapped[Optional[str]] = mapped_column(String(50))
     query_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('user_queries.query_id'),
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
     created_time: Mapped[Optional[datetime.datetime]] = mapped_column(
@@ -140,7 +140,7 @@ class QueriesBalance(Base):
         autoincrement=True,
     )
     query_id: Mapped[int] = mapped_column(
-        ForeignKey('user_queries.query_id'),
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
     balance: Mapped[decimal.Decimal] = mapped_column(Numeric)
@@ -172,7 +172,7 @@ class TelegramNotifications(Base):
         primary_key=True,
         autoincrement=True,
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'))
     chat_id: Mapped[Optional[int]] = mapped_column(Integer, unique=True)
 
     user: Mapped['UserQueries'] = relationship(
@@ -190,7 +190,7 @@ class TextData(Base):
         autoincrement=True,
     )
     query_id: Mapped[int] = mapped_column(
-        ForeignKey('user_queries.query_id'),
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
     file_path: Mapped[Optional[str]] = mapped_column(String(255))
@@ -209,7 +209,7 @@ class UserBalances(Base):
         primary_key=True,
         autoincrement=True,
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='CASCADE'))
     balance: Mapped[Optional[float]] = mapped_column(Double(53))
 
     user: Mapped['Users'] = relationship(
@@ -227,7 +227,7 @@ class UserQueries(Base):
         autoincrement=True,
     )
     user_id: Mapped[int] = mapped_column(
-        ForeignKey('users.id'),
+        ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
     )
     query_unix_date: Mapped[Optional[datetime.datetime]] = mapped_column(
@@ -328,3 +328,12 @@ class Users(Base):
         back_populates='user',
         cascade='all, delete-orphan',
     )
+
+
+class Language(Base):
+    __tablename__ = 'languages'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+    english_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    russian_name: Mapped[str] = mapped_column(String(100), nullable=False)

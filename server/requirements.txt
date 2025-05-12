@@ -69,7 +69,6 @@ bs4==0.0.2
 typing-extensions==4.13.1
 progress==1.6
 pytdbot==0.9.1
-flasgger==0.9.7.1
 uvicorn==0.34.2
 dotenv==0.9.9
 aiogram==2.25.2
@@ -77,3 +76,4 @@ aiofiles==24.1.0
 aiohttp==3.8.6
 asyncpg==0.30.0
 aioredis==2.0.1
+deep-translator==1.11.4
