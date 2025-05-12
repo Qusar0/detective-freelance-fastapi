@@ -10,18 +10,38 @@ from server.api.models.models import (
     UserBalances,
     Events
 )
-from typing import Dict, Tuple
+from typing import Dict, List
 from server.api.database.database import get_db
 import base64
 import httpx
 from datetime import datetime
+from deep_translator import GoogleTranslator
 from server.api.conf.config import settings
 from server.api.scripts.sse_manager import publish_event
+
+
+async def translate_words(
+    keywords_by_category: Dict[str, List[str]],
+    target_languages: List[str]
+) -> Dict[str, List[str]]:
+    translations = {}
+    for lang in target_languages:
+        for category, words in keywords_by_category.items():
+            translations[category] = translations.get(category, [])
+            for word in words:
+                try:
+                    translated = GoogleTranslator(source='ru', target=lang).translate(word).lower()
+                    translations[category].append(translated)
+                except Exception as e:
+                    print(f"Translation error for '{word}' to '{lang}': {e}")
+
+    return translations
 
 
 async def get_default_keywords(
     db: AsyncSession,
     default_keywords_type: str,
+    languages: List[str],
     count: bool = False,
 ):
     splitted_kws = default_keywords_type.split(", ")
@@ -36,43 +56,45 @@ async def get_default_keywords(
         for kwd_type in types_belongs_report:
             query = select(Keywords.word).filter_by(word_type=kwd_type)
             result = await db.execute(query)
-            keywords = [kwd.word for kwd in result.scalars()]
+            keywords = [kwd for kwd in result.scalars()]
             counter += len(keywords)
             named_keywords[kwd_type] = keywords
-        return (counter, named_keywords)
-
     elif 'company_report' in splitted_kws:
         types_belongs_report = ['company_reputation', 'company_negativ', 'company_relations']
         for kwd_type in types_belongs_report:
             query = select(Keywords.word).filter_by(word_type=kwd_type)
             result = await db.execute(query)
-            keywords = [kwd.word for kwd in result.scalars()]
+            keywords = [kwd for kwd in result.scalars()]
             counter += len(keywords)
             named_keywords[kwd_type] = keywords
-        return (counter, named_keywords)
-
     else:
         for splitted_kwd in splitted_kws:
             if (splitted_kwd != 'use_yandex'):
                 query = select(Keywords.word).filter_by(word_type=splitted_kwd)
                 result = await db.execute(query)
-                keywords = [kwd.word for kwd in result.scalars()]
+                keywords = [kwd for kwd in result.scalars()]
                 counter += len(keywords)
                 named_keywords[splitted_kwd] = keywords
 
-        return (counter, named_keywords)
+    translated_words = await translate_words(
+        keywords_by_category=named_keywords,
+        target_languages=languages,
+    )
+    
+    return (counter * len(languages), translated_words)
 
 
 async def calculate_name_price(
     db: AsyncSession,
     search_patronymic: str,
-    keywords: list[str],
-    default_keywords_type: str
+    keywords: List[str],
+    default_keywords_type: str,
+    languages: List[str],
 ) -> float:
     NAME_CASES = 5
 
     len_user_kwds = len(keywords)
-    default_kwds = await get_default_keywords(db, default_keywords_type, count=True)
+    default_kwds = await get_default_keywords(db, default_keywords_type, languages, count=True)
     len_default_kwds = len(default_kwds)
 
     len_all_keywords = 1 if len_user_kwds + len_default_kwds == 0 else len_user_kwds + len_default_kwds
