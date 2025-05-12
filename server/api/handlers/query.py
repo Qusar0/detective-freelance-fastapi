@@ -250,8 +250,6 @@ async def find_by_number(
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
         use_yandex = request_data.use_yandex
-        languages = request_data.languages
-
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -310,8 +308,6 @@ async def find_by_email(
         search_email = request_data.search_email.strip()
         methods_type = request_data.methods_type
         use_yandex = request_data.use_yandex
-        languages = request_data.languages
-
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -449,6 +445,7 @@ async def calculate_price(
             data.search_patronymic.strip(),
             data.keywords,
             data.default_keywords_type.strip(),
+            data.languages,
         )
         return {"price": price}
     except Exception as e:

@@ -1034,6 +1034,7 @@ class NumberSearchTask(BaseSearchTask):
             SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
+        self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
@@ -1045,16 +1046,9 @@ class NumberSearchTask(BaseSearchTask):
                 self.money_to_return += 5
                 print(e)
 
-        if 'bindings' in self.methods_type:
-            try:
-                lampyre_html = lampyre_num_do_request(self.phone_num)
-            except Exception as e:
-                self.money_to_return += 65
-                print(e)
-
         if 'tags' in self.methods_type:
             try:
-                tags, requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
+                tags, self.requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
             except Exception as e:
                 self.money_to_return += 25
                 print(e)
@@ -1064,7 +1058,6 @@ class NumberSearchTask(BaseSearchTask):
             items,
             filters,
             lampyre_html,
-            leaks_html,
             tags,
             acc_search_html,
         )
@@ -1081,7 +1074,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
         await utils.renew_lampyre_balance(db)
-        await utils.renew_getcontact_balance(db)
+        await utils.renew_getcontact_balance(self.requests_getcontact_left, db)
 
 
 class EmailSearchTask(BaseSearchTask):

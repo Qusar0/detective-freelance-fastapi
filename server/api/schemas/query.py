@@ -38,7 +38,7 @@ class FindByNameModel(BaseModel):
     keywords: List[str]
     default_keywords_type: str
     use_yandex: bool = False
-    languages: Optional[List[str]] = Field(None, example=["en", "es"])
+    languages: List[str] = Field(example=["en", "es"])
 
 
 class SearchResponseModel(BaseModel):
@@ -53,14 +53,12 @@ class FindByNumberModel(BaseModel):
     search_number: str
     methods_type: List[str]
     use_yandex: bool = False
-    languages: Optional[List[str]] = Field(None, example=["en", "es"])
 
 
 class FindByEmailModel(BaseModel):
     email: str
     methods_type: List[str]
     use_yandex: bool = False
-    languages: Optional[List[str]] = Field(None, example=["en", "es"])
 
 
 class FindByCompanyModel(BaseModel):
@@ -72,13 +70,14 @@ class FindByCompanyModel(BaseModel):
     search_plus: Optional[str]
     search_minus: Optional[str]
     use_yandex: Optional[bool] = False
-    languages: Optional[List[str]] = Field(None, example=["en", "es"])
+    languages: List[str] = Field(example=["en", "es"])
 
 
 class CalculatePriceRequest(BaseModel):
     search_patronymic: str
     keywords: List[str]
     default_keywords_type: str
+    languages: List[str] = Field(example=["en", "es"])
 
 
 class PriceResponse(BaseModel):
