@@ -108,7 +108,7 @@ async def calculate_name_price(
         not_to_search = 10 * len_default_kwds
         query_count = (fio_default_queries_count * len_all_keywords) - not_to_search
 
-    price = (query_count * 0.02) * 3
+    price = (query_count * 0.02) * 3 * len(languages)
     return round(price, 2)
 
 
@@ -188,7 +188,7 @@ async def renew_xml_balance(db):
 
 async def renew_lampyre_balance(db):
     token = settings.utils_token
-    url = settings.lampyre_url
+    url = settings.lighthouse_url
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, params={"token": token})
@@ -215,6 +215,16 @@ async def renew_getcontact_balance(requests_left, db):
         getcontact_balance.balance = requests_left
         await db.commit()
 
+
+async def get_service_balance(db, service_name):
+    service = await db.execute(
+        select(ServicesBalance)
+        .filter_by(service_name=service_name)
+    )
+    service = service.scalars().first()
+
+    if service:
+        return service.balance
 
 async def is_user_subscribed_on_tg(user_id, db):
     result = await db.execute(
@@ -290,8 +300,8 @@ def calculate_num_price(methods_type):
     price = 0
     if 'mentions' in methods_type:
         price += 5
-    if 'bindings' in methods_type:
-        price += 65
+    if 'tags' in methods_type:
+        price += 20
 
     return price
 

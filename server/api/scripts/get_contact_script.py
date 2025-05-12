@@ -31,9 +31,10 @@ def get_tags_in_getcontact(number):
         if source['source'] == 'getcontact':
             response = source['results']['response']
             if 'tagCount' in response and response['tagCount'] > 0:
-                tags = response.get('tags', [])
-                list_tags.extend([tag['tag'] for tag in tags if 'tag' in tag])
+                extra = response.get('extra', [])
+                if extra:
+                    tags = extra['tags']
+                    list_tags.extend([tag['tag'] for tag in tags if 'tag' in tag])
             else:
                 print(f"Для номера {number} теги не найдены.")
-
     return list_tags, requests_left
