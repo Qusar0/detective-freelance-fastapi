@@ -33,9 +33,16 @@ from server.api.database.database import async_session
 from server.api.conf.config import settings
 from server.api.services.file_storage import FileStorageService
 
-
-url_google = f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query='
-url_yandex = f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query='
+SEARCH_ENGINES = {
+    'google': {
+        'url': f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query=',
+        'enabled': True
+    },
+    'yandex': {
+        'url': f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query=',
+        'enabled': False
+    }
+}
 
 FoundInfo = recordtype("FoundInfo", "title snippet url uri weight kwd word_type kwds_list fullname soc_type doc_type")
 NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
@@ -115,6 +122,10 @@ class NameSearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[6]
         self.use_yandex = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
+        
+        # Обновляем статус Yandex в словаре браузеров
+        if self.use_yandex:
+            SEARCH_ENGINES['yandex']['enabled'] = True
         
         logging.debug(f"DEBUG - search_filters: {search_filters}")
 
@@ -199,31 +210,20 @@ class NameSearchTask(BaseSearchTask):
                     )
 
     def _add_standard_search(self, request_input_pack, search_key, name_case):
-        form_input_pack(
-            request_input_pack,
-            search_key,
-            "",
-            "free word",
-            name_case,
-            self.search_plus,
-            self.search_minus,
-            "standard",
-            len(name_case),
-            url_google,
-        )
-        if self.use_yandex:
-            form_input_pack(
-                request_input_pack,
-                search_key,
-                "",
-                "free word",
-                name_case,
-                self.search_plus,
-                self.search_minus,
-                "standard",
-                len(name_case),
-                url_yandex,
-            )
+        for engine_name, engine_data in SEARCH_ENGINES.items():
+            if engine_data['enabled']:
+                form_input_pack(
+                    request_input_pack,
+                    search_key,
+                    "",
+                    "free word",
+                    name_case,
+                    self.search_plus,
+                    self.search_minus,
+                    "standard",
+                    len(name_case),
+                    engine_data['url'],
+                )
 
     async def _add_keyword_searches(
         self,
@@ -233,59 +233,37 @@ class NameSearchTask(BaseSearchTask):
         keywords_from_db,
     ):
         for kwd_from_user in self.keywords_from_user:
-            form_input_pack(
-                request_input_pack,
-                search_key,
-                kwd_from_user,
-                "free word",
-                name_case,
-                self.search_plus,
-                self.search_minus,
-                "standard",
-                len(name_case),
-                url_google,
-            )
-            if self.use_yandex:
-                form_input_pack(
-                    request_input_pack,
-                    search_key,
-                    kwd_from_user,
-                    "free word",
-                    name_case,
-                    self.search_plus,
-                    self.search_minus,
-                    "standard",
-                    len(name_case),
-                    url_yandex,
-                )
-
-        for words_type, words in keywords_from_db.items():
-            for kwd_from_db in words:
-                form_input_pack(
-                    request_input_pack,
-                    search_key,
-                    kwd_from_db,
-                    words_type,
-                    name_case,
-                    self.search_plus,
-                    self.search_minus,
-                    "system_keywords",
-                    len(name_case),
-                    url_google,
-                )
-                if self.use_yandex:
+            for engine_name, engine_data in SEARCH_ENGINES.items():
+                if engine_data['enabled']:
                     form_input_pack(
                         request_input_pack,
                         search_key,
-                        kwd_from_db,
-                        words_type,
+                        kwd_from_user,
+                        "free word",
                         name_case,
                         self.search_plus,
                         self.search_minus,
-                        "system_keywords",
+                        "standard",
                         len(name_case),
-                        url_yandex,
+                        engine_data['url'],
                     )
+
+        for words_type, words in keywords_from_db.items():
+            for kwd_from_db in words:
+                for engine_name, engine_data in SEARCH_ENGINES.items():
+                    if engine_data['enabled']:
+                        form_input_pack(
+                            request_input_pack,
+                            search_key,
+                            kwd_from_db,
+                            words_type,
+                            name_case,
+                            self.search_plus,
+                            self.search_minus,
+                            "system_keywords",
+                            len(name_case),
+                            engine_data['url'],
+                        )
 
     async def _process_search_requests(
         self,
@@ -1050,6 +1028,10 @@ class NumberSearchTask(BaseSearchTask):
         self.phone_num = phone_num
         self.methods_type = methods_type
         self.use_yandex = use_yandex
+        
+        # Обновляем статус Yandex в словаре браузеров
+        if self.use_yandex:
+            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         items, filters = {}, {}
@@ -1108,6 +1090,10 @@ class EmailSearchTask(BaseSearchTask):
         self.email = email
         self.methods_type = methods_type
         self.use_yandex = use_yandex
+        
+        # Обновляем статус Yandex в словаре браузеров
+        if self.use_yandex:
+            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
@@ -1159,6 +1145,10 @@ class CompanySearchTask(BaseSearchTask):
         self.minus_words = search_filters[6]
         self.use_yandex = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
+        
+        # Обновляем статус Yandex в словаре браузеров
+        if self.use_yandex:
+            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         threads: List[Thread] = []
@@ -1178,74 +1168,47 @@ class CompanySearchTask(BaseSearchTask):
                 if company_name == '':
                     break
                 if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                    form_input_pack_company(
-                        request_input_pack,
-                        company_name,
-                        "",
-                        "free word",
-                        self.location,
-                        self.plus_words,
-                        self.minus_words,
-                        url_google,
-                    )
-                    if self.use_yandex:
-                        form_input_pack_company(
-                            request_input_pack,
-                            company_name,
-                            "",
-                            "free word",
-                            self.location,
-                            self.plus_words,
-                            self.minus_words,
-                            url_yandex,
-                        )
-                else:
-                    for kwd_from_user in self.keywords_from_user:
-                        form_input_pack_company(
-                            request_input_pack,
-                            company_name,
-                            kwd_from_user,
-                            "free word",
-                            self.location,
-                            self.plus_words,
-                            self.minus_words,
-                            url_google,
-                        )
-                        if self.use_yandex:
+                    for engine_name, engine_data in SEARCH_ENGINES.items():
+                        if engine_data['enabled']:
                             form_input_pack_company(
                                 request_input_pack,
                                 company_name,
-                                kwd_from_user,
+                                "",
                                 "free word",
                                 self.location,
                                 self.plus_words,
                                 self.minus_words,
-                                url_yandex,
+                                engine_data['url'],
                             )
-
-                    for words_type, words in keywords_from_db.items():
-                        for kwd_from_db in words:
-                            form_input_pack_company(
-                                request_input_pack,
-                                company_name,
-                                kwd_from_db,
-                                words_type,
-                                self.location,
-                                self.plus_words,
-                                self.minus_words,
-                                url_google,
-                            )
-                            if self.use_yandex:
+                else:
+                    for kwd_from_user in self.keywords_from_user:
+                        for engine_name, engine_data in SEARCH_ENGINES.items():
+                            if engine_data['enabled']:
                                 form_input_pack_company(
                                     request_input_pack,
                                     company_name,
-                                    kwd_from_db,
-                                    words_type,
+                                    kwd_from_user,
+                                    "free word",
                                     self.location,
                                     self.plus_words,
                                     self.minus_words,
-                                    url_yandex,
+                                    engine_data['url'],
                                 )
+
+                    for words_type, words in keywords_from_db.items():
+                        for kwd_from_db in words:
+                            for engine_name, engine_data in SEARCH_ENGINES.items():
+                                if engine_data['enabled']:
+                                    form_input_pack_company(
+                                        request_input_pack,
+                                        company_name,
+                                        kwd_from_db,
+                                        words_type,
+                                        self.location,
+                                        self.plus_words,
+                                        self.minus_words,
+                                        engine_data['url'],
+                                    )
 
             for input_data in request_input_pack:
                 url = input_data[0]
@@ -1396,13 +1359,16 @@ async def xmlriver_num_do_request(phone_num, use_yandex=False):
     urls = []
     proh_sites = read_needless_sites()
 
-    google_urls = form_google_query(phone_num)
-    for url in google_urls:
-        urls.append(url)
-        response = requests.get(url=url)
-        handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
+    # Используем Google по умолчанию
+    if SEARCH_ENGINES['google']['enabled']:
+        google_urls = form_google_query(phone_num)
+        for url in google_urls:
+            urls.append(url)
+            response = requests.get(url=url)
+            handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
 
-    if use_yandex:
+    # Используем Yandex если включен
+    if SEARCH_ENGINES['yandex']['enabled']:
         counter = 0
         while True:
             url = form_yandex_query_num(phone_num, page_num=counter)
@@ -1421,7 +1387,7 @@ async def xmlriver_num_do_request(phone_num, use_yandex=False):
 
 def form_yandex_query_num(num: str, page_num):
     phone_num = num.replace("+", "%2B")
-    url = url_yandex + f'{phone_num}&page={page_num}'
+    url = SEARCH_ENGINES['yandex']['url'] + f'{phone_num}&page={page_num}'
     return url
 
 
@@ -1429,7 +1395,7 @@ def form_google_query(phone_num: str):
     search_keys = []
     query_variants = format_phone_number(phone_num)
     for query in query_variants:
-        search_key = url_google + f'''{query}'''
+        search_key = SEARCH_ENGINES['google']['url'] + f'''{query}'''
         search_keys.append(search_key)
 
     return search_keys
@@ -1456,7 +1422,7 @@ def format_phone_number(raw_number: str):
 
 
 def form_yandex_query_email(email: str, page_num):
-    url = url_yandex + f'"{email}"&page={page_num}'
+    url = SEARCH_ENGINES['yandex']['url'] + f'"{email}"&page={page_num}'
     return url
 
 
@@ -1492,19 +1458,23 @@ async def xmlriver_email_do_request(email, use_yandex=False):
     urls = []
     proh_sites = read_needless_sites()
 
-    url = url_google + f'''"{email}"'''
-    urls.append(url)
+    # Используем Google по умолчанию
+    if SEARCH_ENGINES['google']['enabled']:
+        url = SEARCH_ENGINES['google']['url'] + f'''"{email}"'''
+        urls.append(url)
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url=url)
-        handle_xmlriver_response(url, response, all_found_data, [], email)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url)
+            handle_xmlriver_response(url, response, all_found_data, [], email)
 
-        if use_yandex:
-            counter = 0
-            while True:
-                url = form_yandex_query_email(email, page_num=counter)
-                urls.append(url)
+    # Используем Yandex если включен
+    if SEARCH_ENGINES['yandex']['enabled']:
+        counter = 0
+        while True:
+            url = form_yandex_query_email(email, page_num=counter)
+            urls.append(url)
 
+            async with httpx.AsyncClient() as client:
                 response = await client.get(url=url)
                 handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, email)
 
