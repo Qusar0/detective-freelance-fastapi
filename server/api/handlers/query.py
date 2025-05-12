@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from server.api.database.database import get_db
-from server.api.models.models import UserQueries, Events, TextData, QueriesBalance
+from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
 from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
@@ -181,6 +181,7 @@ async def find_by_name(
             search_patronymic,
             keywords,
             default_keywords_type,
+            languages,
         )
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
@@ -209,7 +210,7 @@ async def find_by_name(
             user_query.query_id,
             price,
             use_yandex,
-            # languages
+            languages
         )
 
         await utils.subtract_balance(user_id, price, channel, db)
@@ -411,7 +412,7 @@ async def find_by_company(
             user_query.query_id,
             price,
             use_yandex,
-            # languages
+            languages,
         )
 
         start_search_by_company.apply_async(
@@ -494,3 +495,23 @@ async def download_query(
     except Exception as e:
         logging.error(f"Download query failed: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
+
+
+@router.get("/available_languages")
+async def get_available_languages(
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        result = await db.execute(
+            select(
+                Language.russian_name,
+                Language.code,
+            ),
+        )
+        languages = result.fetchall()
+
+        translated = {russian_name: code for russian_name, code in languages}
+        
+        return translated
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Ошибка получения языков: {e}")
