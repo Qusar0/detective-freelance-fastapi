@@ -37,7 +37,7 @@ class FindByNameModel(BaseModel):
     search_minus: str
     keywords: List[str]
     default_keywords_type: str
-    use_yandex: bool = False
+    search_engines: List[str] = Field(example=["goolge", "yandex"])
     languages: List[str] = Field(example=["en", "es"])
 
 
@@ -52,13 +52,11 @@ class SearchResponseModel(BaseModel):
 class FindByNumberModel(BaseModel):
     search_number: str
     methods_type: List[str]
-    use_yandex: bool = False
 
 
 class FindByEmailModel(BaseModel):
     email: str
     methods_type: List[str]
-    use_yandex: bool = False
 
 
 class FindByCompanyModel(BaseModel):
@@ -69,7 +67,7 @@ class FindByCompanyModel(BaseModel):
     default_keywords_type: Optional[str]
     search_plus: Optional[str]
     search_minus: Optional[str]
-    use_yandex: Optional[bool] = False
+    search_engines: List[str] = Field(example=["goolge", "yandex"])
     languages: List[str] = Field(example=["en", "es"])
 
 
