@@ -175,7 +175,6 @@ async def find_by_name(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
-        # Обновляем статус Yandex в словаре поисковых систем
         SEARCH_ENGINES['yandex']['enabled'] = use_yandex
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
@@ -253,8 +252,6 @@ async def find_by_number(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
-        # Обновляем статус Yandex в словаре поисковых систем
-        SEARCH_ENGINES['yandex']['enabled'] = use_yandex
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -315,8 +312,6 @@ async def find_by_email(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
-        # Обновляем статус Yandex в словаре поисковых систем
-        SEARCH_ENGINES['yandex']['enabled'] = use_yandex
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -381,8 +376,6 @@ async def find_by_company(
         use_yandex = request_data.use_yandex
         languages = request_data.languages
 
-        # Обновляем статус Yandex в словаре поисковых систем
-        SEARCH_ENGINES['yandex']['enabled'] = use_yandex
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
