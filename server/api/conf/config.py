@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     telegram_api_hash: str = Field(..., env="TELEGRAM_API_HASH")
     telegram_bot_token: str = Field(..., env="TELEGRAM_BOT_TOKEN")
     telegram_db_encryption_key: str = Field(..., env="TELEGRAM_DB_ENCRYPTION_KEY")
+    admin_chat_id: int = Field(..., env="ADMIN_CHAT_ID")
+    balance_threshold: int = Field(..., env="BALANCE_THRESHOLD")
+    check_interval: int = Field(..., env="CHECK_INTERVAL")    
 
     # Notification Bot
     notification_bot_token: str = Field(..., env="NOTIFICATION_BOT_TOKEN")
