@@ -1015,15 +1015,10 @@ def form_var_filters(
 
 
 class NumberSearchTask(BaseSearchTask):
-    def __init__(self, phone_num: str, methods_type: List[str], query_id: int, price: float, search_engines: List[str]):
+    def __init__(self, phone_num: str, methods_type: List[str], query_id: int, price: float):
         super().__init__(query_id, price)
         self.phone_num = phone_num
         self.methods_type = methods_type
-        self.search_engines = search_engines
-        
-        # Обновляем статус Yandex в словаре браузеров
-        if 'yandex' in self.search_engines:
-            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
@@ -1033,7 +1028,7 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                items, filters = await xmlriver_num_do_request(self.phone_num, 'yandex' in self.search_engines)
+                items, filters = await xmlriver_num_do_request(self.phone_num)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1070,15 +1065,10 @@ class NumberSearchTask(BaseSearchTask):
 
 
 class EmailSearchTask(BaseSearchTask):
-    def __init__(self, email: str, methods_type: List[str], query_id: int, price: float, search_engines: List[str]):
+    def __init__(self, email: str, methods_type: List[str], query_id: int, price: float):
         super().__init__(query_id, price)
         self.email = email
         self.methods_type = methods_type
-        self.search_engines = search_engines
-        
-        # Обновляем статус Yandex в словаре браузеров
-        if 'yandex' in self.search_engines:
-            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
@@ -1087,7 +1077,7 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                mentions_html, filters = await xmlriver_email_do_request(self.email, 'yandex' in self.search_engines)
+                mentions_html, filters = await xmlriver_email_do_request(self.email)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1130,10 +1120,6 @@ class CompanySearchTask(BaseSearchTask):
         self.minus_words = search_filters[6]
         self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
-        
-        # Обновляем статус Yandex в словаре браузеров
-        if 'yandex' in self.search_engines:
-            SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
         threads: List[Thread] = []
@@ -1153,8 +1139,8 @@ class CompanySearchTask(BaseSearchTask):
                 if company_name == '':
                     break
                 if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                    for engine_name, engine_data in SEARCH_ENGINES.items():
-                        if engine_data['enabled']:
+                    for engine in self.search_engines:
+                        if url := SEARCH_ENGINES.get(engine):
                             form_input_pack_company(
                                 request_input_pack,
                                 company_name,
@@ -1163,12 +1149,12 @@ class CompanySearchTask(BaseSearchTask):
                                 self.location,
                                 self.plus_words,
                                 self.minus_words,
-                                engine_data['url'],
+                                url,
                             )
                 else:
                     for kwd_from_user in self.keywords_from_user:
-                        for engine_name, engine_data in SEARCH_ENGINES.items():
-                            if engine_data['enabled']:
+                        for engine in self.search_engines:
+                            if url := SEARCH_ENGINES.get(engine):
                                 form_input_pack_company(
                                     request_input_pack,
                                     company_name,
@@ -1177,13 +1163,13 @@ class CompanySearchTask(BaseSearchTask):
                                     self.location,
                                     self.plus_words,
                                     self.minus_words,
-                                    engine_data['url'],
+                                    url,
                                 )
 
                     for words_type, words in keywords_from_db.items():
                         for kwd_from_db in words:
-                            for engine_name, engine_data in SEARCH_ENGINES.items():
-                                if engine_data['enabled']:
+                            for engine in self.search_engines:
+                                if url := SEARCH_ENGINES.get(engine):
                                     form_input_pack_company(
                                         request_input_pack,
                                         company_name,
@@ -1192,7 +1178,7 @@ class CompanySearchTask(BaseSearchTask):
                                         self.location,
                                         self.plus_words,
                                         self.minus_words,
-                                        engine_data['url'],
+                                        url,
                                     )
 
             for input_data in request_input_pack:
@@ -1306,16 +1292,16 @@ class TelegramSearchTask(BaseSearchTask):
 
 
 @shared_task(bind=True, acks_late=True)
-def start_search_by_num(self, phone_num, methods_type, query_id, price, search_engines):
+def start_search_by_num(self, phone_num, methods_type, query_id, price):
     loop = get_event_loop()
-    task = NumberSearchTask(phone_num, methods_type, query_id, price, search_engines)
+    task = NumberSearchTask(phone_num, methods_type, query_id, price)
     loop.run_until_complete(task.execute())
 
 
 @shared_task(bind=True, acks_late=True)
-def start_search_by_email(self, email, methods_type, query_id, price, search_engines):
+def start_search_by_email(self, email, methods_type, query_id, price):
     loop = get_event_loop()
-    task = EmailSearchTask(email, methods_type, query_id, price, search_engines)
+    task = EmailSearchTask(email, methods_type, query_id, price)
     loop.run_until_complete(task.execute())
 
 
@@ -1339,31 +1325,27 @@ def lampyre_num_do_request(phone_num):
     return lampyre_resp
 
 
-async def xmlriver_num_do_request(phone_num, use_yandex):
+async def xmlriver_num_do_request(phone_num):
     all_found_data = []
     urls = []
     proh_sites = read_needless_sites()
 
-    # Используем Google по умолчанию
-    if SEARCH_ENGINES['google']['enabled']:
-        google_urls = form_google_query(phone_num)
-        for url in google_urls:
-            urls.append(url)
-            response = requests.get(url=url)
-            handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
+    google_urls = form_google_query(phone_num)
+    for url in google_urls:
+        urls.append(url)
+        response = requests.get(url=url)
+        handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
 
-    # Используем Yandex если включен
-    if use_yandex:
-        counter = 0
-        while True:
-            url = form_yandex_query_num(phone_num, page_num=counter)
-            urls.append(url)
-            response = requests.get(url=url)
-            handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
-            if handling_resp in ('15', '110', '500'):
-                break
-            else:
-                counter += 1
+    counter = 0
+    while True:
+        url = form_yandex_query_num(phone_num, page_num=counter)
+        urls.append(url)
+        response = requests.get(url=url)
+        handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
+        if handling_resp in ('15', '110', '500'):
+            break
+        else:
+            counter += 1
 
     items, filters = form_number_response_html(all_found_data, phone_num)
     await write_urls(urls, "number")
@@ -1372,7 +1354,7 @@ async def xmlriver_num_do_request(phone_num, use_yandex):
 
 def form_yandex_query_num(num: str, page_num):
     phone_num = num.replace("+", "%2B")
-    url = SEARCH_ENGINES['yandex']['url'] + f'{phone_num}&page={page_num}'
+    url = SEARCH_ENGINES['yandex'] + f'{phone_num}&page={page_num}'
     return url
 
 
@@ -1380,7 +1362,7 @@ def form_google_query(phone_num: str):
     search_keys = []
     query_variants = format_phone_number(phone_num)
     for query in query_variants:
-        search_key = SEARCH_ENGINES['google']['url'] + f'''{query}'''
+        search_key = SEARCH_ENGINES['google'] + f'''{query}'''
         search_keys.append(search_key)
 
     return search_keys
@@ -1407,7 +1389,7 @@ def format_phone_number(raw_number: str):
 
 
 def form_yandex_query_email(email: str, page_num):
-    url = SEARCH_ENGINES['yandex']['url'] + f'"{email}"&page={page_num}'
+    url = SEARCH_ENGINES['yandex'] + f'"{email}"&page={page_num}'
     return url
 
 
@@ -1438,35 +1420,31 @@ def form_number_response_html(all_found_data, phone_num):
     return items, filters
 
 
-async def xmlriver_email_do_request(email, use_yandex):
+async def xmlriver_email_do_request(email):
     all_found_data = []
     urls = []
     proh_sites = read_needless_sites()
 
-    # Используем Google по умолчанию
-    if SEARCH_ENGINES['google']['enabled']:
-        url = SEARCH_ENGINES['google']['url'] + f'''"{email}"'''
+    url = SEARCH_ENGINES['google'] + f'''"{email}"'''
+    urls.append(url)
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url=url)
+        handle_xmlriver_response(url, response, all_found_data, [], email)
+
+    counter = 0
+    while True:
+        url = form_yandex_query_email(email, page_num=counter)
         urls.append(url)
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url=url)
-            handle_xmlriver_response(url, response, all_found_data, [], email)
+            handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, email)
 
-    # Используем Yandex если включен
-    if use_yandex:
-        counter = 0
-        while True:
-            url = form_yandex_query_email(email, page_num=counter)
-            urls.append(url)
-
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url=url)
-                handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, email)
-
-                if handling_resp in ('15', '110', '500'):
-                    break
-                else:
-                    counter += 1
+            if handling_resp in ('15', '110', '500'):
+                break
+            else:
+                counter += 1
 
     items, filters = form_number_response_html(all_found_data, email)
 
