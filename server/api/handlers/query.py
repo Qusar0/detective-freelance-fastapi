@@ -247,7 +247,7 @@ async def find_by_number(
 
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
-        use_yandex = request_data.use_yandex
+        search_engines = request_data.search_engines
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -284,7 +284,7 @@ async def find_by_number(
         )
 
         start_search_by_num.apply_async(
-            args=(search_number, methods_type, user_query.query_id, price, use_yandex),
+            args=(search_number, methods_type, user_query.query_id, price, search_engines),
             queue='number_tasks'
         )
 
@@ -305,7 +305,7 @@ async def find_by_email(
 
         search_email = request_data.search_email.strip()
         methods_type = request_data.methods_type
-        use_yandex = request_data.use_yandex
+        search_engines = request_data.search_engines
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
@@ -341,7 +341,7 @@ async def find_by_email(
         )
 
         start_search_by_email.apply_async(
-            args=(search_email, methods_type, user_query.query_id, price, use_yandex),
+            args=(search_email, methods_type, user_query.query_id, price, search_engines),
             queue='email_tasks'
         )
 
@@ -367,7 +367,7 @@ async def find_by_company(
         default_keywords_type = request_data.default_keywords_type.strip()
         plus_words = request_data.plus_words.strip()
         minus_words = request_data.minus_words.strip()
-        use_yandex = request_data.use_yandex
+        search_engines = request_data.search_engines
         languages = request_data.languages
 
 
@@ -405,7 +405,7 @@ async def find_by_company(
             minus_words,
             user_query.query_id,
             price,
-            use_yandex,
+            search_engines,
             languages
         )
 
