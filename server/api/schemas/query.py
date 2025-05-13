@@ -37,7 +37,7 @@ class FindByNameModel(BaseModel):
     search_minus: str
     keywords: List[str]
     default_keywords_type: str
-    search_engines: List[str] = Field(example=["goolge", "yandex"])
+    search_engines: List[str]
     languages: List[str] = Field(example=["en", "es"])
 
 
@@ -67,7 +67,7 @@ class FindByCompanyModel(BaseModel):
     default_keywords_type: Optional[str]
     search_plus: Optional[str]
     search_minus: Optional[str]
-    search_engines: List[str] = Field(example=["goolge", "yandex"])
+    search_engines: List[str]
     languages: List[str] = Field(example=["en", "es"])
 
 

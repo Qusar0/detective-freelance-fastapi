@@ -1015,14 +1015,14 @@ def form_var_filters(
 
 
 class NumberSearchTask(BaseSearchTask):
-    def __init__(self, phone_num: str, methods_type: List[str], query_id: int, price: float, use_yandex: bool):
+    def __init__(self, phone_num: str, methods_type: List[str], query_id: int, price: float, search_engines: List[str]):
         super().__init__(query_id, price)
         self.phone_num = phone_num
         self.methods_type = methods_type
-        self.use_yandex = use_yandex
+        self.search_engines = search_engines
         
         # Обновляем статус Yandex в словаре браузеров
-        if self.use_yandex:
+        if 'yandex' in self.search_engines:
             SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
@@ -1033,7 +1033,7 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                items, filters = await xmlriver_num_do_request(self.phone_num, self.use_yandex)
+                items, filters = await xmlriver_num_do_request(self.phone_num, 'yandex' in self.search_engines)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1070,14 +1070,14 @@ class NumberSearchTask(BaseSearchTask):
 
 
 class EmailSearchTask(BaseSearchTask):
-    def __init__(self, email: str, methods_type: List[str], query_id: int, price: float, use_yandex: bool):
+    def __init__(self, email: str, methods_type: List[str], query_id: int, price: float, search_engines: List[str]):
         super().__init__(query_id, price)
         self.email = email
         self.methods_type = methods_type
-        self.use_yandex = use_yandex
+        self.search_engines = search_engines
         
         # Обновляем статус Yandex в словаре браузеров
-        if self.use_yandex:
+        if 'yandex' in self.search_engines:
             SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
@@ -1087,7 +1087,7 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                mentions_html, filters = await xmlriver_email_do_request(self.email, self.use_yandex)
+                mentions_html, filters = await xmlriver_email_do_request(self.email, 'yandex' in self.search_engines)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1128,11 +1128,11 @@ class CompanySearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[4]
         self.plus_words = search_filters[5]
         self.minus_words = search_filters[6]
-        self.use_yandex = search_filters[9]
+        self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else None
         
         # Обновляем статус Yandex в словаре браузеров
-        if self.use_yandex:
+        if 'yandex' in self.search_engines:
             SEARCH_ENGINES['yandex']['enabled'] = True
 
     async def _process_search(self, db):
@@ -1306,16 +1306,16 @@ class TelegramSearchTask(BaseSearchTask):
 
 
 @shared_task(bind=True, acks_late=True)
-def start_search_by_num(self, phone_num, methods_type, query_id, use_yandex=False):
+def start_search_by_num(self, phone_num, methods_type, query_id, price, search_engines):
     loop = get_event_loop()
-    task = NumberSearchTask(phone_num, methods_type, query_id, 0, use_yandex)
+    task = NumberSearchTask(phone_num, methods_type, query_id, price, search_engines)
     loop.run_until_complete(task.execute())
 
 
 @shared_task(bind=True, acks_late=True)
-def start_search_by_email(self, email, methods_type, query_id, use_yandex=False):
+def start_search_by_email(self, email, methods_type, query_id, price, search_engines):
     loop = get_event_loop()
-    task = EmailSearchTask(email, methods_type, query_id, 0, use_yandex)
+    task = EmailSearchTask(email, methods_type, query_id, price, search_engines)
     loop.run_until_complete(task.execute())
 
 
@@ -1339,7 +1339,7 @@ def lampyre_num_do_request(phone_num):
     return lampyre_resp
 
 
-async def xmlriver_num_do_request(phone_num, use_yandex=False):
+async def xmlriver_num_do_request(phone_num, use_yandex):
     all_found_data = []
     urls = []
     proh_sites = read_needless_sites()
@@ -1353,7 +1353,7 @@ async def xmlriver_num_do_request(phone_num, use_yandex=False):
             handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
 
     # Используем Yandex если включен
-    if SEARCH_ENGINES['yandex']['enabled']:
+    if use_yandex:
         counter = 0
         while True:
             url = form_yandex_query_num(phone_num, page_num=counter)
@@ -1438,7 +1438,7 @@ def form_number_response_html(all_found_data, phone_num):
     return items, filters
 
 
-async def xmlriver_email_do_request(email, use_yandex=False):
+async def xmlriver_email_do_request(email, use_yandex):
     all_found_data = []
     urls = []
     proh_sites = read_needless_sites()
@@ -1453,7 +1453,7 @@ async def xmlriver_email_do_request(email, use_yandex=False):
             handle_xmlriver_response(url, response, all_found_data, [], email)
 
     # Используем Yandex если включен
-    if SEARCH_ENGINES['yandex']['enabled']:
+    if use_yandex:
         counter = 0
         while True:
             url = form_yandex_query_email(email, page_num=counter)
