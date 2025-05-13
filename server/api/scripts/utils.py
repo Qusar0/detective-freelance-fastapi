@@ -69,12 +69,11 @@ async def get_default_keywords(
             named_keywords[kwd_type] = keywords
     else:
         for splitted_kwd in splitted_kws:
-            if (splitted_kwd != 'use_yandex'):
-                query = select(Keywords.word).filter_by(word_type=splitted_kwd)
-                result = await db.execute(query)
-                keywords = [kwd for kwd in result.scalars()]
-                counter += len(keywords)
-                named_keywords[splitted_kwd] = keywords
+            query = select(Keywords.word).filter_by(word_type=splitted_kwd)
+            result = await db.execute(query)
+            keywords = [kwd for kwd in result.scalars()]
+            counter += len(keywords)
+            named_keywords[splitted_kwd] = keywords
 
     translated_words = await translate_words(
         keywords_by_category=named_keywords,
