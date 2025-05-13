@@ -247,11 +247,10 @@ async def find_by_number(
 
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
-        search_engines = request_data.search_engines
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
-        price = await utils.calculate_number_price(methods_type, db)
+        price = utils.calculate_num_price(methods_type)
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
@@ -284,8 +283,8 @@ async def find_by_number(
         )
 
         start_search_by_num.apply_async(
-            args=(search_number, methods_type, user_query.query_id, price, search_engines),
-            queue='number_tasks'
+            args=(search_number, methods_type, user_query.query_id, price),
+            queue='num_tasks'
         )
 
     except Exception as e:
@@ -303,13 +302,12 @@ async def find_by_email(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        search_email = request_data.search_email.strip()
+        search_email = request_data.email.strip()
         methods_type = request_data.methods_type
-        search_engines = request_data.search_engines
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
-        price = await utils.calculate_email_price(methods_type, db)
+        price = utils.calculate_email_price(methods_type)
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
@@ -341,7 +339,7 @@ async def find_by_email(
         )
 
         start_search_by_email.apply_async(
-            args=(search_email, methods_type, user_query.query_id, price, search_engines),
+            args=(search_email, methods_type, user_query.query_id, price),
             queue='email_tasks'
         )
 
@@ -361,25 +359,19 @@ async def find_by_company(
         user_id = int(Authorize.get_jwt_subject())
 
         company_name = request_data.company_name.strip()
-        company_name_2 = request_data.company_name_2.strip()
+        company_name_2 = request_data.extra_name.strip()
         location = request_data.location.strip()
         keywords = request_data.keywords
         default_keywords_type = request_data.default_keywords_type.strip()
-        plus_words = request_data.plus_words.strip()
-        minus_words = request_data.minus_words.strip()
+        plus_words = request_data.search_plus.strip()
+        minus_words = request_data.search_minus.strip()
         search_engines = request_data.search_engines
         languages = request_data.languages
 
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
-        price = await utils.calculate_company_price(
-            db,
-            keywords,
-            default_keywords_type,
-            languages,
-        )
-
+        price = 10
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
         query_title = company_name
