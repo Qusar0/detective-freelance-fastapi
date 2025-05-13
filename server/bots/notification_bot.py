@@ -10,13 +10,10 @@ from server.api.database.database import async_session
 from server.api.models.models import ServicesBalance
 
 
-ADMIN_CHAT_ID = settings.admin_chat_id
-BALANCE_THRESHOLD = 200
-CHECK_INTERVAL = 60 * 60
-
 bot = Bot(token=settings.notification_bot_token, parse_mode=ParseMode.HTML)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
+
 
 @dp.message_handler(commands=['start'])
 async def send_connects(message: Message):
@@ -24,8 +21,10 @@ async def send_connects(message: Message):
     url = f"{settings.frontend_url}/api/connect_tg?chat={chat_id}"
     await message.reply(f"Привет, для подписки на уведомления перейди по ссылке: {url}")
 
+
 async def send_notification(chat_id: int, text: str):
     await bot.send_message(chat_id, f'Ваш запрос по этому объекту "{text}" обработан')
+
 
 async def send_balance_alert(chat_id: int, text: str):
     try:
@@ -33,6 +32,7 @@ async def send_balance_alert(chat_id: int, text: str):
         logging.info(f"Уведомление отправлено в чат {chat_id}")
     except Exception as e:
         logging.error(f"Ошибка при отправке уведомления: {e}")
+
 
 async def check_balances():
     """Проверяет балансы сервисов и отправляет уведомления, если баланс ниже порога."""
@@ -42,25 +42,28 @@ async def check_balances():
             services = result.scalars().all()
             
             for service in services:
-                if service.balance is not None and service.balance < BALANCE_THRESHOLD:
+                if service.balance is not None and service.balance < settings.balance_threshold:
                     message = (
                         f"⚠️ <strong>Внимание!</strong> Баланс сервиса `{service.service_name}` "
-                        f"опустился ниже `{BALANCE_THRESHOLD}`. Текущий баланс: `{service.balance}`"
+                        f"опустился ниже `{settings.balance_threshold}`. Текущий баланс: `{service.balance}`"
                     )
-                    await send_balance_alert(ADMIN_CHAT_ID, message)
+                    await send_balance_alert(settings.admin_chat_id, message)
     except Exception as e:
         logging.error(f"Ошибка при проверке балансов: {e}")
+
 
 async def periodic_balance_check():
     """Запускает проверку балансов каждые 3 часа."""
     while True:
         logging.info(f"🔍 Проверка балансов...")
         await check_balances()
-        await asyncio.sleep(CHECK_INTERVAL)
+        await asyncio.sleep(settings.check_interval)
+
 
 async def on_startup(_):
     """Запускает периодическую проверку при старте бота."""
     asyncio.create_task(periodic_balance_check())
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
