@@ -83,6 +83,9 @@ class BaseSearchTask(ABC):
         await db_transactions.change_query_status(user_query, "done", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
         
+        from server.celery_tasks import delete_query_task
+        delete_query_task.apply_async(args=[user_query.query_id], countdown=2*60*60)
+        
         chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
             await send_notification(chat_id, user_query.query_title)
@@ -1488,3 +1491,11 @@ def form_extra_titles(second_name, location):
         extra_titles += f'<span class="max-text-length" title="Местонахождение: {location}"><b>Местонахождение:</b> {location}</span>'
 
     return extra_titles
+
+
+@shared_task
+def delete_query_task(query_id):
+    async def _delete():
+        async with async_session() as db:
+            await delete_query_by_id(query_id, db)
+    asyncio.run(_delete())
