@@ -32,6 +32,7 @@ from server.bots.notification_bot import send_notification
 from server.api.database.database import async_session
 from server.api.conf.config import settings
 from server.api.services.file_storage import FileStorageService
+from server.api.scripts.db_transactions import delete_query_by_id
 
 
 SEARCH_ENGINES = {
@@ -83,8 +84,7 @@ class BaseSearchTask(ABC):
         await db_transactions.change_query_status(user_query, "done", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
         
-        from server.celery_tasks import delete_query_task
-        delete_query_task.apply_async(args=[user_query.query_id], countdown=2*60*60)
+        delete_query_task.apply_async(args=[user_query.query_id], countdown=60)
         
         chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
@@ -1495,7 +1495,24 @@ def form_extra_titles(second_name, location):
 
 @shared_task
 def delete_query_task(query_id):
+    import logging
+    logging.info(f"Celery: Попытка удалить query {query_id}")
     async def _delete():
-        async with async_session() as db:
-            await delete_query_by_id(query_id, db)
-    asyncio.run(_delete())
+        try:
+            async with async_session() as db:
+                user_query = await db_transactions.get_user_query(query_id, db)
+                if not user_query:
+                    logging.info(f"Celery: Query {query_id} уже удалён вручную.")
+                    return
+                await delete_query_by_id(query_id, db)
+                logging.info(f"Celery: Query {query_id} удалён автоматически.")
+        except Exception as e:
+            logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop = asyncio.get_event_loop()
+    loop.run_until_complete(_delete())
