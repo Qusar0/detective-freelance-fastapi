@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 from server.api.models.models import Users, UserQueries, QueriesBalance, Events, UserBalances, BalanceHistory, TextData
 from server.api.database.database import get_db
 from server.api.scripts import utils
-from sqlalchemy import select
+from sqlalchemy import select, delete
 import logging
 
 from server.api.scripts.sse_manager import publish_event
@@ -130,3 +130,16 @@ async def send_sse_notification(user_query, channel, db):
     })
 
     await publish_event(channel, event_data)
+
+
+async def delete_query_by_id(query_id, db):
+    try:
+        user_query = await get_user_query(query_id, db)
+        if user_query:
+            await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
+            await db.commit()
+            logging.info(f"Celery: Query {query_id} удалён автоматически.")
+    except Exception as e:
+        await db.rollback()
+        logging.error(f"Ошибка при удалении query {query_id}: {str(e)}")
+        raise

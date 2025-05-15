@@ -32,6 +32,7 @@ from server.bots.notification_bot import send_notification
 from server.api.database.database import async_session
 from server.api.conf.config import settings
 from server.api.services.file_storage import FileStorageService
+from server.api.scripts.db_transactions import delete_query_by_id
 
 
 SEARCH_ENGINES = {
@@ -72,6 +73,7 @@ class BaseSearchTask(ABC):
                 print(e)
                 await self._handle_error(user_query, db)
             finally:
+                delete_query_task.apply_async(args=[user_query.query_id], countdown=2 * 60 * 60)
                 await self._update_balances(db)
 
     @abstractmethod
@@ -1488,3 +1490,23 @@ def form_extra_titles(second_name, location):
         extra_titles += f'<span class="max-text-length" title="Местонахождение: {location}"><b>Местонахождение:</b> {location}</span>'
 
     return extra_titles
+
+
+@shared_task
+def delete_query_task(query_id):
+    import logging
+    logging.info(f"Celery: Попытка удалить query {query_id}")
+    async def _delete():
+        try:
+            async with async_session() as db:
+                await delete_query_by_id(query_id, db)
+        except Exception as e:
+            logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop = asyncio.get_event_loop()
+    loop.run_until_complete(_delete())
