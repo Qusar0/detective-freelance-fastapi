@@ -73,6 +73,7 @@ class BaseSearchTask(ABC):
                 print(e)
                 await self._handle_error(user_query, db)
             finally:
+                delete_query_task.apply_async(args=[user_query.query_id], countdown=2 * 60 * 60)
                 await self._update_balances(db)
 
     @abstractmethod
@@ -83,8 +84,6 @@ class BaseSearchTask(ABC):
         channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
         await db_transactions.change_query_status(user_query, "done", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
-        
-        delete_query_task.apply_async(args=[user_query.query_id], countdown=60)
         
         chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
@@ -1500,12 +1499,7 @@ def delete_query_task(query_id):
     async def _delete():
         try:
             async with async_session() as db:
-                user_query = await db_transactions.get_user_query(query_id, db)
-                if not user_query:
-                    logging.info(f"Celery: Query {query_id} уже удалён вручную.")
-                    return
                 await delete_query_by_id(query_id, db)
-                logging.info(f"Celery: Query {query_id} удалён автоматически.")
         except Exception as e:
             logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
 

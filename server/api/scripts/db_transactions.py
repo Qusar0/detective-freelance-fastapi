@@ -134,10 +134,11 @@ async def send_sse_notification(user_query, channel, db):
 
 async def delete_query_by_id(query_id, db):
     try:
-        await db.execute(delete(TextData).where(TextData.query_id == query_id))
-        await db.execute(delete(Events).where(Events.query_id == query_id))
-        await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
-        await db.commit()
+        user_query = await get_user_query(query_id, db)
+        if user_query:
+            await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
+            await db.commit()
+            logging.info(f"Celery: Query {query_id} удалён автоматически.")
     except Exception as e:
         await db.rollback()
         logging.error(f"Ошибка при удалении query {query_id}: {str(e)}")
