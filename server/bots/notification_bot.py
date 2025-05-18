@@ -18,7 +18,7 @@ dp = Dispatcher(bot, storage=storage)
 @dp.message_handler(commands=['start'])
 async def send_connects(message: Message):
     chat_id = message.chat.id
-    url = f"{settings.frontend_url}/api/connect_tg?chat={chat_id}"
+    url = f"{settings.frontend_url}/connect_tg?chat={chat_id}"
     await message.reply(f"Привет, для подписки на уведомления перейди по ссылке: {url}")
 
 
