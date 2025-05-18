@@ -12,6 +12,7 @@ from server.api.models.models import (
 from server.api.database.database import get_db, engine
 from server.api.conf.config import settings
 
+
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):
         self.secret_key = secret_key
@@ -51,6 +52,6 @@ def init_admin(app: FastAPI) -> Admin:
         engine=engine,
         authentication_backend=AdminAuth(secret_key=settings.secret_key),
         templates_dir="templates",
-        title="Admin Panel",
+        title="Панель администратора",
     )
     return admin 

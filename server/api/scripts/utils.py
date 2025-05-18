@@ -80,7 +80,8 @@ async def get_default_keywords(
         target_languages=languages,
     )
     
-    return (counter * len(languages), translated_words)
+    coefficient = len(languages) or 1
+    return (counter * coefficient, translated_words)
 
 
 async def calculate_name_price(
@@ -107,7 +108,7 @@ async def calculate_name_price(
         not_to_search = 10 * len_default_kwds
         query_count = (fio_default_queries_count * len_all_keywords) - not_to_search
 
-    price = (query_count * 0.02) * 3 * len(languages)
+    price = (query_count * 0.02) * 3
     return round(price, 2)
 
 
