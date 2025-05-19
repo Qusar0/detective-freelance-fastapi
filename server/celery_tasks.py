@@ -301,7 +301,7 @@ def start_search_by_name(self, search_filters):
 
 
 async def write_urls(urls, type):
-    log_dir = './app/url_logs'
+    log_dir = './url_logs'
     os.makedirs(log_dir, exist_ok=True)
 
     filename = f'{log_dir}/{type}-{datetime.datetime.now()}.txt'
