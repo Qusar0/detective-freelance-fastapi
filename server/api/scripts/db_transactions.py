@@ -40,18 +40,18 @@ async def save_payment_to_history(user_id, price, query_id, db):
     balance_history = BalanceHistory(
         transaction_type='payment',
         amount=price,
-        query_id=query_id
+        query_id=query_id,
+        timestamp=datetime.now()
     )
     db.add(balance_history)
     await db.commit()
 
 
 async def save_query_balance(query_id, price, db):
-    now = datetime.now()
     balance = QueriesBalance(
         query_id=query_id,
         balance=price,
-        transaction_date=now
+        transaction_date=datetime.now()
     )
     db.add(balance)
     await db.commit()

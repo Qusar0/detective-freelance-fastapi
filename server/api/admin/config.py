@@ -50,7 +50,6 @@ def init_admin(app: FastAPI) -> Admin:
     admin = Admin(
         app=app,
         engine=engine,
-        authentication_backend=AdminAuth(secret_key=settings.secret_key),
         templates_dir="templates",
         title="Панель администратора",
     )

@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
 from sqladmin import ModelView
 from server.api.models.models import (
-    Users, UserQueries, UserBalances, PaymentHistory,
-    ServicesBalance, UserRole, Events, Keywords
+    BalanceHistory, Blacklist, Events, Keywords, PaymentHistory,
+    ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
+    TextData, UserBalances, UserQueries, UserRole, Users, Language
 )
+from typing import Any
+from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import async_session
 from fastapi_jwt_auth import AuthJWT
-from typing import Any
 from contextlib import asynccontextmanager
 
 
@@ -16,14 +17,6 @@ from contextlib import asynccontextmanager
 async def get_session():
     async with async_session() as session:
         yield session
-
-
-async def get_role_id_by_name(role_name: str, session: AsyncSession) -> int | None:
-    result = await session.execute(
-        select(UserRole).where(UserRole.role_name == role_name)
-    )
-    role = result.scalar_one_or_none()
-    return role.id if role else None
 
 
 async def is_admin(user_id: int, session: AsyncSession) -> bool:
@@ -41,10 +34,12 @@ async def is_admin(user_id: int, session: AsyncSession) -> bool:
     return user is not None
 
 
-async def get_user_roles_choices(session: AsyncSession) -> list[tuple[int, str]]:
-    result = await session.execute(select(UserRole))
-    roles = result.scalars().all()
-    return [(role.id, role.role_name) for role in roles]
+async def get_role_id_by_name(role_name: str, session: AsyncSession) -> int | None:
+    result = await session.execute(
+        select(UserRole).where(UserRole.role_name == role_name)
+    )
+    role = result.scalar_one_or_none()
+    return role.id if role else None
 
 
 class AdminProtectedView(ModelView):
@@ -60,233 +55,58 @@ class AdminProtectedView(ModelView):
             return False
 
 
-class UserAdmin(AdminProtectedView, model=Users):
-    name = "Пользователь"
-    name_plural = "Пользователи"
-    icon = "fa-solid fa-user"
-    column_list = [Users.id, Users.email, Users.is_confirmed, Users.created, Users.user_role_id]
-    column_labels = {
-        Users.id: "ID",
-        Users.email: "Email",
-        Users.is_confirmed: "Подтвержден",
-        Users.created: "Дата создания",
-        Users.user_role_id: "Роль"
-    }
-    column_searchable_list = [Users.email]
-    column_sortable_list = [Users.id, Users.email, Users.created]
-    column_details_exclude_list = [Users.password]
-    form_columns = [Users.email, Users.is_confirmed, Users.user_role_id]
-    form_labels = {
-        Users.email: "Email",
-        Users.is_confirmed: "Подтвержден",
-        Users.user_role_id: "Роль"
-    }
-    can_create = True
-    can_edit = True
-    can_delete = True
-    can_view_details = True
-
-    async def get_form_choices(self, request, field_name: str) -> list[tuple]:
-        if field_name == "user_role_id":
-            async with get_session() as session:
-                return await get_user_roles_choices(session)
-        return []
-
-
-class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
-    name = "Запрос"
-    name_plural = "Запросы"
-    icon = "fa-solid fa-magnifying-glass"
+class BalanceHistoryAdmin(AdminProtectedView, model=BalanceHistory):
+    name = "История баланса"
+    name_plural = "История балансов"
+    icon = "fa-solid fa-coins"
+    
     column_list = [
-        UserQueries.query_id,
-        UserQueries.user_id,
-        UserQueries.query_status,
-        UserQueries.query_category,
-        UserQueries.query_created_at,
-        UserQueries.query_title
+        BalanceHistory.id,
+        BalanceHistory.transaction_type,
+        BalanceHistory.amount,
+        BalanceHistory.timestamp,
+        BalanceHistory.query
     ]
     column_labels = {
-        UserQueries.query_id: "ID запроса",
-        UserQueries.user_id: "ID пользователя",
-        UserQueries.query_status: "Статус",
-        UserQueries.query_category: "Категория",
-        UserQueries.query_created_at: "Дата создания",
-        UserQueries.query_title: "Название"
+        BalanceHistory.id: "ID",
+        BalanceHistory.transaction_type: "Тип транзакции",
+        BalanceHistory.amount: "Сумма",
+        BalanceHistory.timestamp: "Время",
+        BalanceHistory.query: "Запрос"
     }
-    column_searchable_list = [UserQueries.query_id, UserQueries.user_id, UserQueries.query_title]
-    column_sortable_list = [UserQueries.query_id, UserQueries.user_id, UserQueries.query_created_at]
-    form_columns = [
-        UserQueries.user_id,
-        UserQueries.query_status,
-        UserQueries.query_category,
-        UserQueries.query_title
+    column_details_list = [
+        BalanceHistory.id,
+        BalanceHistory.transaction_type,
+        BalanceHistory.amount,
+        BalanceHistory.timestamp,
+        BalanceHistory.query
     ]
-    form_labels = {
-        UserQueries.user_id: "ID пользователя",
-        UserQueries.query_status: "Статус",
-        UserQueries.query_category: "Категория",
-        UserQueries.query_title: "Название"
-    }
-    can_create = True
-    can_edit = True
-    can_delete = True
-    can_view_details = True
-
-    async def get_list_query(self, request) -> Any:
-        query = await super().get_list_query(request)
-        
-        category = request.query_params.get("category")
-        if category:
-            query = query.where(UserQueries.query_category == category)
-            
-        status = request.query_params.get("status")
-        if status:
-            query = query.where(UserQueries.query_status == status)
-            
-        date_range = request.query_params.get("date_range")
-        if date_range:
-            now = datetime.utcnow()
-            if date_range == "last_day":
-                start_date = now - timedelta(days=1)
-            elif date_range == "last_week":
-                start_date = now - timedelta(weeks=1)
-            elif date_range == "last_month":
-                start_date = now - timedelta(days=30)
-            else:
-                start_date = None
-                
-            if start_date:
-                query = query.where(UserQueries.query_created_at >= start_date)
-                
-        return query
-
-
-class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
-    name = "Баланс пользователя"
-    name_plural = "Балансы пользователей"
-    icon = "fa-solid fa-wallet"
-    column_list = [UserBalances.id, UserBalances.user_id, UserBalances.balance]
-    column_labels = {
-        UserBalances.id: "ID",
-        UserBalances.user_id: "ID пользователя",
-        UserBalances.balance: "Баланс"
-    }
-    column_searchable_list = [UserBalances.user_id]
-    column_sortable_list = [UserBalances.id, UserBalances.balance]
-    form_columns = [UserBalances.user_id, UserBalances.balance]
-    form_labels = {
-        UserBalances.user_id: "ID пользователя",
-        UserBalances.balance: "Баланс"
-    }
-    can_create = True
-    can_edit = True
-    can_delete = False
-    can_view_details = True
-
-
-class PaymentHistoryAdmin(AdminProtectedView, model=PaymentHistory):
-    name = "История платежей"
-    name_plural = "История платежей"
-    icon = "fa-solid fa-credit-card"
-    column_list = [
-        PaymentHistory.id,
-        PaymentHistory.user_id,
-        PaymentHistory.payment_amount,
-        PaymentHistory.currency,
-        PaymentHistory.operation_type,
-        PaymentHistory.status,
-        PaymentHistory.date_time
-    ]
-    column_labels = {
-        PaymentHistory.id: "ID",
-        PaymentHistory.user_id: "ID пользователя",
-        PaymentHistory.payment_amount: "Сумма",
-        PaymentHistory.currency: "Валюта",
-        PaymentHistory.operation_type: "Тип операции",
-        PaymentHistory.status: "Статус",
-        PaymentHistory.date_time: "Дата и время"
-    }
-    column_searchable_list = [PaymentHistory.user_id, PaymentHistory.status, PaymentHistory.operation_type]
-    column_sortable_list = [PaymentHistory.id, PaymentHistory.payment_amount, PaymentHistory.date_time]
-    form_columns = [
-        PaymentHistory.user_id,
-        PaymentHistory.payment_amount,
-        PaymentHistory.currency,
-        PaymentHistory.operation_type,
-        PaymentHistory.status
-    ]
-    form_labels = {
-        PaymentHistory.user_id: "ID пользователя",
-        PaymentHistory.payment_amount: "Сумма",
-        PaymentHistory.currency: "Валюта",
-        PaymentHistory.operation_type: "Тип операции",
-        PaymentHistory.status: "Статус"
-    }
-    can_create = True
-    can_edit = False
-    can_delete = False
-    can_view_details = True
-
-
-class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
-    name = "Баланс сервисов"
-    name_plural = "Балансы сервисов"
-    icon = "fa-solid fa-server"
-    column_list = [ServicesBalance.id, ServicesBalance.service_name, ServicesBalance.balance]
-    column_labels = {
-        ServicesBalance.id: "ID",
-        ServicesBalance.service_name: "Название сервиса",
-        ServicesBalance.balance: "Баланс"
-    }
-    column_searchable_list = [ServicesBalance.service_name]
-    column_sortable_list = [ServicesBalance.id, ServicesBalance.balance]
-    form_columns = [ServicesBalance.service_name, ServicesBalance.balance]
-    form_labels = {
-        ServicesBalance.service_name: "Название сервиса",
-        ServicesBalance.balance: "Баланс"
-    }
-    can_create = True
-    can_edit = False
-    can_delete = False
-    can_view_details = True
+    column_searchable_list = [BalanceHistory.transaction_type]
+    column_sortable_list = [BalanceHistory.id, BalanceHistory.timestamp, BalanceHistory.amount]
 
 
 class EventsAdmin(AdminProtectedView, model=Events):
     name = "Событие"
     name_plural = "События"
-    icon = "fa-solid fa-calendar"
+    icon = "fa-solid fa-calendar-check"
+    
     column_list = [
         Events.event_id,
         Events.event_type,
         Events.event_status,
-        Events.query_id,
+        Events.query,
         Events.created_time
     ]
     column_labels = {
         Events.event_id: "ID события",
         Events.event_type: "Тип события",
         Events.event_status: "Статус",
-        Events.query_id: "ID запроса",
+        Events.query: "Запрос",
         Events.created_time: "Время создания"
     }
+    column_details_exclude_list = [Events.query_id, Events.additional_data]
     column_searchable_list = [Events.event_type, Events.event_status]
     column_sortable_list = [Events.event_id, Events.created_time]
-    form_columns = [
-        Events.event_type,
-        Events.event_status,
-        Events.query_id,
-        Events.additional_data
-    ]
-    form_labels = {
-        Events.event_type: "Тип события",
-        Events.event_status: "Статус",
-        Events.query_id: "ID запроса",
-        Events.additional_data: "Дополнительные данные"
-    }
-    can_create = True
-    can_edit = True
-    can_delete = True
-    can_view_details = True
 
 
 class KeywordsAdmin(AdminProtectedView, model=Keywords):
@@ -302,14 +122,241 @@ class KeywordsAdmin(AdminProtectedView, model=Keywords):
     }
     column_searchable_list = [Keywords.word, Keywords.word_type]
     column_sortable_list = [Keywords.id, Keywords.word]
+
+
+class PaymentHistoryAdmin(AdminProtectedView, model=PaymentHistory):
+    name = "История платежей"
+    name_plural = "История платежей"
+    icon = "fa-solid fa-credit-card"
     
-    form_columns = [Keywords.word, Keywords.word_type]
-    form_labels = {
-        Keywords.word: "Слово",
-        Keywords.word_type: "Тип слова"
+    column_list = [
+        PaymentHistory.id,
+        PaymentHistory.user,
+        PaymentHistory.payment_amount,
+        PaymentHistory.currency,
+        PaymentHistory.operation_type,
+        PaymentHistory.status,
+        PaymentHistory.date_time
+    ]
+    column_labels = {
+        PaymentHistory.id: "ID",
+        PaymentHistory.user: "Пользователь",
+        PaymentHistory.payment_amount: "Сумма",
+        PaymentHistory.currency: "Валюта",
+        PaymentHistory.operation_type: "Тип операции",
+        PaymentHistory.status: "Статус",
+        PaymentHistory.date_time: "Дата и время",
+        PaymentHistory.transaction_id: "Номер транзакции",
+        PaymentHistory.invoice_id: "Номер инвойс",
+        PaymentHistory.email: "Email",
+        PaymentHistory.ip_address: "IP адресс",
     }
+    column_details_exclude_list = [PaymentHistory.user_id]
+    column_searchable_list = [PaymentHistory.status, PaymentHistory.operation_type]
+    column_sortable_list = [PaymentHistory.id, PaymentHistory.date_time, PaymentHistory.payment_amount]
+    can_create = False
+    can_edit = False
+
+
+class ProhibitedSitesAdmin(AdminProtectedView, model=ProhibitedSites):
+    name = "Запрещенный сайт"
+    name_plural = "Запрещенные сайты"
+    icon = "fa-solid fa-globe"
     
-    can_create = True
-    can_edit = True
-    can_delete = True
-    can_view_details = True
+    column_list = [ProhibitedSites.id, ProhibitedSites.site_link]
+    column_labels = {
+        ProhibitedSites.id: "ID",
+        ProhibitedSites.site_link: "Ссылка на сайт"
+    }
+    column_searchable_list = [ProhibitedSites.site_link]
+    column_sortable_list = [ProhibitedSites.id]
+
+
+class QueriesBalanceAdmin(AdminProtectedView, model=QueriesBalance):
+    name = "Баланс запроса"
+    name_plural = "Балансы запросов"
+    icon = "fa-solid fa-file-invoice-dollar"
+    
+    column_list = [
+        QueriesBalance.id,
+        QueriesBalance.query,
+        QueriesBalance.balance,
+        QueriesBalance.transaction_date
+    ]
+    column_labels = {
+        QueriesBalance.id: "ID",
+        QueriesBalance.query: "Запрос",
+        QueriesBalance.balance: "Баланс",
+        QueriesBalance.transaction_date: "Дата транзакции"
+    }
+    column_details_exclude_list = [QueriesBalance.query_idgit]
+    column_searchable_list = []
+    column_sortable_list = [QueriesBalance.id, QueriesBalance.transaction_date]
+
+
+class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
+    name = "Баланс сервиса"
+    name_plural = "Балансы сервисов"
+    icon = "fa-solid fa-server"
+    
+    column_list = [
+        ServicesBalance.id,
+        ServicesBalance.service_name,
+        ServicesBalance.balance
+    ]
+    column_labels = {
+        ServicesBalance.id: "ID",
+        ServicesBalance.service_name: "Название сервиса",
+        ServicesBalance.balance: "Баланс"
+    }
+    column_searchable_list = [ServicesBalance.service_name]
+    column_sortable_list = [ServicesBalance.id, ServicesBalance.balance]
+
+
+class TelegramNotificationsAdmin(AdminProtectedView, model=TelegramNotifications):
+    name = "Телеграм уведомления"
+    name_plural = "Телеграм уведомления"
+    icon = "fa-brands fa-telegram"
+    
+    column_list = [
+        TelegramNotifications.id,
+        TelegramNotifications.user,
+        TelegramNotifications.chat_id
+    ]
+    column_labels = {
+        TelegramNotifications.id: "ID",
+        TelegramNotifications.user: "Пользователь",
+        TelegramNotifications.chat_id: "ID чата"
+    }
+    column_details_exclude_list = [TelegramNotifications.user_id]
+    column_searchable_list = [TelegramNotifications.chat_id]
+    column_sortable_list = [TelegramNotifications.id]
+
+
+class TextDataAdmin(AdminProtectedView, model=TextData):
+    name = "Текстовые данные"
+    name_plural = "Текстовые данные"
+    icon = "fa-solid fa-file-lines"
+    
+    column_list = [
+        TextData.id,
+        TextData.query,
+        TextData.file_path
+    ]
+    column_labels = {
+        TextData.id: "ID",
+        TextData.query: "Запрос",
+        TextData.file_path: "Путь к файлу"
+    }
+    column_details_exclude_list = [TextData.query_id]
+    column_searchable_list = [TextData.file_path]
+    column_sortable_list = [TextData.id]
+
+
+class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
+    name = "Баланс пользователя"
+    name_plural = "Балансы пользователей"
+    icon = "fa-solid fa-wallet"
+    
+    column_list = [
+        UserBalances.id,
+        UserBalances.user,
+        UserBalances.balance
+    ]
+    column_labels = {
+        UserBalances.id: "ID",
+        UserBalances.user: "Пользователь",
+        UserBalances.balance: "Баланс"
+    }
+    column_details_exclude_list = [UserBalances.user_id]
+    column_searchable_list = []
+    column_sortable_list = [UserBalances.id, UserBalances.balance]
+
+
+class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
+    name = "Запрос пользователя"
+    name_plural = "Запросы пользователей"
+    icon = "fa-solid fa-magnifying-glass"
+    
+    column_list = [
+        UserQueries.query_id,
+        UserQueries.user,
+        UserQueries.query_status,
+        UserQueries.query_category,
+        UserQueries.query_created_at,
+        UserQueries.query_title
+    ]
+    column_labels = {
+        UserQueries.query_id: "ID запроса",
+        UserQueries.user: "Пользователь",
+        UserQueries.query_status: "Статус",
+        UserQueries.query_category: "Категория",
+        UserQueries.query_created_at: "Дата создания",
+        UserQueries.query_title: "Название",
+        UserQueries.balance_histories: "История баланса",
+        UserQueries.text_dates: "Расположение запроса",
+        UserQueries.queries_balances: "Стоимость запроса",
+        UserQueries.events: "Уведомление"
+    }
+    column_details_exclude_list = [
+        UserQueries.user_id,
+        UserQueries.query_unix_date,
+        UserQueries.deleted_at,
+    ]
+    column_searchable_list = [
+        UserQueries.query_status,
+        UserQueries.query_category,
+        UserQueries.query_title
+    ]
+    column_sortable_list = [
+        UserQueries.query_id,
+        UserQueries.query_created_at
+    ]
+
+
+class UserRoleAdmin(AdminProtectedView, model=UserRole):
+    name = "Роль пользователя"
+    name_plural = "Роли пользователей"
+    icon = "fa-solid fa-user-tag"
+    
+    column_list = [
+        UserRole.id,
+        UserRole.role_name,
+        UserRole.users
+    ]
+    column_labels = {
+        UserRole.id: "ID",
+        UserRole.role_name: "Название роли",
+        UserRole.users: "Пользователи"
+    }
+    column_searchable_list = [UserRole.role_name]
+    column_sortable_list = [UserRole.id]
+
+
+class UsersAdmin(AdminProtectedView, model=Users):
+    name = "Пользователь"
+    name_plural = "Пользователи"
+    icon = "fa-solid fa-user"
+    
+    column_list = [
+        Users.id,
+        Users.email,
+        Users.is_confirmed,
+        Users.user_role,
+        Users.created
+    ]
+    column_labels = {
+        Users.id: "ID",
+        Users.email: "Email",
+        Users.is_confirmed: "Подтвержден",
+        Users.user_role: "Роль",
+        Users.created: "Дата создания",
+        Users.user_balance: "Баланс",
+        Users.user_queries: "Запросы",
+        Users.payment_histories: "Пополнения",
+        Users.telegram_notification: "Телеграм",
+        Users.confirmation_date: "Дата подтверждения",
+    }
+    column_details_exclude_list = [Users.user_role_id, Users.password]
+    column_searchable_list = [Users.email]
+    column_sortable_list = [Users.id, Users.created]
