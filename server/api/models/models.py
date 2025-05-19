@@ -43,6 +43,9 @@ class BalanceHistory(Base):
         back_populates='balance_histories',
     )
 
+    def __str__(self):
+        return f"История баланса ({self.id})"
+
 
 class Blacklist(Base):
     __tablename__ = 'blacklist'
@@ -79,6 +82,9 @@ class Events(Base):
         back_populates='events',
     )
 
+    def __str__(self):
+        return f"Событие ({self.event_id})"
+
 
 class Keywords(Base):
     __tablename__ = 'keywords'
@@ -91,6 +97,8 @@ class Keywords(Base):
     word: Mapped[Optional[str]] = mapped_column(String(75))
     word_type: Mapped[Optional[str]] = mapped_column(String(20))
 
+    def __str__(self):
+        return f"Ключевое слово ({self.id})"
 
 class PaymentHistory(Base):
     __tablename__ = 'payment_history'
@@ -119,6 +127,9 @@ class PaymentHistory(Base):
         back_populates='payment_histories',
     )
 
+    def __str__(self):
+        return f"История пополнения ({self.id})"
+
 
 class ProhibitedSites(Base):
     __tablename__ = 'prohibited_sites'
@@ -129,6 +140,9 @@ class ProhibitedSites(Base):
         autoincrement=True,
     )
     site_link: Mapped[Optional[str]] = mapped_column(String(100))
+
+    def __str__(self):
+        return f"Запрещенный сайт ({self.id})"
 
 
 class QueriesBalance(Base):
@@ -151,6 +165,9 @@ class QueriesBalance(Base):
         back_populates='queries_balances',
     )
 
+    def __str__(self):
+        return f"Баланс запроса ({self.id})"
+
 
 class ServicesBalance(Base):
     __tablename__ = 'services_balance'
@@ -163,6 +180,8 @@ class ServicesBalance(Base):
     service_name: Mapped[Optional[str]] = mapped_column(String)
     balance: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
 
+    def __str__(self):
+        return f"Баланс сервиса ({self.id})"
 
 class TelegramNotifications(Base):
     __tablename__ = 'telegram_notifications'
@@ -179,6 +198,9 @@ class TelegramNotifications(Base):
         'Users',
         back_populates='telegram_notification',
     )
+
+    def __str__(self):
+        return f"Телеграм уведомления ({self.id})"
 
 
 class TextData(Base):
@@ -200,6 +222,9 @@ class TextData(Base):
         back_populates='text_dates',
     )
 
+    def __str__(self):
+        return f"Расположение запроса ({self.id})"
+
 
 class UserBalances(Base):
     __tablename__ = 'user_balances'
@@ -216,6 +241,9 @@ class UserBalances(Base):
         'Users',
         back_populates='user_balance',
     )
+
+    def __str__(self):
+        return f"Баланс пользователя ({self.id})"
 
 
 class UserQueries(Base):
@@ -263,6 +291,9 @@ class UserQueries(Base):
 
     events: Mapped['Events'] = relationship('Events', back_populates='query')
 
+    def __str__(self):
+        return f"Запрос ({self.query_id})"
+
 
 class UserRole(Base):
     __tablename__ = 'user_role'
@@ -278,6 +309,9 @@ class UserRole(Base):
         'Users',
         back_populates='user_role',
     )
+
+    def __str__(self):
+        return f"Роль ({self.id})"
 
 
 class Users(Base):
@@ -313,12 +347,12 @@ class Users(Base):
         back_populates='user',
         cascade='all, delete-orphan',
     )
-    user_queries: Mapped['UserQueries'] = relationship(
+    user_queries: Mapped[List['UserQueries']] = relationship(
         'UserQueries',
         back_populates='user',
         cascade='all, delete-orphan',
     )
-    payment_histories: Mapped['PaymentHistory'] = relationship(
+    payment_histories: Mapped[List['PaymentHistory']] = relationship(
         'PaymentHistory',
         back_populates='user',
         cascade='all, delete-orphan',
@@ -328,6 +362,9 @@ class Users(Base):
         back_populates='user',
         cascade='all, delete-orphan',
     )
+
+    def __str__(self):
+        return f"Пользователь ({self.id})"
 
 
 class Language(Base):
