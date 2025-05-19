@@ -83,7 +83,9 @@ class BalanceHistoryAdmin(AdminProtectedView, model=BalanceHistory):
     ]
     column_searchable_list = [BalanceHistory.transaction_type]
     column_sortable_list = [BalanceHistory.id, BalanceHistory.timestamp, BalanceHistory.amount]
-
+    can_create = False
+    can_edit = False
+    can_delete = False
 
 class EventsAdmin(AdminProtectedView, model=Events):
     name = "Событие"
@@ -107,7 +109,8 @@ class EventsAdmin(AdminProtectedView, model=Events):
     column_details_exclude_list = [Events.query_id, Events.additional_data]
     column_searchable_list = [Events.event_type, Events.event_status]
     column_sortable_list = [Events.event_id, Events.created_time]
-
+    can_create = False
+    can_edit = False
 
 class KeywordsAdmin(AdminProtectedView, model=Keywords):
     name = "Ключевое слово"
@@ -189,10 +192,11 @@ class QueriesBalanceAdmin(AdminProtectedView, model=QueriesBalance):
         QueriesBalance.balance: "Баланс",
         QueriesBalance.transaction_date: "Дата транзакции"
     }
-    column_details_exclude_list = [QueriesBalance.query_idgit]
+    column_details_exclude_list = [QueriesBalance.query_id]
     column_searchable_list = []
     column_sortable_list = [QueriesBalance.id, QueriesBalance.transaction_date]
-
+    can_create = False
+    can_delete = False
 
 class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
     name = "Баланс сервиса"
@@ -216,7 +220,7 @@ class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
 class TelegramNotificationsAdmin(AdminProtectedView, model=TelegramNotifications):
     name = "Телеграм уведомления"
     name_plural = "Телеграм уведомления"
-    icon = "fa-brands fa-telegram"
+    icon = "fa-solid fa-user"
     
     column_list = [
         TelegramNotifications.id,
@@ -251,7 +255,9 @@ class TextDataAdmin(AdminProtectedView, model=TextData):
     column_details_exclude_list = [TextData.query_id]
     column_searchable_list = [TextData.file_path]
     column_sortable_list = [TextData.id]
-
+    can_delete = False
+    can_edit = False
+    can_create = False
 
 class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
     name = "Баланс пользователя"
@@ -271,7 +277,8 @@ class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
     column_details_exclude_list = [UserBalances.user_id]
     column_searchable_list = []
     column_sortable_list = [UserBalances.id, UserBalances.balance]
-
+    can_delete = False
+    can_create = False
 
 class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
     name = "Запрос пользователя"
@@ -331,6 +338,7 @@ class UserRoleAdmin(AdminProtectedView, model=UserRole):
     }
     column_searchable_list = [UserRole.role_name]
     column_sortable_list = [UserRole.id]
+    form_columns = [UserRole.role_name]
 
 
 class UsersAdmin(AdminProtectedView, model=Users):
@@ -360,3 +368,6 @@ class UsersAdmin(AdminProtectedView, model=Users):
     column_details_exclude_list = [Users.user_role_id, Users.password]
     column_searchable_list = [Users.email]
     column_sortable_list = [Users.id, Users.created]
+
+    can_create = False
+    can_edit = False
