@@ -8,7 +8,7 @@ fi
 
 export TZ=Europe/Moscow
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="/backups/backup_${DB_NAME}_${TIMESTAMP}.sql.gz"
+BACKUP_FILE="./backups/backup_${DB_NAME}_${TIMESTAMP}.sql.gz"
 
 echo "Creating backup of ${DB_NAME} from ${DB_HOST}:${DB_PORT} at $(date)"
 

@@ -10,7 +10,7 @@ from server.api.models.models import (
     UserBalances,
     Events
 )
-from typing import Dict, List
+from typing import Dict, List, Any
 from server.api.database.database import get_db
 import base64
 import httpx
@@ -20,28 +20,117 @@ from server.api.conf.config import settings
 from server.api.scripts.sse_manager import publish_event
 
 
-async def translate_words(
+def process_text(text: str, lang: str) -> str:
+    """Обрабатывает и переводит текст с приведением к правильному регистру"""
+    if not text:
+        return ''
+    translated = translate_text(text, 'ru', lang)[0]
+    return translated.replace("-", " ").title().replace(" ", "-")
+
+
+def process_keywords(keywords: List[str], lang: str) -> List[str]:
+    """Переводит список ключевых слов"""
+    return translate_words({"keywords": keywords}, [lang])
+
+
+def process_special_field(text: str, prefix: str, lang: str) -> str:
+    """Обрабатывает специальные поля (plus/minus) с разделителями"""
+    if not text:
+        return ''
+    terms = text[len(prefix):].split(prefix)
+    translated_terms = [translate_text(term, 'ru', lang)[0] for term in terms if term]
+    return prefix + prefix.join(translated_terms) if translated_terms else ''
+
+
+async def translate_name_fields(data: Dict[str, Any], target_languages: List[str]) -> Dict[str, Any]:
+    """Переводит все текстовые поля на указанные языки"""
+    translated = {
+        "name": {},
+        "surname": {},
+        "patronymic": {},
+        "plus": {},
+        "minus": {},
+        "keywords": {}
+    }
+    for lang in target_languages:
+        translated["name"][lang] = process_text(data["name"], lang)
+        translated["surname"][lang] = process_text(data["surname"], lang)
+        translated["patronymic"][lang] = process_text(data["patronymic"], lang)
+        
+        translated["plus"][lang] = process_special_field(data["plus"], '+', lang)
+        translated["minus"][lang] = process_special_field(data["minus"], '+-', lang)
+        
+        translated["keywords"][lang] = process_keywords(data["keywords"], lang)[lang]
+
+    translated["name"]['original'] = data["name"]
+    translated["surname"]['original'] = data["surname"]
+    translated["patronymic"]['original'] = data["patronymic"]
+    translated["plus"]['original'] = data["plus"]
+    translated["minus"]['original'] = data["minus"]
+    translated["keywords"]['original'] = data["keywords"]
+    return translated
+
+
+async def translate_company_fields(data: Dict[str, Any], target_languages: List[str]) -> Dict[str, Any]:
+    """Переводит поля для поиска компании на указанные языки"""
+    translated = {
+        "location": {},
+        "keywords": {},
+        "plus": {},
+        "minus": {}
+    }
+
+    for lang in target_languages:
+        translated["location"][lang] = process_text(data["location"], lang)
+        
+        translated["keywords"][lang] = process_keywords(data["keywords"], lang)
+        
+        translated["plus"][lang] = process_special_field(data["plus"], '+', lang)
+        
+        translated["minus"][lang] = process_special_field(data["minus"], '+-', lang)
+
+    translated["location"]['original'] = data["location"]
+    translated["keywords"]['original'] = data["keywords"]
+    translated["plus"]['original'] = data["plus"]
+    translated["minus"]['original'] = data["minus"]
+
+    return translated
+
+
+def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
+    """Функция для перевода текста с разделением по точкам"""
+    try:
+        translated = GoogleTranslator(source=source_lang, target=target_lang).translate(text)
+        return list(set([word.strip().lower() for word in translated.split('. ') if word.strip()]))
+    except Exception as e:
+        print(f"Translation error for '{text}' to '{target_lang}': {e}")
+        return []
+
+
+def translate_words(
     keywords_by_category: Dict[str, List[str]],
-    target_languages: List[str]
+    target_languages: List[str],
+    source_language: str = 'ru'
 ) -> Dict[str, List[str]]:
     translations = {}
+    if not target_languages:
+        target_languages = ['ru']
+    
     for lang in target_languages:
+        translations[lang] = {}
         for category, words in keywords_by_category.items():
-            translations[category] = translations.get(category, [])
-            for word in words:
-                try:
-                    translated = GoogleTranslator(source='ru', target=lang).translate(word).lower()
-                    translations[category].append(translated)
-                except Exception as e:
-                    print(f"Translation error for '{word}' to '{lang}': {e}")
-
+            text_to_translate = '. '.join(words)
+            
+            translated_words = translate_text(text_to_translate, source_language, lang)
+            translations[lang][category] = list(set(translated_words))
+    
     return translations
 
 
 async def get_default_keywords(
     db: AsyncSession,
     default_keywords_type: str,
-    languages: List[str],
+    languages: List[str] = ['ru'],
     count: bool = False,
 ):
     splitted_kws = default_keywords_type.split(", ")
@@ -49,7 +138,7 @@ async def get_default_keywords(
     counter = 0
 
     if '' in splitted_kws:
-        return (counter, {})
+        return (counter, {lang: {} for lang in languages})
 
     if 'report' in splitted_kws:
         types_belongs_report = ['reputation', 'negativ', 'relations']
@@ -75,11 +164,15 @@ async def get_default_keywords(
             counter += len(keywords)
             named_keywords[splitted_kwd] = keywords
 
-    translated_words = await translate_words(
+    translated_words = translate_words(
         keywords_by_category=named_keywords,
         target_languages=languages,
     )
-    
+    print(translate_words)
+    print(translate_words)
+    print(translate_words)
+    print(translate_words)
+    print(translate_words)
     coefficient = len(languages) or 1
     return (counter * coefficient, translated_words)
 
@@ -95,7 +188,7 @@ async def calculate_name_price(
 
     len_user_kwds = len(keywords)
     default_kwds = await get_default_keywords(db, default_keywords_type, languages, count=True)
-    len_default_kwds = len(default_kwds)
+    len_default_kwds = default_kwds[0]
 
     len_all_keywords = 1 if len_user_kwds + len_default_kwds == 0 else len_user_kwds + len_default_kwds
 

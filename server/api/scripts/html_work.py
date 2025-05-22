@@ -810,7 +810,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     5: {{ {filters.get("rel_kwds")} }},
                     6: {{ {filters.get("soc_kwds")} }},
                     7: {{ {filters.get("doc_kwds")} }},
-                    8: {{ {filters.get("free_kwds")} }},
+                    8: {{ {filters.get("all_kwds")} }},
                 }}
 
             let social_types = {{
@@ -2216,7 +2216,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                     5: {{ {filters.get("rel_kwds")} }},
                     6: {{ {filters.get("soc_kwds")} }},
                     7: {{ {filters.get("doc_kwds")} }},
-                    8: {{ {filters.get("free_kwds")} }}, 
+                    8: {{ {filters.get("all_kwds")} }}, 
                 }}
 
             let social_types = {{
@@ -2835,12 +2835,8 @@ def response_num_template(title, items, filters, lampyre_html, tags, osint_html)
                 </div>
                 <div class="tab-2" onclick="select_tab(2)"> 
                     Теги 
-                    <span class="tab-count" style="display: none;">0</span> 
+                    <span class="tab-count">0</span> 
                 </div> 
-                <div class="tab-3" onclick="select_tab(3)"> 
-                    Аккаунты 
-                    <span class="tab-count" style="display: none;">0</span> 
-                </div>
             </div>
         </div>
 
@@ -3124,7 +3120,8 @@ def response_num_template(title, items, filters, lampyre_html, tags, osint_html)
 
             let filterable_tabs = [1, 2, 3, 4, 5, 6]
             const items = {{
-                main: [{items.get("all")}]
+                main: [{items.get("all", '')}],
+                arbitrary: {tags or []}
             }}
 
             endRangeValue = []
@@ -3638,10 +3635,6 @@ def response_email_template(title, items, filters, leak_html, acc_search_html, f
                     Упоминания
                     <span class="tab-count">0</span>
                 </div>
-                <div class="tab-2" onclick="select_tab(2)">
-                    Аккаунты 
-                    <span class="tab-count" style="display: none;">0</span>
-                </div>
             </div>
         </div>
 
@@ -3856,7 +3849,7 @@ def response_email_template(title, items, filters, leak_html, acc_search_html, f
 
             let filterable_tabs = [1, 2, 3, 4, 5, 6]
             const items = {{
-                main: [{items.get("all")}]
+                main: [{items.get("all", '')}]
             }}
 
             endRangeValue = []

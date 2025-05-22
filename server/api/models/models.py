@@ -337,6 +337,11 @@ class Users(Base):
         default=func.now()
     )
     confirmation_date: Mapped[Optional[int]] = mapped_column(Integer)
+    last_visited: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(True),
+        onupdate=func.now(),
+        nullable=True
+    )
 
     user_role: Mapped['UserRole'] = relationship(
         'UserRole',

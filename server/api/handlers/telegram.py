@@ -16,7 +16,7 @@ from server.api.conf.config import settings
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 
 
-@router.get("/connect_tg", response_class=RedirectResponse)
+@router.get("/connect_tg")
 async def connect_tg(
     chat: int = Query(..., description="ID чата Telegram"),
     db: AsyncSession = Depends(get_db),
@@ -33,13 +33,15 @@ async def connect_tg(
         success = await utils.save_user_and_chat(user_id, chat, db)
         if not success:
             raise HTTPException(status_code=422, detail="Пользователь уже привязан")
+        return {
+            "status": "success",
+            "message": "Телеграмм аккаунт успешно привязан",
+        }
     except HTTPException:
         raise
     except Exception as e:
         logging.warning("Ошибка при сохранении связи: " + str(e))
         raise HTTPException(status_code=422, detail="Неверные данные")
-
-    return RedirectResponse(url=settings.frontend_url)
 
 
 @router.post("/write_support", response_model=WriteSupportResponse)
