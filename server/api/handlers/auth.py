@@ -151,7 +151,10 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
     user = result.scalars().first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+        return {
+            "status": "success",
+            "message": "Ссылка для сброса пароля отправлена на ваш email",
+        }
 
     token = generate_conformation_token(email)
 

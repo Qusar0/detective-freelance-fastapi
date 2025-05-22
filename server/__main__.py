@@ -13,12 +13,20 @@ from server.api.scripts.sse_manager import (
     redis_listener,
 )
 from server.api.services.file_storage import FileStorageService
+from fastapi import Depends, HTTPException
+from fastapi_jwt_auth import AuthJWT
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import update, func
+from server.api.database.database import get_db
+import logging
+from server.api.models.models import Users
 
-
-app = FastAPI()
 
 def get_file_storage() -> FileStorageService:
     return FileStorageService()
+
+
+app = FastAPI()
 
 app.dependency_overrides[FileStorageService] = get_file_storage
 
@@ -38,12 +46,36 @@ app.include_router(query_router)
 app.include_router(telegram_router)
 app.include_router(admin_router)
 
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(redis_listener())
 
+
 @app.get("/sse/{channel}")
-async def sse_endpoint(channel: str, request: Request):
+async def sse_endpoint(
+    channel: str,
+    request: Request,
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception:
+        raise HTTPException(status_code=401, detail="Not authorized")
+
+    try:
+        await db.execute(
+            update(Users)
+            .where(Users.id == user_id)
+            .values(last_visited=func.now())
+        )
+        await db.commit()
+    except Exception as e:
+        logging.error(f"Failed to update last_visited: {e}")
+        await db.rollback()
+
     queue = asyncio.Queue()
     await add_subscriber(channel, queue)
     return StreamingResponse(

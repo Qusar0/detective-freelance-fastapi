@@ -4,46 +4,107 @@ from sqladmin.authentication import AuthenticationBackend
 from fastapi import Request, Depends, FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_jwt_auth import AuthJWT
+from fastapi.responses import RedirectResponse
 from sqlalchemy.future import select
 from server.api.models.models import (
     Users, UserQueries, UserBalances, PaymentHistory,
     ServicesBalance, UserRole, Events, BalanceHistory
 )
+from passlib.hash import bcrypt
 from server.api.database.database import get_db, engine
 from server.api.conf.config import settings
+from contextlib import asynccontextmanager
+from server.api.database.database import async_session
 
+
+@asynccontextmanager
+async def get_session():
+    async with async_session() as session:
+        yield session
 
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):
-        self.secret_key = secret_key
-        self.middlewares = []
+        super().__init__(secret_key)
 
     async def login(self, request: Request) -> bool:
-        return True
+        form = await request.form()
+        email = form.get("username")
+        password = form.get("password")
+
+        if not email or not password:
+            return False
+
+        try:
+            async with get_session() as db:
+                result = await db.execute(
+                    select(Users)
+                    .join(UserRole)
+                    .where(
+                        Users.email == email,
+                        UserRole.role_name.in_(["admin"])
+                    )
+                )
+                user = result.scalar_one_or_none()
+
+                if not user:
+                    return False
+
+                if not bcrypt.verify(password, user.password):
+                    return False
+
+                auth = AuthJWT(request)
+                response = RedirectResponse(url="/admin")
+                access_token = auth.create_access_token(
+                    subject=str(user.id),
+                    expires_time=86400
+                )
+                request.session.update({"access_token": access_token})
+                request.state.response = response
+                return True
+        except Exception as e:
+            print(f"Admin login error: {e}")
+            return False
 
     async def logout(self, request: Request) -> bool:
+        request.session.clear()
+        
+        temp_response = RedirectResponse(url="/admin/login")
+        auth = AuthJWT(req=request, res=temp_response)
+        auth.unset_jwt_cookies(temp_response)
+        
+        request.state.response = temp_response
         return True
 
     async def authenticate(self, request: Request) -> bool:
+        access_token = request.session.get("access_token")
+        if not access_token:
+            return RedirectResponse(url="/admin/login")
+
         try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
+            response = RedirectResponse(url="/admin")
+            auth = AuthJWT(req=request, res=response)
+            auth._token = access_token
+            auth.set_access_cookies(access_token, response, max_age=settings.access_token_expire_minutes)
             user_id = int(auth.get_jwt_subject())
 
-            db = await anext(get_db())
-            result = await db.execute(
-                select(Users)
-                .join(UserRole)
-                .where(
-                    Users.id == user_id,
-                    UserRole.role_name == "admin"
+            async with async_session() as session:
+                result = await session.execute(
+                    select(Users)
+                    .join(UserRole)
+                    .where(
+                        Users.id == user_id,
+                        UserRole.role_name.in_(["admin"])
+                    )
                 )
-            )
-            user = result.scalar_one_or_none()
-            
-            return user is not None
-        except Exception:
-            return False
+                user = result.scalar_one_or_none()
+                if not user:
+                    return RedirectResponse(url="/admin/login")
+
+            return True
+
+        except Exception as e:
+            print(f"Admin auth error: {e}")
+            return RedirectResponse(url="/admin/login")
 
 
 def init_admin(app: FastAPI) -> Admin:
@@ -52,5 +113,6 @@ def init_admin(app: FastAPI) -> Admin:
         engine=engine,
         templates_dir="templates",
         title="Панель администратора",
+        authentication_backend=AdminAuth(secret_key=settings.secret_key),
     )
     return admin 

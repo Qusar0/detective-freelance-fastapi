@@ -19,43 +19,7 @@ async def get_session():
         yield session
 
 
-async def is_admin(user_id: int, session: AsyncSession) -> bool:
-    admin_role_id = await get_role_id_by_name("admin", session)
-    if not admin_role_id:
-        return False
-    
-    result = await session.execute(
-        select(Users).where(
-            Users.id == user_id,
-            Users.user_role_id == admin_role_id
-        )
-    )
-    user = result.scalar_one_or_none()
-    return user is not None
-
-
-async def get_role_id_by_name(role_name: str, session: AsyncSession) -> int | None:
-    result = await session.execute(
-        select(UserRole).where(UserRole.role_name == role_name)
-    )
-    role = result.scalar_one_or_none()
-    return role.id if role else None
-
-
-class AdminProtectedView(ModelView):
-    async def is_accessible(self, request) -> bool:
-        try:
-            auth = AuthJWT(request)
-            auth.jwt_required()
-            user_id = int(auth.get_jwt_subject())
-
-            async with get_session() as session:
-                return await is_admin(user_id, session)
-        except Exception:
-            return False
-
-
-class BalanceHistoryAdmin(AdminProtectedView, model=BalanceHistory):
+class BalanceHistoryAdmin(ModelView, model=BalanceHistory):
     name = "История баланса"
     name_plural = "История балансов"
     icon = "fa-solid fa-coins"
@@ -87,7 +51,7 @@ class BalanceHistoryAdmin(AdminProtectedView, model=BalanceHistory):
     can_edit = False
     can_delete = False
 
-class EventsAdmin(AdminProtectedView, model=Events):
+class EventsAdmin(ModelView, model=Events):
     name = "Событие"
     name_plural = "События"
     icon = "fa-solid fa-calendar-check"
@@ -112,7 +76,7 @@ class EventsAdmin(AdminProtectedView, model=Events):
     can_create = False
     can_edit = False
 
-class KeywordsAdmin(AdminProtectedView, model=Keywords):
+class KeywordsAdmin(ModelView, model=Keywords):
     name = "Ключевое слово"
     name_plural = "Ключевые слова"
     icon = "fa-solid fa-key"
@@ -127,7 +91,7 @@ class KeywordsAdmin(AdminProtectedView, model=Keywords):
     column_sortable_list = [Keywords.id, Keywords.word]
 
 
-class PaymentHistoryAdmin(AdminProtectedView, model=PaymentHistory):
+class PaymentHistoryAdmin(ModelView, model=PaymentHistory):
     name = "История платежей"
     name_plural = "История платежей"
     icon = "fa-solid fa-credit-card"
@@ -161,7 +125,7 @@ class PaymentHistoryAdmin(AdminProtectedView, model=PaymentHistory):
     can_edit = False
 
 
-class ProhibitedSitesAdmin(AdminProtectedView, model=ProhibitedSites):
+class ProhibitedSitesAdmin(ModelView, model=ProhibitedSites):
     name = "Запрещенный сайт"
     name_plural = "Запрещенные сайты"
     icon = "fa-solid fa-globe"
@@ -175,7 +139,7 @@ class ProhibitedSitesAdmin(AdminProtectedView, model=ProhibitedSites):
     column_sortable_list = [ProhibitedSites.id]
 
 
-class QueriesBalanceAdmin(AdminProtectedView, model=QueriesBalance):
+class QueriesBalanceAdmin(ModelView, model=QueriesBalance):
     name = "Баланс запроса"
     name_plural = "Балансы запросов"
     icon = "fa-solid fa-file-invoice-dollar"
@@ -198,7 +162,7 @@ class QueriesBalanceAdmin(AdminProtectedView, model=QueriesBalance):
     can_create = False
     can_delete = False
 
-class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
+class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     name = "Баланс сервиса"
     name_plural = "Балансы сервисов"
     icon = "fa-solid fa-server"
@@ -217,7 +181,7 @@ class ServicesBalanceAdmin(AdminProtectedView, model=ServicesBalance):
     column_sortable_list = [ServicesBalance.id, ServicesBalance.balance]
 
 
-class TelegramNotificationsAdmin(AdminProtectedView, model=TelegramNotifications):
+class TelegramNotificationsAdmin(ModelView, model=TelegramNotifications):
     name = "Телеграм уведомления"
     name_plural = "Телеграм уведомления"
     icon = "fa-solid fa-user"
@@ -237,7 +201,7 @@ class TelegramNotificationsAdmin(AdminProtectedView, model=TelegramNotifications
     column_sortable_list = [TelegramNotifications.id]
 
 
-class TextDataAdmin(AdminProtectedView, model=TextData):
+class TextDataAdmin(ModelView, model=TextData):
     name = "Текстовые данные"
     name_plural = "Текстовые данные"
     icon = "fa-solid fa-file-lines"
@@ -259,7 +223,7 @@ class TextDataAdmin(AdminProtectedView, model=TextData):
     can_edit = False
     can_create = False
 
-class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
+class UserBalancesAdmin(ModelView, model=UserBalances):
     name = "Баланс пользователя"
     name_plural = "Балансы пользователей"
     icon = "fa-solid fa-wallet"
@@ -280,7 +244,7 @@ class UserBalancesAdmin(AdminProtectedView, model=UserBalances):
     can_delete = False
     can_create = False
 
-class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
+class UserQueriesAdmin(ModelView, model=UserQueries):
     name = "Запрос пользователя"
     name_plural = "Запросы пользователей"
     icon = "fa-solid fa-magnifying-glass"
@@ -321,7 +285,7 @@ class UserQueriesAdmin(AdminProtectedView, model=UserQueries):
     ]
 
 
-class UserRoleAdmin(AdminProtectedView, model=UserRole):
+class UserRoleAdmin(ModelView, model=UserRole):
     name = "Роль пользователя"
     name_plural = "Роли пользователей"
     icon = "fa-solid fa-user-tag"
@@ -341,7 +305,7 @@ class UserRoleAdmin(AdminProtectedView, model=UserRole):
     form_columns = [UserRole.role_name]
 
 
-class UsersAdmin(AdminProtectedView, model=Users):
+class UsersAdmin(ModelView, model=Users):
     name = "Пользователь"
     name_plural = "Пользователи"
     icon = "fa-solid fa-user"
@@ -351,7 +315,8 @@ class UsersAdmin(AdminProtectedView, model=Users):
         Users.email,
         Users.is_confirmed,
         Users.user_role,
-        Users.created
+        Users.created,
+        Users.last_visited,
     ]
     column_labels = {
         Users.id: "ID",
@@ -364,6 +329,7 @@ class UsersAdmin(AdminProtectedView, model=Users):
         Users.payment_histories: "Пополнения",
         Users.telegram_notification: "Телеграм",
         Users.confirmation_date: "Дата подтверждения",
+        Users.last_visited: "Последнее посещение",
     }
     column_details_exclude_list = [Users.user_role_id, Users.password]
     column_searchable_list = [Users.email]

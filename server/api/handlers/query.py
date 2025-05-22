@@ -6,7 +6,7 @@ from sqlalchemy.future import select
 from sqlalchemy import delete, update
 from datetime import datetime, timezone
 from typing import List
-
+from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
 from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
 from server.api.schemas.query import (
@@ -33,7 +33,7 @@ from server.api.scripts import utils
 from server.api.scripts import db_transactions
 from server.api.services.file_storage import FileStorageService
 import logging
-
+from server.api.scripts.utils import translate_name_fields, translate_company_fields
 
 router = APIRouter(
     prefix="/queries",
@@ -156,6 +156,7 @@ async def send_query_data(
 
 
 @router.post("/find_by_name")
+@BalanceNotifier.notify_balance
 async def find_by_name(
     request_data: FindByNameModel,
     Authorize: AuthJWT = Depends(),
@@ -165,29 +166,36 @@ async def find_by_name(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        search_name = request_data.search_name.strip()
-        search_surname = request_data.search_surname.strip()
-        search_patronymic = request_data.search_patronymic.strip()
-        search_plus = request_data.search_plus.strip()
-        search_minus = request_data.search_minus.strip()
-        keywords: List[str] = request_data.keywords
+
+        original_data = {
+            "name": request_data.search_name.strip(),
+            "surname": request_data.search_surname.strip(),
+            "patronymic": request_data.search_patronymic.strip(),
+            "plus": request_data.search_plus.strip(),
+            "minus": request_data.search_minus.strip(),
+            "keywords": request_data.keywords
+        }
+
+        languages = request_data.languages or ['ru']
+
         default_keywords_type = request_data.default_keywords_type.strip()
         search_engines = request_data.search_engines
-        languages = request_data.languages
+
+        translated_data = await translate_name_fields(original_data, languages)
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
         price = await utils.calculate_name_price(
             db,
-            search_patronymic,
-            keywords,
+            original_data["patronymic"],
+            original_data["keywords"],
             default_keywords_type,
             languages,
         )
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
-        query_title = f"{search_surname} {search_name} {search_patronymic}"
+        query_title = f"{original_data['surname']} {original_data['name']} {original_data['patronymic']}"
         user_query = UserQueries(
             user_id=user_id,
             query_unix_date=query_created_at,
@@ -201,12 +209,12 @@ async def find_by_name(
         await db.commit()
 
         search_filters = (
-            search_name,
-            search_surname,
-            search_patronymic,
-            search_plus,
-            search_minus,
-            keywords,
+            translated_data["name"],
+            translated_data["surname"],
+            translated_data["patronymic"],
+            translated_data["plus"],
+            translated_data["minus"],
+            translated_data["keywords"],
             default_keywords_type,
             user_query.query_id,
             price,
@@ -229,13 +237,15 @@ async def find_by_name(
         )
 
         start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
-
+        return None
     except Exception as e:
+        raise e
         logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
 @router.post("/find_by_number")
+@BalanceNotifier.notify_balance
 async def find_by_number(
     request_data: FindByNumberModel,
     Authorize: AuthJWT = Depends(),
@@ -293,6 +303,7 @@ async def find_by_number(
 
 
 @router.post("/find_by_email")
+@BalanceNotifier.notify_balance
 async def find_by_email(
     request_data: FindByEmailModel,
     Authorize: AuthJWT = Depends(),
@@ -349,6 +360,7 @@ async def find_by_email(
 
 
 @router.post("/find_by_company")
+@BalanceNotifier.notify_balance
 async def find_by_company(
     request_data: FindByCompanyModel,
     Authorize: AuthJWT = Depends(),
@@ -358,23 +370,27 @@ async def find_by_company(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        company_name = request_data.company_name.strip()
-        company_name_2 = request_data.extra_name.strip()
-        location = request_data.location.strip()
-        keywords = request_data.keywords
-        default_keywords_type = request_data.default_keywords_type.strip()
-        plus_words = request_data.search_plus.strip()
-        minus_words = request_data.search_minus.strip()
-        search_engines = request_data.search_engines
-        languages = request_data.languages
+        original_data = {
+            "company_name": request_data.company_name.strip(),
+            "extra_name": request_data.extra_name.strip(),
+            "location": request_data.location.strip(),
+            "keywords": request_data.keywords,
+            "plus": request_data.search_plus.strip(),
+            "minus": request_data.search_minus.strip()
+        }
 
+        languages = request_data.languages or ['ru']
+        default_keywords_type = request_data.default_keywords_type.strip()
+        search_engines = request_data.search_engines
+
+        translated_data = await translate_company_fields(original_data, languages)
 
         channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
 
         price = 10
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
-        query_title = company_name
+        query_title = original_data['company_name']
         user_query = UserQueries(
             user_id=user_id,
             query_unix_date=query_created_at,
@@ -388,13 +404,13 @@ async def find_by_company(
         await db.commit()
 
         search_filters = (
-            company_name,
-            company_name_2,
-            location,
-            keywords,
+            original_data['company_name'],
+            original_data['extra_name'],
+            translated_data['location'],
+            translated_data['keywords'],
             default_keywords_type,
-            plus_words,
-            minus_words,
+            translated_data['plus'],
+            translated_data['minus'],
             user_query.query_id,
             price,
             search_engines,
@@ -418,6 +434,7 @@ async def find_by_company(
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
 
     except Exception as e:
+        raise e
         logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 

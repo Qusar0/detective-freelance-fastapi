@@ -72,6 +72,7 @@ class BaseSearchTask(ABC):
             except Exception as e:
                 print(e)
                 await self._handle_error(user_query, db)
+                raise e
             finally:
                 delete_query_task.apply_async(args=[user_query.query_id], countdown=2 * 60 * 60)
                 await self._update_balances(db)
@@ -119,7 +120,7 @@ class NameSearchTask(BaseSearchTask):
         self.keywords_from_user = search_filters[5]
         self.default_keywords_type = search_filters[6]
         self.search_engines = search_filters[9]
-        self.languages = search_filters[10] if len(search_filters) > 10 else None
+        self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
         
         logging.debug(f"DEBUG - search_filters: {search_filters}")
 
@@ -132,24 +133,26 @@ class NameSearchTask(BaseSearchTask):
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
             keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
-            
             keywords_from_db = keywords[1]
-            len_keywords_from_user = len(self.keywords_from_user)
-            len_keywords_from_db = len(keywords_from_db)
+            titles = []
+            for lang in self.languages:
+                if self.search_patronymic[lang] == "":
+                    full_name = [self.search_name[lang], self.search_surname[lang]]
+                else:
+                    full_name = [self.search_name[lang], self.search_surname[lang], self.search_patronymic[lang]]
 
-            if self.search_patronymic == "":
-                full_name = [self.search_name, self.search_surname]
-            else:
-                full_name = [self.search_name, self.search_surname, self.search_patronymic]
+                name_cases = await form_name_cases(full_name)
+                len_keywords_from_user = len(self.keywords_from_user[lang])
+                len_keywords_from_db = len(keywords_from_db[lang])
 
-            name_cases = await form_name_cases(full_name)
-            await self._form_search_requests(
-                name_cases,
-                len_keywords_from_user,
-                len_keywords_from_db,
-                keywords_from_db,
-                request_input_pack,
-            )
+                await self._form_search_requests(
+                    name_cases,
+                    len_keywords_from_user,
+                    len_keywords_from_db,
+                    keywords_from_db[lang],
+                    request_input_pack,
+                    lang,
+                )
 
             await self._process_search_requests(
                 request_input_pack,
@@ -160,13 +163,19 @@ class NameSearchTask(BaseSearchTask):
                 db,
             )
 
-            titles = form_titles(
-                full_name,
-                self.default_keywords_type,
-                self.keywords_from_user,
-                self.search_minus,
-                self.search_plus,
+            titles.extend(
+                form_titles(
+                    full_name,
+                    self.default_keywords_type,
+                    self.keywords_from_user[lang],
+                    self.search_minus[lang],
+                    self.search_plus[lang],
+                ),
             )
+        
+            manage_threads(threads)
+            await write_urls(urls, "name")
+            
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
 
@@ -189,21 +198,34 @@ class NameSearchTask(BaseSearchTask):
         len_keywords_from_db,
         keywords_from_db,
         request_input_pack,
+        lang,
     ):
         for name_case in name_cases:
             search_keys = form_search_key(name_case, len_keywords_from_user)
             for search_key in search_keys:
                 if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                    self._add_standard_search(request_input_pack, search_key, name_case)
+                    self._add_standard_search(
+                        request_input_pack,
+                        search_key,
+                        name_case,
+                        lang,
+                    )
                 else:
                     await self._add_keyword_searches(
                         request_input_pack,
                         search_key,
                         name_case,
                         keywords_from_db,
+                        lang,
                     )
 
-    def _add_standard_search(self, request_input_pack, search_key, name_case):
+    def _add_standard_search(
+        self,
+        request_input_pack,
+        search_key,
+        name_case,
+        lang,
+    ):
         for engine in self.search_engines:
             if url := SEARCH_ENGINES.get(engine):
                 form_input_pack(
@@ -212,8 +234,8 @@ class NameSearchTask(BaseSearchTask):
                     "",
                     "free word",
                     name_case,
-                    self.search_plus,
-                    self.search_minus,
+                    self.search_plus[lang],
+                    self.search_minus[lang],
                     "standard",
                     len(name_case),
                     url,
@@ -225,8 +247,9 @@ class NameSearchTask(BaseSearchTask):
         search_key,
         name_case,
         keywords_from_db,
+        lang,
     ):
-        for kwd_from_user in self.keywords_from_user:
+        for kwd_from_user in self.keywords_from_user[lang]:
             for engine in self.search_engines:
                 if url := SEARCH_ENGINES.get(engine):
                     form_input_pack(
@@ -235,14 +258,14 @@ class NameSearchTask(BaseSearchTask):
                         kwd_from_user,
                         "free word",
                         name_case,
-                        self.search_plus,
-                        self.search_minus,
+                        self.search_plus[lang],
+                        self.search_minus[lang],
                         "standard",
                         len(name_case),
                         url,
                     )
 
-        for words_type, words in keywords_from_db.items():
+        for words_type, words in keywords_from_db[lang].items():
             for kwd_from_db in words:
                 for engine in self.search_engines:
                     if url := SEARCH_ENGINES.get(engine):
@@ -252,8 +275,8 @@ class NameSearchTask(BaseSearchTask):
                             kwd_from_db,
                             words_type,
                             name_case,
-                            self.search_plus,
-                            self.search_minus,
+                            self.search_plus[lang],
+                            self.search_minus[lang],
                             "system_keywords",
                             len(name_case),
                             url,
@@ -270,11 +293,9 @@ class NameSearchTask(BaseSearchTask):
     ):
         for input_data in request_input_pack:
             url = input_data[0]
-            urls.append(url)
             keyword = input_data[1]
             keyword_type = input_data[2]
             name_case = input_data[3]
-
             threads.append(
                 Thread(
                     target=do_request_to_xmlriver,
@@ -285,13 +306,10 @@ class NameSearchTask(BaseSearchTask):
                         keyword,
                         name_case,
                         keyword_type,
+                        urls,
                     ),
                 ),
             )
-
-        manage_threads(threads)
-        await write_urls(urls, "name")
-
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')
 def start_search_by_name(self, search_filters):
@@ -506,17 +524,37 @@ def do_request_to_xmlriver(
     keyword,
     name_case,
     keyword_type,
+    urls,
 ):
-    response = requests.get(url)
-    handle_xmlriver_response(
-        url,
-        response,
-        all_found_data,
-        prohibited_sites,
-        keyword,
-        name_case,
-        keyword_type,
-    )
+    if SEARCH_ENGINES['google'] in url:
+        # response = requests.get(url)
+        # handling_resp = handle_xmlriver_response(
+        #     url,
+        #     response,
+        #     all_found_data,
+        #     prohibited_sites,
+        #     keyword,
+        #     name_case,
+        #     keyword_type,
+        # )
+        urls.append(url)
+    elif SEARCH_ENGINES['yandex'] in url:
+        page_num = 0
+        handling_resp = None
+        while handling_resp not in ('15', '110', '500'):
+            new_url = form_page_query(url, page_num)
+            response = requests.get(url)
+            handling_resp = handle_xmlriver_response(
+                new_url,
+                response,
+                all_found_data,
+                prohibited_sites,
+                keyword,
+                name_case,
+                keyword_type,
+            )
+            urls.append(new_url)
+            page_num += 1
 
 
 def handle_xmlriver_response(
@@ -1004,6 +1042,7 @@ def form_var_filters(
     for doc_kwd in list(set(doc_kwds)):
         doc_objects += f"'{doc_kwd}': true,\n"
 
+    all_kwds = f"{kwds_objects}{neg_objects}{rep_objects}{rel_objects}{soc_objects}{doc_objects}"
     filters = {
         "free_kwds": kwds_objects,
         "neg_kwds": neg_objects,
@@ -1011,6 +1050,7 @@ def form_var_filters(
         "rel_kwds": rel_objects,
         "soc_kwds": soc_objects,
         "doc_kwds": doc_objects,
+        "all_kwds": all_kwds,
     }
 
     return filters
@@ -1121,71 +1161,75 @@ class CompanySearchTask(BaseSearchTask):
         self.plus_words = search_filters[5]
         self.minus_words = search_filters[6]
         self.search_engines = search_filters[9]
-        self.languages = search_filters[10] if len(search_filters) > 10 else None
+        self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
 
     async def _process_search(self, db):
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
         urls = []
+        titles = []
 
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
             keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
-
+            print(keywords)
+            print(keywords)
+            print(keywords)
+            print(keywords)
             keywords_from_db = keywords[1]
-            len_keywords_from_user = len(self.keywords_from_user)
-            len_keywords_from_db = len(keywords_from_db)
 
-            for company_name in self.company_names:
-                if company_name == '':
-                    break
-                if len_keywords_from_user == 0 and len_keywords_from_db == 0:
-                    for engine in self.search_engines:
-                        if url := SEARCH_ENGINES.get(engine):
-                            form_input_pack_company(
-                                request_input_pack,
-                                company_name,
-                                "",
-                                "free word",
-                                self.location,
-                                self.plus_words,
-                                self.minus_words,
-                                url,
-                            )
-                else:
-                    for kwd_from_user in self.keywords_from_user:
+            for lang in self.languages:
+                len_keywords_from_user = len(self.keywords_from_user[lang])
+                len_keywords_from_db = len(keywords_from_db[lang])
+                for company_name in self.company_names:
+                    if company_name == '':
+                        break
+                    if len_keywords_from_user == 0 and len_keywords_from_db == 0:
                         for engine in self.search_engines:
                             if url := SEARCH_ENGINES.get(engine):
                                 form_input_pack_company(
                                     request_input_pack,
                                     company_name,
-                                    kwd_from_user,
+                                    "",
                                     "free word",
-                                    self.location,
-                                    self.plus_words,
-                                    self.minus_words,
+                                    self.location[lang],
+                                    self.plus_words[lang],
+                                    self.minus_words[lang],
                                     url,
                                 )
-
-                    for words_type, words in keywords_from_db.items():
-                        for kwd_from_db in words:
+                    else:
+                        for kwd_from_user in self.keywords_from_user[lang]:
                             for engine in self.search_engines:
                                 if url := SEARCH_ENGINES.get(engine):
                                     form_input_pack_company(
                                         request_input_pack,
                                         company_name,
-                                        kwd_from_db,
-                                        words_type,
-                                        self.location,
-                                        self.plus_words,
-                                        self.minus_words,
+                                        kwd_from_user,
+                                        "free word",
+                                        self.location[lang],
+                                        self.plus_words[lang],
+                                        self.minus_words[lang],
                                         url,
                                     )
 
+                        for words_type, words in keywords_from_db[lang].items():
+                            for kwd_from_db in words:
+                                for engine in self.search_engines:
+                                    if url := SEARCH_ENGINES.get(engine):
+                                        form_input_pack_company(
+                                            request_input_pack,
+                                            company_name,
+                                            kwd_from_db,
+                                            words_type,
+                                            self.location[lang],
+                                            self.plus_words[lang],
+                                            self.minus_words[lang],
+                                            url,
+                                        )
+
             for input_data in request_input_pack:
                 url = input_data[0]
-                urls.append(url)
                 keyword = input_data[1]
                 keyword_type = input_data[2]
 
@@ -1199,20 +1243,23 @@ class CompanySearchTask(BaseSearchTask):
                             keyword,
                             None,
                             keyword_type,
+                            urls,
                         ),
                     ),
                 )
 
             manage_threads(threads)
 
-            company_titles = form_extra_titles(self.company_names[1], self.location)
-            titles = form_titles(
-                self.company_names[0],
-                self.default_keywords_type,
-                self.keywords_from_user,
-                self.minus_words,
-                self.plus_words,
-                'company',
+            company_titles = form_extra_titles(self.company_names[1], self.location['original'])
+            titles.extend(
+                form_titles(
+                    self.company_names[0],
+                    self.default_keywords_type,
+                    self.keywords_from_user['original'],
+                    self.minus_words['original'],
+                    self.plus_words['original'],
+                    'company',
+                ),
             )
 
             items, filters, fullname_counters = form_response_html(all_found_info)
@@ -1353,6 +1400,8 @@ async def xmlriver_num_do_request(phone_num):
     await write_urls(urls, "number")
     return items, filters
 
+def form_page_query(url, page_num):
+    return f'{url}&page={page_num}'
 
 def form_yandex_query_num(num: str, page_num):
     phone_num = num.replace("+", "%2B")
