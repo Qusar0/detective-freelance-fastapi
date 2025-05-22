@@ -379,3 +379,25 @@ class Language(Base):
     code: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
     english_name: Mapped[str] = mapped_column(String(100), nullable=False)
     russian_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    country: Mapped['Countries'] = relationship(
+        'Countries',
+        back_populates='language',
+    )
+
+
+class Countries(Base):
+    __tablename__ = 'countries'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    country_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    language_id: Mapped[int] = mapped_column(
+        ForeignKey('languages.id'),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    language: Mapped['Language'] = relationship(
+        'Language',
+        back_populates='country',
+    )
