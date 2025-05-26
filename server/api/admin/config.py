@@ -1,8 +1,6 @@
-from typing import Optional
 from sqladmin import Admin
 from sqladmin.authentication import AuthenticationBackend
-from fastapi import Request, Depends, FastAPI
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Request, FastAPI
 from fastapi_jwt_auth import AuthJWT
 from fastapi.responses import RedirectResponse
 from sqlalchemy.future import select
@@ -11,7 +9,7 @@ from server.api.models.models import (
     ServicesBalance, UserRole, Events, BalanceHistory
 )
 from passlib.hash import bcrypt
-from server.api.database.database import get_db, engine
+from server.api.database.database import engine
 from server.api.conf.config import settings
 from contextlib import asynccontextmanager
 from server.api.database.database import async_session
@@ -21,6 +19,7 @@ from server.api.database.database import async_session
 async def get_session():
     async with async_session() as session:
         yield session
+
 
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):

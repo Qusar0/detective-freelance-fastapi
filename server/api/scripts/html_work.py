@@ -25,6 +25,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     <span class="max-text-length" title="Произвольные ключевые слова: {titles[2]}"><b>Произвольные ключевые слова: </b> {titles[2]}</span>
                     <span class="max-text-length" title="Минус-слова: {titles[3]}"><b>Минус-слова:</b> {titles[3]}</span>
                     <span class="max-text-length" title="Плюс-слова: {titles[4]}"><b>Плюс-слова:</b> {titles[4]}</span>
+                    <span class="max-text-length" title="Языки перевода: {', '.join(titles[5])}"><b>Языки перевода:</b> {', '.join(titles[5])}</span>
                     {extra_titles}
                 </div>
 
@@ -1428,6 +1429,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                     <span class="max-text-length" title="Произвольные ключевые слова: {titles[2]}"><b>Произвольные ключевые слова: </b> {titles[2]}</span>
                     <span class="max-text-length" title="Минус-слова: {titles[3]}"><b>Минус-слова:</b> {titles[3]}</span>
                     <span class="max-text-length" title="Плюс-слова: {titles[4]}"><b>Плюс-слова:</b> {titles[4]}</span>
+                    <span class="max-text-length" title="Языки перевода: {', '.join(titles[5])}"><b>Языки перевода:</b> {', '.join(titles[5])}</span>
                     {extra_titles}
                 </div>
 

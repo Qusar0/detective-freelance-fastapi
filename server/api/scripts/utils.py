@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 from server.api.models.models import (
     Keywords,
     ServicesBalance,
@@ -8,7 +9,9 @@ from server.api.models.models import (
     TelegramNotifications,
     UserQueries,
     UserBalances,
-    Events
+    Events,
+    Language,
+    CountryLanguage,
 )
 from typing import Dict, List, Any
 from server.api.database.database import get_db
@@ -68,6 +71,7 @@ async def translate_name_fields(data: Dict[str, Any], target_languages: List[str
     translated["plus"]['original'] = data["plus"]
     translated["minus"]['original'] = data["minus"]
     translated["keywords"]['original'] = data["keywords"]
+
     return translated
 
 
@@ -83,7 +87,7 @@ async def translate_company_fields(data: Dict[str, Any], target_languages: List[
     for lang in target_languages:
         translated["location"][lang] = process_text(data["location"], lang)
         
-        translated["keywords"][lang] = process_keywords(data["keywords"], lang)
+        translated["keywords"][lang] = process_keywords(data["keywords"], lang)[lang]
         
         translated["plus"][lang] = process_special_field(data["plus"], '+', lang)
         
@@ -110,7 +114,7 @@ def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
 def translate_words(
     keywords_by_category: Dict[str, List[str]],
     target_languages: List[str],
-    source_language: str = 'ru'
+    source_language: str = 'ru',
 ) -> Dict[str, List[str]]:
     translations = {}
     if not target_languages:
@@ -127,12 +131,64 @@ def translate_words(
     return translations
 
 
+async def get_countries_code_by_languages(
+    db: AsyncSession,
+    language_codes: List[str] = None,
+) -> Dict[str, List[int]]:
+    """Получает коды стран, связанных с указанными языками."""
+    if not language_codes:
+        language_codes = ['ru']
+    
+    query = (
+        select(CountryLanguage)
+        .join(CountryLanguage.language)
+        .join(CountryLanguage.country)
+        .where(Language.code.in_(language_codes))
+        .options(
+            joinedload(CountryLanguage.language),
+            joinedload(CountryLanguage.country)
+        )
+    )
+    
+    result = await db.execute(query)
+    country_links = result.scalars().all()
+    
+    result_dict = {}
+    for link in country_links:
+        lang_code = link.language.code
+        if lang_code not in result_dict:
+            result_dict[lang_code] = []
+        result_dict[lang_code].append(link.country.country_id)
+    
+    return result_dict
+
+
+async def get_languages_by_code(
+    db: AsyncSession,
+    language_codes: List[str] = None,
+) -> List[dict]:
+    """Получает информацию о языках по их кодам."""
+    if not language_codes:
+        language_codes = ['ru']
+
+    query = (
+        select(Language)
+        .where(Language.code.in_(language_codes))
+    )
+    
+    result = await db.execute(query)
+    languages = result.scalars().all()
+    
+    return [lang.russian_name for lang in languages]
+
 async def get_default_keywords(
     db: AsyncSession,
     default_keywords_type: str,
-    languages: List[str] = ['ru'],
+    languages: List[str] = None,
     count: bool = False,
 ):
+    if not languages:
+        languages = ['ru']
     splitted_kws = default_keywords_type.split(", ")
     named_keywords = {}
     counter = 0
@@ -168,11 +224,6 @@ async def get_default_keywords(
         keywords_by_category=named_keywords,
         target_languages=languages,
     )
-    print(translate_words)
-    print(translate_words)
-    print(translate_words)
-    print(translate_words)
-    print(translate_words)
     coefficient = len(languages) or 1
     return (counter * coefficient, translated_words)
 

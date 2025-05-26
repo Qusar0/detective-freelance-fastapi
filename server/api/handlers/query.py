@@ -239,7 +239,6 @@ async def find_by_name(
         start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
         return None
     except Exception as e:
-        raise e
         logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
@@ -296,6 +295,7 @@ async def find_by_number(
             args=(search_number, methods_type, user_query.query_id, price),
             queue='num_tasks'
         )
+        return None
 
     except Exception as e:
         logging.error(f"Failed to process the query: {e}")
@@ -353,6 +353,7 @@ async def find_by_email(
             args=(search_email, methods_type, user_query.query_id, price),
             queue='email_tasks'
         )
+        return None
 
     except Exception as e:
         logging.error(f"Failed to process the query: {e}")
@@ -432,9 +433,8 @@ async def find_by_company(
         )
 
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
-
+        return None
     except Exception as e:
-        raise e
         logging.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
@@ -521,7 +521,7 @@ async def get_available_languages(
             select(
                 Language.russian_name,
                 Language.code,
-            ),
+            ).order_by(Language.russian_name),
         )
         languages = result.fetchall()
 

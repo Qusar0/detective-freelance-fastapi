@@ -65,7 +65,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 1 -P eventlet -Q name_tasks --loglevel=INFO
+    command: celery -A run.celery_app worker --concurrency 1 -P eventlet -Q name_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
