@@ -4,14 +4,8 @@ from server.api.models.models import (
     ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
     TextData, UserBalances, UserQueries, UserRole, Users, Language
 )
-from typing import Any
-from datetime import datetime, timedelta
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import async_session
-from fastapi_jwt_auth import AuthJWT
 from contextlib import asynccontextmanager
-
 
 @asynccontextmanager
 async def get_session():
@@ -170,12 +164,14 @@ class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     column_list = [
         ServicesBalance.id,
         ServicesBalance.service_name,
-        ServicesBalance.balance
+        ServicesBalance.balance,
+        ServicesBalance.balance_threshold,
     ]
     column_labels = {
         ServicesBalance.id: "ID",
         ServicesBalance.service_name: "Название сервиса",
-        ServicesBalance.balance: "Баланс"
+        ServicesBalance.balance: "Баланс",
+        ServicesBalance.balance_threshold: "Лимит для уведомлений"
     }
     column_searchable_list = [ServicesBalance.service_name]
     column_sortable_list = [ServicesBalance.id, ServicesBalance.balance]
@@ -293,13 +289,12 @@ class UserRoleAdmin(ModelView, model=UserRole):
     column_list = [
         UserRole.id,
         UserRole.role_name,
-        UserRole.users
     ]
     column_labels = {
         UserRole.id: "ID",
         UserRole.role_name: "Название роли",
-        UserRole.users: "Пользователи"
     }
+
     column_searchable_list = [UserRole.role_name]
     column_sortable_list = [UserRole.id]
     form_columns = [UserRole.role_name]
@@ -333,7 +328,13 @@ class UsersAdmin(ModelView, model=Users):
     }
     column_details_exclude_list = [Users.user_role_id, Users.password]
     column_searchable_list = [Users.email]
-    column_sortable_list = [Users.id, Users.created]
+    column_sortable_list = [Users.id, Users.created, Users.last_visited, Users.email]
+
+    form_columns = [Users.user_role]
+    form_args = {
+        'user_role': {
+            'label': 'Роль пользователя',
+        }
+    }
 
     can_create = False
-    can_edit = False

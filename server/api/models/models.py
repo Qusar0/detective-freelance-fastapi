@@ -179,6 +179,7 @@ class ServicesBalance(Base):
     )
     service_name: Mapped[Optional[str]] = mapped_column(String)
     balance: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
+    balance_threshold: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
 
     def __str__(self):
         return f"Баланс сервиса ({self.id})"
@@ -311,7 +312,7 @@ class UserRole(Base):
     )
 
     def __str__(self):
-        return f"Роль ({self.id})"
+        return f"{self.role_name}"
 
 
 class Users(Base):
@@ -369,7 +370,7 @@ class Users(Base):
     )
 
     def __str__(self):
-        return f"Пользователь ({self.id})"
+        return f"{self.email}"
 
 
 class Language(Base):
@@ -379,10 +380,10 @@ class Language(Base):
     code: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
     english_name: Mapped[str] = mapped_column(String(100), nullable=False)
     russian_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    
-    country: Mapped['Countries'] = relationship(
-        'Countries',
+
+    country_links: Mapped[List['CountryLanguage']] = relationship(
         back_populates='language',
+        cascade='all, delete-orphan'
     )
 
 
@@ -391,13 +392,20 @@ class Countries(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     country_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
-    language_id: Mapped[int] = mapped_column(
-        ForeignKey('languages.id'),
-        nullable=False,
-    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    language: Mapped['Language'] = relationship(
-        'Language',
+    language_links: Mapped[List['CountryLanguage']] = relationship(
         back_populates='country',
+        cascade='all, delete-orphan'
     )
+
+
+class CountryLanguage(Base):
+    __tablename__ = 'country_languages'
+    
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    country_id: Mapped[int] = mapped_column(ForeignKey('countries.id'))
+    language_id: Mapped[int] = mapped_column(ForeignKey('languages.id'))
+    
+    country: Mapped['Countries'] = relationship(back_populates='language_links')
+    language: Mapped['Language'] = relationship(back_populates='country_links')

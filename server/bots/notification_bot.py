@@ -56,9 +56,8 @@ class BalanceNotifier:
                         if (service.balance < settings.balance_threshold 
                             and service.service_name not in cls._notified_services):
                             message = (
-                                f"⚠️ Баланс `{service.service_name}` "
-                                f"ниже {settings.balance_threshold}. "
-                                f"Текущий: {service.balance}"
+                                f"⚠️ <strong>Внимание!</strong> Баланс сервиса <strong>{service.service_name}</strong> "
+                                f"опустился ниже <strong>{settings.balance_threshold}</strong>. Текущий баланс: <strong>{service.balance}</strong>"
                             )
                             await send_balance_alert(settings.admin_chat_id, message)
                             cls._notified_services.add(service.service_name)

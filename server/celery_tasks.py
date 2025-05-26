@@ -23,10 +23,25 @@ from server.api.error.errors import CustomError
 from server.api.scripts.lampyre_num_script import Lampyre
 from server.api.scripts import lampyre_email_script
 from server.api.scripts.get_contact_script import get_tags_in_getcontact
-from server.api.scripts.ibhldr_script import get_interests, get_groups_ibhldr_method, get_profiles, get_phones
+from server.api.scripts.ibhldr_script import (
+    get_interests,
+    get_groups_ibhldr_method,
+    get_profiles,
+    get_phones,
+)
 from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
-from server.api.scripts.utils import get_default_keywords
-from server.api.scripts.html_work import response_template, response_num_template, response_email_template, response_company_template, response_tg_template
+from server.api.scripts.utils import (
+    get_default_keywords,
+    get_languages_by_code,
+    get_countries_code_by_languages,
+)
+from server.api.scripts.html_work import (
+    response_template,
+    response_num_template,
+    response_email_template,
+    response_company_template,
+    response_tg_template,
+)
 from server.api.scripts import utils, db_transactions
 from server.bots.notification_bot import send_notification
 from server.api.database.database import async_session
@@ -72,7 +87,6 @@ class BaseSearchTask(ABC):
             except Exception as e:
                 print(e)
                 await self._handle_error(user_query, db)
-                raise e
             finally:
                 delete_query_task.apply_async(args=[user_query.query_id], countdown=2 * 60 * 60)
                 await self._update_balances(db)
@@ -121,7 +135,6 @@ class NameSearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[6]
         self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
-        
         logging.debug(f"DEBUG - search_filters: {search_filters}")
 
     async def _process_search(self, db):        
@@ -135,14 +148,18 @@ class NameSearchTask(BaseSearchTask):
             keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
             titles = []
+
+            original_full_name = [self.search_name['original'], self.search_surname['original']]
+            if self.search_patronymic['original']:
+                original_full_name.append(self.search_patronymic['original'])
+
             for lang in self.languages:
-                if self.search_patronymic[lang] == "":
-                    full_name = [self.search_name[lang], self.search_surname[lang]]
-                else:
-                    full_name = [self.search_name[lang], self.search_surname[lang], self.search_patronymic[lang]]
+                full_name = [self.search_name[lang], self.search_surname[lang]]
+                if self.search_patronymic[lang]:
+                    full_name.append(self.search_patronymic[lang])
 
                 name_cases = await form_name_cases(full_name)
-                len_keywords_from_user = len(self.keywords_from_user[lang])
+                len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
                 len_keywords_from_db = len(keywords_from_db[lang])
 
                 await self._form_search_requests(
@@ -165,13 +182,16 @@ class NameSearchTask(BaseSearchTask):
 
             titles.extend(
                 form_titles(
-                    full_name,
+                    original_full_name,
                     self.default_keywords_type,
-                    self.keywords_from_user[lang],
-                    self.search_minus[lang],
-                    self.search_plus[lang],
+                    self.keywords_from_user['original'],
+                    self.search_minus['original'],
+                    self.search_plus['original'],
                 ),
             )
+
+            languages_names = await get_languages_by_code(db, self.languages)
+            titles.append(languages_names)
         
             manage_threads(threads)
             await write_urls(urls, "name")
@@ -238,6 +258,7 @@ class NameSearchTask(BaseSearchTask):
                     self.search_minus[lang],
                     "standard",
                     len(name_case),
+                    lang,
                     url,
                 )
 
@@ -249,7 +270,7 @@ class NameSearchTask(BaseSearchTask):
         keywords_from_db,
         lang,
     ):
-        for kwd_from_user in self.keywords_from_user[lang]:
+        for kwd_from_user in self.keywords_from_user[lang]['keywords']:
             for engine in self.search_engines:
                 if url := SEARCH_ENGINES.get(engine):
                     form_input_pack(
@@ -262,25 +283,28 @@ class NameSearchTask(BaseSearchTask):
                         self.search_minus[lang],
                         "standard",
                         len(name_case),
+                        lang,
                         url,
                     )
 
-        for words_type, words in keywords_from_db[lang].items():
-            for kwd_from_db in words:
-                for engine in self.search_engines:
-                    if url := SEARCH_ENGINES.get(engine):
-                        form_input_pack(
-                            request_input_pack,
-                            search_key,
-                            kwd_from_db,
-                            words_type,
-                            name_case,
-                            self.search_plus[lang],
-                            self.search_minus[lang],
-                            "system_keywords",
-                            len(name_case),
-                            url,
-                        )
+        if self.search_patronymic[lang] == '' or len(search_key.split('+')) != 2:
+            for words_type, words in keywords_from_db.items():
+                for kwd_from_db in words:
+                    for engine in self.search_engines:
+                        if url := SEARCH_ENGINES.get(engine):
+                            form_input_pack(
+                                request_input_pack,
+                                search_key,
+                                kwd_from_db,
+                                words_type,
+                                name_case,
+                                self.search_plus[lang],
+                                self.search_minus[lang],
+                                "system_keywords",
+                                len(name_case),
+                                lang,
+                                url,
+                            )
 
     async def _process_search_requests(
         self,
@@ -487,6 +511,7 @@ def form_input_pack(
     minus_words,
     generation_type: str,
     full_name_length: int,
+    lang: str,
     base_url: str,
 ):
     try:
@@ -502,17 +527,14 @@ def form_input_pack(
 
         if full_name_length == 2:
             url += f"{plus_words}{minus_words}"
-            input_pack.append((url, keyword, keyword_type, name_case))
         else:
             if generation_type == "standard":
                 url += f"{plus_words}{minus_words}"
-                input_pack.append((url, keyword, keyword_type, name_case))
             elif generation_type == "system_keywords" and length > 1:
                 url += f"{plus_words}{minus_words}"
-                input_pack.append((url, keyword, keyword_type, name_case))
-            else:
-                pass
-
+        
+        url += f"&lr={lang.upper()}"
+        input_pack.append((url, keyword, keyword_type, name_case))
     except Exception as e:
         print("form_input_pack function Exception {0}".format(e))
 
@@ -527,16 +549,16 @@ def do_request_to_xmlriver(
     urls,
 ):
     if SEARCH_ENGINES['google'] in url:
-        # response = requests.get(url)
-        # handling_resp = handle_xmlriver_response(
-        #     url,
-        #     response,
-        #     all_found_data,
-        #     prohibited_sites,
-        #     keyword,
-        #     name_case,
-        #     keyword_type,
-        # )
+        response = requests.get(url)
+        handling_resp = handle_xmlriver_response(
+            url,
+            response,
+            all_found_data,
+            prohibited_sites,
+            keyword,
+            name_case,
+            keyword_type,
+        )
         urls.append(url)
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
@@ -1173,14 +1195,10 @@ class CompanySearchTask(BaseSearchTask):
         try:
             prohibited_sites_list = await utils.add_sites_from_db([], db)
             keywords: dict = await get_default_keywords(db, self.default_keywords_type, self.languages)
-            print(keywords)
-            print(keywords)
-            print(keywords)
-            print(keywords)
             keywords_from_db = keywords[1]
 
             for lang in self.languages:
-                len_keywords_from_user = len(self.keywords_from_user[lang])
+                len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
                 len_keywords_from_db = len(keywords_from_db[lang])
                 for company_name in self.company_names:
                     if company_name == '':
@@ -1196,10 +1214,11 @@ class CompanySearchTask(BaseSearchTask):
                                     self.location[lang],
                                     self.plus_words[lang],
                                     self.minus_words[lang],
+                                    lang,
                                     url,
                                 )
                     else:
-                        for kwd_from_user in self.keywords_from_user[lang]:
+                        for kwd_from_user in self.keywords_from_user[lang]['keywords']:
                             for engine in self.search_engines:
                                 if url := SEARCH_ENGINES.get(engine):
                                     form_input_pack_company(
@@ -1210,6 +1229,7 @@ class CompanySearchTask(BaseSearchTask):
                                         self.location[lang],
                                         self.plus_words[lang],
                                         self.minus_words[lang],
+                                        lang,
                                         url,
                                     )
 
@@ -1225,6 +1245,7 @@ class CompanySearchTask(BaseSearchTask):
                                             self.location[lang],
                                             self.plus_words[lang],
                                             self.minus_words[lang],
+                                            lang,
                                             url,
                                         )
 
@@ -1261,6 +1282,9 @@ class CompanySearchTask(BaseSearchTask):
                     'company',
                 ),
             )
+
+            languages_names = await get_languages_by_code(db, self.languages)
+            titles.append(languages_names)
 
             items, filters, fullname_counters = form_response_html(all_found_info)
 
@@ -1400,8 +1424,10 @@ async def xmlriver_num_do_request(phone_num):
     await write_urls(urls, "number")
     return items, filters
 
+
 def form_page_query(url, page_num):
     return f'{url}&page={page_num}'
+
 
 def form_yandex_query_num(num: str, page_num):
     phone_num = num.replace("+", "%2B")
@@ -1511,6 +1537,7 @@ def form_input_pack_company(
     location,
     plus_words,
     minus_words,
+    lang,
     base_url: str,
 ):
     if company_name == f'"{company_name}"':
@@ -1526,7 +1553,7 @@ def form_input_pack_company(
     if location != "":
         url += f"+{location}"
 
-    url += f"{plus_words}{minus_words}"
+    url += f"{plus_words}{minus_words}&lr={lang}"
     input_pack.append((url, keyword, keyword_type))
 
 

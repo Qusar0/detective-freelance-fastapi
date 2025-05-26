@@ -27,7 +27,6 @@ def get_file_storage() -> FileStorageService:
 
 
 app = FastAPI()
-
 app.dependency_overrides[FileStorageService] = get_file_storage
 
 setup_admin(app)
@@ -40,11 +39,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(query_router)
-app.include_router(telegram_router)
-app.include_router(admin_router)
+app.include_router(auth_router, prefix='/api')
+app.include_router(user_router, prefix='/api')
+app.include_router(query_router, prefix='/api')
+app.include_router(telegram_router, prefix='/api')
+app.include_router(admin_router, prefix='/api')
 
 
 @app.on_event("startup")
@@ -52,7 +51,7 @@ async def startup_event():
     asyncio.create_task(redis_listener())
 
 
-@app.get("/sse/{channel}")
+@app.get("/api/sse/{channel}")
 async def sse_endpoint(
     channel: str,
     request: Request,
