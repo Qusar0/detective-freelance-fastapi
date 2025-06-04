@@ -1500,9 +1500,8 @@ def form_number_response_html(all_found_data, phone_num):
 async def xmlriver_email_do_request(email):
     all_found_data = []
     urls = []
-    proh_sites = read_needless_sites()
 
-    url = SEARCH_ENGINES['google'] + f'''"{email}"'''
+    url = SEARCH_ENGINES['google'] + f'"{email}"'
     urls.append(url)
 
     async with httpx.AsyncClient() as client:
@@ -1516,7 +1515,7 @@ async def xmlriver_email_do_request(email):
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url=url)
-            handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, email)
+            handling_resp = handle_xmlriver_response(url, response, all_found_data, [], email)
 
             if handling_resp in ('15', '110', '500'):
                 break
