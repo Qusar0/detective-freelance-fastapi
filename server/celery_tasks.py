@@ -4,11 +4,11 @@ import re
 import threading
 import time
 import logging
-from threading import Thread
+from threading import Thread, Lock
 from urllib.parse import urlparse
 from phonenumbers import parse, NumberParseException
 from abc import ABC, abstractmethod
-
+from collections import defaultdict
 import aiofiles
 import httpx
 import requests
@@ -48,6 +48,8 @@ from server.api.database.database import async_session
 from server.api.conf.config import settings
 from server.api.services.file_storage import FileStorageService
 from server.api.scripts.db_transactions import delete_query_by_id
+from server.api.models.models import ProhibitedPhoneSites
+from sqlalchemy import select
 
 
 SEARCH_ENGINES = {
@@ -69,11 +71,33 @@ def get_event_loop():
     return loop
 
 
+class SearchLogger:
+    def __init__(self, query_id, log_file="search_errors.log"):
+        self.query_id = query_id
+        self.log_file = log_file
+        self.lock = threading.Lock()
+        
+    def log_error(self, error_message):
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log_entry = f"[{timestamp}] [ID:{self.query_id}] ОШИБКА: {error_message}\n"
+        
+        with self.lock:
+            with open(self.log_file, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+
+
 class BaseSearchTask(ABC):
     def __init__(self, query_id: int, price: float):
         self.query_id = query_id
         self.price = price
         self.money_to_return = 0
+        self.request_stats = {
+            'total_requests': 0,
+            'success_first_try': 0,
+            'success_after_retry': defaultdict(int),
+            'failed_after_max_retries': 0,
+        }
+        self.stats_lock = Lock()
 
     async def execute(self):
         async with async_session() as db:
@@ -122,6 +146,27 @@ class BaseSearchTask(ABC):
     async def _update_balances(self, db):
         pass
 
+    def save_stats_to_file(self, filename="search_stats.txt"):
+        """Сохраняет статистику запросов в файл с русскоязычным выводом и ID запроса"""
+        with self.stats_lock:
+            total = self.request_stats['total_requests']
+            if total == 0:
+                return "Не было выполнено ни одного запроса."
+
+            stats_text = [
+                f"=== СТАТИСТИКА ЗАПРОСА ID: {self.query_id} ===",
+                f"Общее количество запросов: {total}",
+                f"Успешно с 1 попытки: {self.request_stats['success_first_try']} ({self.request_stats['success_first_try'] / total * 100:.1f}%)",
+                *[f"Успешно после {attempt} попыток: {count} ({count / total * 100:.1f}%)" 
+                for attempt, count in sorted(self.request_stats['success_after_retry'].items())],
+                f"Не удалось после всех попыток: {self.request_stats['failed_after_max_retries']} ({self.request_stats['failed_after_max_retries'] / total * 100:.1f}%)",
+                f"Время формирования отчета: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "===================================="
+            ]
+            
+            with open(filename, "a", encoding="utf-8") as f:
+                f.write("\n".join(stats_text) + "\n\n")
+
 
 class NameSearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -135,7 +180,7 @@ class NameSearchTask(BaseSearchTask):
         self.default_keywords_type = search_filters[6]
         self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
-        logging.debug(f"DEBUG - search_filters: {search_filters}")
+        self.logger = SearchLogger(self.query_id, 'search_name.log')
 
     async def _process_search(self, db):        
         threads: List[Thread] = []
@@ -194,6 +239,7 @@ class NameSearchTask(BaseSearchTask):
             titles.append(languages_names)
         
             manage_threads(threads)
+            self.save_stats_to_file('search_name.log')
             await write_urls(urls, "name")
             
             items, filters, fullname_counters = form_response_html(all_found_info)
@@ -331,15 +377,31 @@ class NameSearchTask(BaseSearchTask):
                         name_case,
                         keyword_type,
                         urls,
+                        self.request_stats,
+                        self.stats_lock,
+                        self.logger
                     ),
                 ),
             )
+
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')
 def start_search_by_name(self, search_filters):
     loop = get_event_loop()
     task = NameSearchTask(search_filters)
     loop.run_until_complete(task.execute())
+
+
+def update_stats(request_stats, stats_lock, attempt, success=True):
+    with stats_lock:
+        request_stats['total_requests'] += 1
+        if success:
+            if attempt == 1:
+                request_stats['success_first_try'] += 1
+            else:
+                request_stats['success_after_retry'][attempt] += 1
+        else:
+            request_stats['failed_after_max_retries'] += 1
 
 
 async def write_urls(urls, type):
@@ -533,7 +595,11 @@ def form_input_pack(
             elif generation_type == "system_keywords" and length > 1:
                 url += f"{plus_words}{minus_words}"
         
-        url += f"&lr={lang.upper()}"
+        if base_url == SEARCH_ENGINES['google']:
+            url += f"&lr={lang}"
+        elif base_url == SEARCH_ENGINES['yandex']:
+            url += f"&lang={lang}"
+
         input_pack.append((url, keyword, keyword_type, name_case))
     except Exception as e:
         print("form_input_pack function Exception {0}".format(e))
@@ -547,37 +613,74 @@ def do_request_to_xmlriver(
     name_case,
     keyword_type,
     urls,
+    request_stats,
+    stats_lock,
+    logger : SearchLogger,
 ):
+    max_attempts = 5
+    retry_delay = 2
     if SEARCH_ENGINES['google'] in url:
-        response = requests.get(url)
-        handling_resp = handle_xmlriver_response(
-            url,
-            response,
-            all_found_data,
-            prohibited_sites,
-            keyword,
-            name_case,
-            keyword_type,
-        )
-        urls.append(url)
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = requests.get(url)
+                handling_resp = handle_xmlriver_response(
+                    url,
+                    response,
+                    all_found_data,
+                    prohibited_sites,
+                    keyword,
+                    name_case,
+                    keyword_type,
+                )
+                if handling_resp not in ('500', '110', '111'):
+                    urls.append(url)
+                    update_stats(request_stats, stats_lock, attempt, success=True)
+                    break
+                else:
+                    logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                    if attempt < max_attempts:
+                        time.sleep(retry_delay)
+            except Exception as e:
+                logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
+                if attempt < max_attempts:
+                    time.sleep(retry_delay)
+        else:
+            logger.log_error(f"Запрос полностью провален: {url}")
+            update_stats(request_stats, stats_lock, attempt, success=False)
+    
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
         handling_resp = None
-        while handling_resp not in ('15', '110', '500'):
-            new_url = form_page_query(url, page_num)
-            response = requests.get(url)
-            handling_resp = handle_xmlriver_response(
-                new_url,
-                response,
-                all_found_data,
-                prohibited_sites,
-                keyword,
-                name_case,
-                keyword_type,
-            )
-            urls.append(new_url)
-            page_num += 1
-
+        
+        while handling_resp not in ('15'):
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    new_url = form_page_query(url, page_num)
+                    response = requests.get(new_url)
+                    handling_resp = handle_xmlriver_response(
+                            url,
+                            response,
+                            all_found_data,
+                            prohibited_sites,
+                            keyword,
+                            name_case,
+                            keyword_type,
+                    )
+                    if handling_resp not in ('500', '110', '111'):
+                        urls.append(new_url)
+                        update_stats(request_stats, stats_lock, attempt, success=True)
+                        page_num += 1
+                        break
+                    else:
+                        logging.error(f"Yandex request failed. URL: {new_url}, Status: {response.status_code}, Attempt: {attempt}")
+                        if attempt < max_attempts:
+                            time.sleep(retry_delay)
+                except Exception as e:
+                    logging.error(f"Yandex request exception. URL: {new_url}, Error: {str(e)}, Attempt: {attempt}")
+                    if attempt < max_attempts:
+                        time.sleep(retry_delay)
+            else:
+                update_stats(request_stats, stats_lock, attempt, success=False)
 
 def handle_xmlriver_response(
     url,
@@ -1083,6 +1186,7 @@ class NumberSearchTask(BaseSearchTask):
         super().__init__(query_id, price)
         self.phone_num = phone_num
         self.methods_type = methods_type
+        self.logger = SearchLogger(self.query_id, 'search_num.log')
 
     async def _process_search(self, db):
         self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
@@ -1092,7 +1196,7 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                items, filters = await xmlriver_num_do_request(self.phone_num)
+                items, filters = await self.xmlriver_num_do_request(db)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1112,7 +1216,7 @@ class NumberSearchTask(BaseSearchTask):
             tags,
             acc_search_html,
         )
-
+        self.save_stats_to_file('search_num.log')
         try:
             file_storage = FileStorageService()
             await db_transactions.save_html(html, self.query_id, db, file_storage)
@@ -1127,12 +1231,81 @@ class NumberSearchTask(BaseSearchTask):
         await utils.renew_lampyre_balance(db)
         await utils.renew_getcontact_balance(self.requests_getcontact_left, db)
 
+    async def xmlriver_num_do_request(self, db):
+        all_found_data = []
+        urls = []
+        proh_sites = await read_needless_sites(db)
+        max_attempts = 5
+        retry_delay = 2
+
+        # Обработка Google запросов
+        google_urls = form_google_query(self.phone_num)
+        for url in google_urls:
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    response = requests.get(url=url)
+                    handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
+                    
+                    if handling_resp not in ('500', '110', '111'):
+                        urls.append(url)
+                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                        break
+                    else:
+                        self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                        if attempt < max_attempts:
+                            time.sleep(retry_delay)
+                except Exception as e:
+                    self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
+                    if attempt < max_attempts:
+                        time.sleep(retry_delay)
+            else:
+                self.logger.log_error(f"Google запрос полностью провален: {url}")
+                update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+
+        # Обработка Yandex запросов
+        counter = 0
+        while True:
+            url = form_yandex_query_num(self.phone_num, page_num=counter)
+            
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    response = requests.get(url=url)
+                    handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
+                    
+                    if handling_resp == '15':
+                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                        urls.append(url)
+                        break
+                    elif handling_resp in ('500', '110', '111'):
+                        self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                        if attempt < max_attempts:
+                            time.sleep(retry_delay)
+                    else:
+                        urls.append(url)
+                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                        counter += 1
+                        break
+                except Exception as e:
+                    self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
+                    if attempt < max_attempts:
+                        time.sleep(retry_delay)
+            else:
+                self.logger.log_error(f"Yandex запрос полностью провален: {url}")
+                update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+            
+            if handling_resp == '15':
+                break
+
+        items, filters = form_number_response_html(all_found_data, self.phone_num)
+        await write_urls(urls, "number")
+        return items, filters
 
 class EmailSearchTask(BaseSearchTask):
     def __init__(self, email: str, methods_type: List[str], query_id: int, price: float):
         super().__init__(query_id, price)
         self.email = email
         self.methods_type = methods_type
+        self.logger = SearchLogger(self.query_id, 'search_email.log')
 
     async def _process_search(self, db):
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
@@ -1141,7 +1314,7 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                mentions_html, filters = await xmlriver_email_do_request(self.email)
+                mentions_html, filters = await self.xmlriver_email_do_request(db)
             except Exception as e:
                 self.money_to_return += 5
                 print(e)
@@ -1164,14 +1337,84 @@ class EmailSearchTask(BaseSearchTask):
             acc_checker,
         )
 
+        self.save_stats_to_file('search_email.log')
         file_storage = FileStorageService()
-
         await db_transactions.save_html(html, self.query_id, db, file_storage)
 
     async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
         await utils.renew_lampyre_balance(db)
 
+    async def xmlriver_email_do_request(self, db):
+        all_found_data = []
+        urls = []
+        proh_sites = await read_needless_sites(db)
+        max_attempts = 5
+        retry_delay = 2
+
+        # Обработка Google запроса
+        url = SEARCH_ENGINES['google'] + f'"{self.email}"'
+        
+        for attempt in range(1, max_attempts + 1):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(url=url)
+                    handling_resp = handle_xmlriver_response(url, response, all_found_data, [], self.email)
+                    
+                    if handling_resp not in ('500', '110', '111'):
+                        urls.append(url)
+                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                        break
+                    else:
+                        self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                        if attempt < max_attempts:
+                            await asyncio.sleep(retry_delay)
+            except Exception as e:
+                self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
+                if attempt < max_attempts:
+                    await asyncio.sleep(retry_delay)
+        else:
+            self.logger.log_error(f"Google запрос полностью провален: {url}")
+            update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+
+        # Обработка Yandex запросов
+        counter = 0
+        while True:
+            url = form_yandex_query_email(self.email, page_num=counter)
+            
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(url=url)
+                        handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.email)
+                        
+                        if handling_resp == '15':
+                            update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                            urls.append(url)
+                            break
+                        elif handling_resp in ('500', '110', '111'):
+                            self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                            if attempt < max_attempts:
+                                await asyncio.sleep(retry_delay)
+                        else:
+                            urls.append(url)
+                            update_stats(self.request_stats, self.stats_lock, attempt, success=True)
+                            counter += 1
+                            break
+                except Exception as e:
+                    self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
+                    if attempt < max_attempts:
+                        await asyncio.sleep(retry_delay)
+            else:
+                self.logger.log_error(f"Yandex запрос полностью провален: {url}")
+                update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+            
+            if handling_resp == '15':
+                break
+
+        items, filters = form_number_response_html(all_found_data, self.email)
+        await write_urls(urls, "email")
+        return items, filters
 
 class CompanySearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -1184,6 +1427,7 @@ class CompanySearchTask(BaseSearchTask):
         self.minus_words = search_filters[6]
         self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
+        self.logger = SearchLogger(self.query_id, 'search_company.log')
 
     async def _process_search(self, db):
         threads: List[Thread] = []
@@ -1265,12 +1509,15 @@ class CompanySearchTask(BaseSearchTask):
                             None,
                             keyword_type,
                             urls,
+                            self.request_stats,
+                            self.stats_lock,
+                            self.logger,
                         ),
                     ),
                 )
 
             manage_threads(threads)
-
+            self.save_stats_to_file('search_company.log')
             company_titles = form_extra_titles(self.company_names[1], self.location['original'])
             titles.extend(
                 form_titles(
@@ -1398,33 +1645,6 @@ def lampyre_num_do_request(phone_num):
     return lampyre_resp
 
 
-async def xmlriver_num_do_request(phone_num):
-    all_found_data = []
-    urls = []
-    proh_sites = read_needless_sites()
-
-    google_urls = form_google_query(phone_num)
-    for url in google_urls:
-        urls.append(url)
-        response = requests.get(url=url)
-        handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
-
-    counter = 0
-    while True:
-        url = form_yandex_query_num(phone_num, page_num=counter)
-        urls.append(url)
-        response = requests.get(url=url)
-        handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, phone_num)
-        if handling_resp in ('15', '110', '500'):
-            break
-        else:
-            counter += 1
-
-    items, filters = form_number_response_html(all_found_data, phone_num)
-    await write_urls(urls, "number")
-    return items, filters
-
-
 def form_page_query(url, page_num):
     return f'{url}&page={page_num}'
 
@@ -1470,12 +1690,11 @@ def form_yandex_query_email(email: str, page_num):
     return url
 
 
-def read_needless_sites():
-    file_path = Path(__file__).parent / "phone minus sites.txt"
-    with file_path.open("r", encoding="utf-8") as f:
-        sites = f.readlines()
-    minus_sites = [i.strip() for i in sites]
-    return minus_sites
+async def read_needless_sites(db):
+    result = await db.execute(
+        select(ProhibitedPhoneSites.site_link)
+    )
+    return result.scalars().all()
 
 
 def form_number_response_html(all_found_data, phone_num):
@@ -1495,39 +1714,6 @@ def form_number_response_html(all_found_data, phone_num):
     items = form_var_items(all_obj=all_js_objs)
 
     return items, filters
-
-
-async def xmlriver_email_do_request(email):
-    all_found_data = []
-    urls = []
-    proh_sites = read_needless_sites()
-
-    url = SEARCH_ENGINES['google'] + f'''"{email}"'''
-    urls.append(url)
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url=url)
-        handle_xmlriver_response(url, response, all_found_data, [], email)
-
-    counter = 0
-    while True:
-        url = form_yandex_query_email(email, page_num=counter)
-        urls.append(url)
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url=url)
-            handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, email)
-
-            if handling_resp in ('15', '110', '500'):
-                break
-            else:
-                counter += 1
-
-    items, filters = form_number_response_html(all_found_data, email)
-
-    await write_urls(urls, "email")
-    return items, filters
-
 
 def form_input_pack_company(
     input_pack,
