@@ -1762,8 +1762,6 @@ def delete_query_task(query_id):
         try:
             async with async_session() as db:
                 # Удаление файлов, связанных с query_id
-                from sqlalchemy import select
-                from server.api.models.models import TextData
                 file_storage = FileStorageService()
                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
                 text_data = result.scalars().first()
