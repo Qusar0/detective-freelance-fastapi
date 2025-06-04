@@ -98,7 +98,7 @@ class Keywords(Base):
     word_type: Mapped[Optional[str]] = mapped_column(String(20))
 
     def __str__(self):
-        return f"Ключевое слово ({self.id})"
+        return f"Ключевое слово ({self.word})"
 
 class PaymentHistory(Base):
     __tablename__ = 'payment_history'
@@ -142,7 +142,7 @@ class ProhibitedSites(Base):
     site_link: Mapped[Optional[str]] = mapped_column(String(100))
 
     def __str__(self):
-        return f"Запрещенный сайт ({self.id})"
+        return f"Запрещенный сайт ({self.site_link})"
 
 
 class QueriesBalance(Base):
@@ -409,3 +409,17 @@ class CountryLanguage(Base):
     
     country: Mapped['Countries'] = relationship(back_populates='language_links')
     language: Mapped['Language'] = relationship(back_populates='country_links')
+
+
+class ProhibitedPhoneSites(Base):
+    __tablename__ = 'prohibited_phone_sites'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    site_link: Mapped[Optional[str]] = mapped_column(String(255))
+
+    def __str__(self):
+        return f"Запрещенный сайт для телефонов ({self.site_link})"
