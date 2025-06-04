@@ -6,6 +6,7 @@ from server.api.admin.views import (
     KeywordsAdmin,
     PaymentHistoryAdmin,
     ProhibitedSitesAdmin,
+    ProhibitedPhoneSitesAdmin,
     QueriesBalanceAdmin,
     ServicesBalanceAdmin,
     TelegramNotificationsAdmin,
@@ -28,6 +29,7 @@ def setup_admin(app: FastAPI):
     admin.add_view(KeywordsAdmin)
     admin.add_view(PaymentHistoryAdmin)
     admin.add_view(ProhibitedSitesAdmin)
+    admin.add_view(ProhibitedPhoneSitesAdmin)
     admin.add_view(QueriesBalanceAdmin)
     admin.add_view(ServicesBalanceAdmin)
     admin.add_view(TelegramNotificationsAdmin)

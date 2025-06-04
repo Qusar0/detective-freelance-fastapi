@@ -2,7 +2,7 @@ from sqladmin import ModelView
 from server.api.models.models import (
     BalanceHistory, Blacklist, Events, Keywords, PaymentHistory,
     ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
-    TextData, UserBalances, UserQueries, UserRole, Users, Language
+    TextData, UserBalances, UserQueries, UserRole, Users, Language, ProhibitedPhoneSites
 )
 from server.api.database.database import async_session
 from contextlib import asynccontextmanager
@@ -45,6 +45,7 @@ class BalanceHistoryAdmin(ModelView, model=BalanceHistory):
     can_edit = False
     can_delete = False
 
+
 class EventsAdmin(ModelView, model=Events):
     name = "Событие"
     name_plural = "События"
@@ -69,6 +70,7 @@ class EventsAdmin(ModelView, model=Events):
     column_sortable_list = [Events.event_id, Events.created_time]
     can_create = False
     can_edit = False
+
 
 class KeywordsAdmin(ModelView, model=Keywords):
     name = "Ключевое слово"
@@ -118,10 +120,28 @@ class PaymentHistoryAdmin(ModelView, model=PaymentHistory):
     can_create = False
     can_edit = False
 
+    column_formatters = {
+        PaymentHistory.payment_amount: lambda m, a: f"{m.payment_amount:,.2f}".replace(",", " ").replace(".", ",")
+    }
+
 
 class ProhibitedSitesAdmin(ModelView, model=ProhibitedSites):
     name = "Запрещенный сайт"
     name_plural = "Запрещенные сайты"
+    icon = "fa-solid fa-globe"
+    
+    column_list = [ProhibitedSites.id, ProhibitedSites.site_link]
+    column_labels = {
+        ProhibitedSites.id: "ID",
+        ProhibitedSites.site_link: "Ссылка на сайт"
+    }
+    column_searchable_list = [ProhibitedSites.site_link]
+    column_sortable_list = [ProhibitedSites.id]
+
+
+class ProhibitedPhoneSitesAdmin(ModelView, model=ProhibitedPhoneSites):
+    name = "Запрещенный сайт (телефон)"
+    name_plural = "Запрещенные сайты (телефон)"
     icon = "fa-solid fa-globe"
     
     column_list = [ProhibitedSites.id, ProhibitedSites.site_link]
@@ -155,6 +175,9 @@ class QueriesBalanceAdmin(ModelView, model=QueriesBalance):
     column_sortable_list = [QueriesBalance.id, QueriesBalance.transaction_date]
     can_create = False
     can_delete = False
+    column_formatters = {
+        QueriesBalance.balance: lambda m, a: f"{m.balance:,.2f}".replace(",", " ").replace(".", ",")
+    }
 
 class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     name = "Баланс сервиса"
@@ -175,7 +198,9 @@ class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     }
     column_searchable_list = [ServicesBalance.service_name]
     column_sortable_list = [ServicesBalance.id, ServicesBalance.balance]
-
+    column_formatters = {
+        ServicesBalance.balance: lambda m, a: f"{m.balance:,.2f}".replace(",", " ").replace(".", ",")
+    }
 
 class TelegramNotificationsAdmin(ModelView, model=TelegramNotifications):
     name = "Телеграм уведомления"
