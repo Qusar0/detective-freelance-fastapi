@@ -50,6 +50,7 @@ from server.api.services.file_storage import FileStorageService
 from server.api.scripts.db_transactions import delete_query_by_id
 from server.api.models.models import ProhibitedPhoneSites
 from sqlalchemy import select
+from server.api.models.models import TextData
 
 
 SEARCH_ENGINES = {
