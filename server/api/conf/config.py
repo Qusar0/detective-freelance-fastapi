@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     # Frontend URLs
     frontend_url: str = Field(..., env="FRONTEND_URL")
 
+    # Query delete delay (seconds)
+    query_delete_delay_seconds: int = Field(7200, env="QUERY_DELETE_DELAY_SECONDS")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

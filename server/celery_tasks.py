@@ -112,7 +112,7 @@ class BaseSearchTask(ABC):
                 print(e)
                 await self._handle_error(user_query, db)
             finally:
-                delete_query_task.apply_async(args=[user_query.query_id], countdown=60)
+                delete_query_task.apply_async(args=[user_query.query_id], countdown=settings.query_delete_delay_seconds)
                 await self._update_balances(db)
 
     @abstractmethod
@@ -1766,14 +1766,13 @@ def delete_query_task(query_id):
                 from server.api.models.models import TextData
                 file_storage = FileStorageService()
                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
-                text_data_list = result.scalars().all()
-                for text_data in text_data_list:
-                    if text_data.file_path:
-                        try:
-                            await file_storage.delete_query_data(text_data.file_path)
-                            logging.info(f"Файл {text_data.file_path} успешно удалён.")
-                        except Exception as e:
-                            logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
+                text_data = result.scalars().first()
+                if text_data and text_data.file_path:
+                    try:
+                        await file_storage.delete_query_data(text_data.file_path)
+                        logging.info(f"Файл {text_data.file_path} успешно удалён.")
+                    except Exception as e:
+                        logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
                 # Удаление самого запроса и связанных записей
                 await delete_query_by_id(query_id, db)
         except Exception as e:
