@@ -1,40 +1,33 @@
+import asyncio
 import datetime
+import logging
 import os
 import re
 import threading
 import time
-import logging
-from threading import Thread, Lock
-from urllib.parse import urlparse
-from phonenumbers import parse, NumberParseException
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from threading import Thread, Lock
+from typing import List, Tuple
+from urllib.parse import urlparse
+
 import aiofiles
 import httpx
 import requests
 import xmltodict
-from recordtype import recordtype
-from server.api.conf.celery_worker import celery_app
 from celery import shared_task
-from typing import List, Dict, Any, Optional, Tuple
-import asyncio
-from pathlib import Path
-from server.api.error.errors import CustomError
-from server.api.scripts.lampyre_num_script import Lampyre
+from phonenumbers import parse, NumberParseException
+from recordtype import recordtype
+from sqlalchemy import select
+
+from server.api.conf.config import settings
+from server.api.database.database import async_session
+from server.api.models.models import ProhibitedPhoneSites
+from server.api.models.models import TextData
 from server.api.scripts import lampyre_email_script
+from server.api.scripts import utils, db_transactions
+from server.api.scripts.db_transactions import delete_query_by_id
 from server.api.scripts.get_contact_script import get_tags_in_getcontact
-from server.api.scripts.ibhldr_script import (
-    get_interests,
-    get_groups_ibhldr_method,
-    get_profiles,
-    get_phones,
-)
-from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
-from server.api.scripts.utils import (
-    get_default_keywords,
-    get_languages_by_code,
-    get_countries_code_by_languages,
-)
 from server.api.scripts.html_work import (
     response_template,
     response_num_template,
@@ -42,22 +35,25 @@ from server.api.scripts.html_work import (
     response_company_template,
     response_tg_template,
 )
-from server.api.scripts import utils, db_transactions
-from server.bots.notification_bot import send_notification
-from server.api.database.database import async_session
-from server.api.conf.config import settings
+from server.api.scripts.ibhldr_script import (
+    get_interests,
+    get_groups_ibhldr_method,
+    get_profiles,
+    get_phones,
+)
+from server.api.scripts.lampyre_num_script import Lampyre
+from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
+from server.api.scripts.utils import (
+    get_default_keywords,
+    get_languages_by_code,
+)
 from server.api.services.file_storage import FileStorageService
-from server.api.scripts.db_transactions import delete_query_by_id
-from server.api.models.models import ProhibitedPhoneSites
-from sqlalchemy import select
-from server.api.models.models import TextData
-
+from server.bots.notification_bot import send_notification
 
 SEARCH_ENGINES = {
     'google': f'http://xmlriver.com/search/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&query=',
     'yandex': f'http://xmlriver.com/search_yandex/xml?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}&groupby=10&query=',
 }
-
 
 FoundInfo = recordtype("FoundInfo", "title snippet url uri weight kwd word_type kwds_list fullname soc_type doc_type")
 NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
@@ -77,11 +73,11 @@ class SearchLogger:
         self.query_id = query_id
         self.log_file = log_file
         self.lock = threading.Lock()
-        
+
     def log_error(self, error_message):
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_entry = f"[{timestamp}] [ID:{self.query_id}] ОШИБКА: {error_message}\n"
-        
+
         with self.lock:
             with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(log_entry)
@@ -124,7 +120,7 @@ class BaseSearchTask(ABC):
         channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
         await db_transactions.change_query_status(user_query, "done", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
-        
+
         chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
             await send_notification(chat_id, user_query.query_title)
@@ -133,7 +129,7 @@ class BaseSearchTask(ABC):
         channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
         await db_transactions.change_query_status(user_query, "failed", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
-        
+
         if self.money_to_return > 0:
             await db_transactions.return_balance(
                 user_query.user_id,
@@ -143,7 +139,7 @@ class BaseSearchTask(ABC):
                 db,
             )
 
-    @abstractmethod 
+    @abstractmethod
     async def _update_balances(self, db):
         pass
 
@@ -158,13 +154,13 @@ class BaseSearchTask(ABC):
                 f"=== СТАТИСТИКА ЗАПРОСА ID: {self.query_id} ===",
                 f"Общее количество запросов: {total}",
                 f"Успешно с 1 попытки: {self.request_stats['success_first_try']} ({self.request_stats['success_first_try'] / total * 100:.1f}%)",
-                *[f"Успешно после {attempt} попыток: {count} ({count / total * 100:.1f}%)" 
-                for attempt, count in sorted(self.request_stats['success_after_retry'].items())],
+                *[f"Успешно после {attempt} попыток: {count} ({count / total * 100:.1f}%)"
+                  for attempt, count in sorted(self.request_stats['success_after_retry'].items())],
                 f"Не удалось после всех попыток: {self.request_stats['failed_after_max_retries']} ({self.request_stats['failed_after_max_retries'] / total * 100:.1f}%)",
                 f"Время формирования отчета: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 "===================================="
             ]
-            
+
             with open(filename, "a", encoding="utf-8") as f:
                 f.write("\n".join(stats_text) + "\n\n")
 
@@ -183,7 +179,7 @@ class NameSearchTask(BaseSearchTask):
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
         self.logger = SearchLogger(self.query_id, 'search_name.log')
 
-    async def _process_search(self, db):        
+    async def _process_search(self, db):
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -238,11 +234,11 @@ class NameSearchTask(BaseSearchTask):
 
             languages_names = await get_languages_by_code(db, self.languages)
             titles.append(languages_names)
-        
+
             manage_threads(threads)
             self.save_stats_to_file('search_name.log')
             await write_urls(urls, "name")
-            
+
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
 
@@ -259,13 +255,13 @@ class NameSearchTask(BaseSearchTask):
         await utils.renew_xml_balance(db)
 
     async def _form_search_requests(
-        self,
-        name_cases,
-        len_keywords_from_user,
-        len_keywords_from_db,
-        keywords_from_db,
-        request_input_pack,
-        lang,
+            self,
+            name_cases,
+            len_keywords_from_user,
+            len_keywords_from_db,
+            keywords_from_db,
+            request_input_pack,
+            lang,
     ):
         for name_case in name_cases:
             search_keys = form_search_key(name_case, len_keywords_from_user)
@@ -287,11 +283,11 @@ class NameSearchTask(BaseSearchTask):
                     )
 
     def _add_standard_search(
-        self,
-        request_input_pack,
-        search_key,
-        name_case,
-        lang,
+            self,
+            request_input_pack,
+            search_key,
+            name_case,
+            lang,
     ):
         for engine in self.search_engines:
             if url := SEARCH_ENGINES.get(engine):
@@ -310,12 +306,12 @@ class NameSearchTask(BaseSearchTask):
                 )
 
     async def _add_keyword_searches(
-        self,
-        request_input_pack,
-        search_key,
-        name_case,
-        keywords_from_db,
-        lang,
+            self,
+            request_input_pack,
+            search_key,
+            name_case,
+            keywords_from_db,
+            lang,
     ):
         for kwd_from_user in self.keywords_from_user[lang]['keywords']:
             for engine in self.search_engines:
@@ -354,13 +350,13 @@ class NameSearchTask(BaseSearchTask):
                             )
 
     async def _process_search_requests(
-        self,
-        request_input_pack,
-        threads,
-        all_found_info,
-        prohibited_sites_list,
-        urls,
-        db,
+            self,
+            request_input_pack,
+            threads,
+            all_found_info,
+            prohibited_sites_list,
+            urls,
+            db,
     ):
         for input_data in request_input_pack:
             url = input_data[0]
@@ -416,12 +412,12 @@ async def write_urls(urls, type):
 
 
 def form_titles(
-    fullname,
-    default_kwds_name,
-    keywords_from_user,
-    minus_words,
-    plus_words,
-    type='',
+        fullname,
+        default_kwds_name,
+        keywords_from_user,
+        minus_words,
+        plus_words,
+        type='',
 ):
     if isinstance(fullname, list) and len(fullname) == 3:
         fullname = f"{fullname[1]} {fullname[0]} {fullname[2]}".title()
@@ -565,17 +561,17 @@ def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
 
 
 def form_input_pack(
-    input_pack,
-    search_key: str,
-    keyword: str,
-    keyword_type: str,
-    name_case,
-    plus_words,
-    minus_words,
-    generation_type: str,
-    full_name_length: int,
-    lang: str,
-    base_url: str,
+        input_pack,
+        search_key: str,
+        keyword: str,
+        keyword_type: str,
+        name_case,
+        plus_words,
+        minus_words,
+        generation_type: str,
+        full_name_length: int,
+        lang: str,
+        base_url: str,
 ):
     try:
         url = f'''{base_url}{search_key}'''
@@ -595,7 +591,7 @@ def form_input_pack(
                 url += f"{plus_words}{minus_words}"
             elif generation_type == "system_keywords" and length > 1:
                 url += f"{plus_words}{minus_words}"
-        
+
         if base_url == SEARCH_ENGINES['google']:
             url += f"&lr={lang}"
         elif base_url == SEARCH_ENGINES['yandex']:
@@ -607,16 +603,16 @@ def form_input_pack(
 
 
 def do_request_to_xmlriver(
-    url,
-    all_found_data,
-    prohibited_sites,
-    keyword,
-    name_case,
-    keyword_type,
-    urls,
-    request_stats,
-    stats_lock,
-    logger : SearchLogger,
+        url,
+        all_found_data,
+        prohibited_sites,
+        keyword,
+        name_case,
+        keyword_type,
+        urls,
+        request_stats,
+        stats_lock,
+        logger: SearchLogger,
 ):
     max_attempts = 5
     retry_delay = 2
@@ -648,24 +644,24 @@ def do_request_to_xmlriver(
         else:
             logger.log_error(f"Запрос полностью провален: {url}")
             update_stats(request_stats, stats_lock, attempt, success=False)
-    
+
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
         handling_resp = None
-        
+
         while handling_resp not in ('15'):
             for attempt in range(1, max_attempts + 1):
                 try:
                     new_url = form_page_query(url, page_num)
                     response = requests.get(new_url)
                     handling_resp = handle_xmlriver_response(
-                            url,
-                            response,
-                            all_found_data,
-                            prohibited_sites,
-                            keyword,
-                            name_case,
-                            keyword_type,
+                        url,
+                        response,
+                        all_found_data,
+                        prohibited_sites,
+                        keyword,
+                        name_case,
+                        keyword_type,
                     )
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(new_url)
@@ -673,7 +669,8 @@ def do_request_to_xmlriver(
                         page_num += 1
                         break
                     else:
-                        logging.error(f"Yandex request failed. URL: {new_url}, Status: {response.status_code}, Attempt: {attempt}")
+                        logging.error(
+                            f"Yandex request failed. URL: {new_url}, Status: {response.status_code}, Attempt: {attempt}")
                         if attempt < max_attempts:
                             time.sleep(retry_delay)
                 except Exception as e:
@@ -683,14 +680,15 @@ def do_request_to_xmlriver(
             else:
                 update_stats(request_stats, stats_lock, attempt, success=False)
 
+
 def handle_xmlriver_response(
-    url,
-    response,
-    all_found_data: List,
-    prohibited_sites: List,
-    keyword: str,
-    name_case=None,
-    keyword_type=None,
+        url,
+        response,
+        all_found_data: List,
+        prohibited_sites: List,
+        keyword: str,
+        name_case=None,
+        keyword_type=None,
 ):
     soc_urls = {
         'vk.com': 'Вконтакте',
@@ -833,10 +831,10 @@ def xml_errors_handler(xml_response):
 
     except KeyError:
         print(xml_response)
-        raise CustomError("XMLriver на обновлении.")
+        raise Exception("XMLriver на обновлении.")
 
     if error_code == '101' and error_text == 'Сервис сбора данных на обновлении. Попробуйте чуть позже.':
-        raise CustomError("XMLriver на обновлении.")
+        raise Exception("XMLriver на обновлении.")
 
     return error_code
 
@@ -899,13 +897,13 @@ def filter_by_weight(all_found_info, search_type) -> List[FoundInfo]:
 
 
 def form_js_data(
-    title,
-    snippet,
-    uri,
-    keyword_list,
-    fullname_type="",
-    social_type="",
-    doc_type="",
+        title,
+        snippet,
+        uri,
+        keyword_list,
+        fullname_type="",
+        social_type="",
+        doc_type="",
 ):
     if fullname_type != "":
         js_data = f"""
@@ -1118,14 +1116,14 @@ def form_response_html(found_info_test) -> str:
 
 
 def form_var_items(
-    all_obj="",
-    main="",
-    free="",
-    negative="",
-    reputation="",
-    relations="",
-    socials="",
-    documents="",
+        all_obj="",
+        main="",
+        free="",
+        negative="",
+        reputation="",
+        relations="",
+        socials="",
+        documents="",
 ):
     items = {
         "all": all_obj,
@@ -1141,12 +1139,12 @@ def form_var_items(
 
 
 def form_var_filters(
-    keywords_from_user="",
-    neg_kwds="",
-    rep_kwds="",
-    rel_kwds="",
-    soc_kwds="",
-    doc_kwds="",
+        keywords_from_user="",
+        neg_kwds="",
+        rep_kwds="",
+        rel_kwds="",
+        soc_kwds="",
+        doc_kwds="",
 ):
     kwds_objects, neg_objects, rep_objects, rel_objects, soc_objects, doc_objects = "", "", "", "", "", ""
 
@@ -1226,7 +1224,7 @@ class NumberSearchTask(BaseSearchTask):
             logging.error(f"{str(e)}")
             self.money_to_return = self.price
             raise e
-    
+
     async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
         await utils.renew_lampyre_balance(db)
@@ -1246,7 +1244,7 @@ class NumberSearchTask(BaseSearchTask):
                 try:
                     response = requests.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
-                    
+
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
@@ -1267,12 +1265,12 @@ class NumberSearchTask(BaseSearchTask):
         counter = 0
         while True:
             url = form_yandex_query_num(self.phone_num, page_num=counter)
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
-                    
+
                     if handling_resp == '15':
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
                         urls.append(url)
@@ -1293,13 +1291,14 @@ class NumberSearchTask(BaseSearchTask):
             else:
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
-            
+
             if handling_resp == '15':
                 break
 
         items, filters = form_number_response_html(all_found_data, self.phone_num)
         await write_urls(urls, "number")
         return items, filters
+
 
 class EmailSearchTask(BaseSearchTask):
     def __init__(self, email: str, methods_type: List[str], query_id: int, price: float):
@@ -1355,13 +1354,13 @@ class EmailSearchTask(BaseSearchTask):
 
         # Обработка Google запроса
         url = SEARCH_ENGINES['google'] + f'"{self.email}"'
-        
+
         for attempt in range(1, max_attempts + 1):
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, [], self.email)
-                    
+
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
@@ -1382,13 +1381,13 @@ class EmailSearchTask(BaseSearchTask):
         counter = 0
         while True:
             url = form_yandex_query_email(self.email, page_num=counter)
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     async with httpx.AsyncClient() as client:
                         response = await client.get(url=url)
                         handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.email)
-                        
+
                         if handling_resp == '15':
                             update_stats(self.request_stats, self.stats_lock, attempt, success=True)
                             urls.append(url)
@@ -1409,13 +1408,14 @@ class EmailSearchTask(BaseSearchTask):
             else:
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
-            
+
             if handling_resp == '15':
                 break
 
         items, filters = form_number_response_html(all_found_data, self.email)
         await write_urls(urls, "email")
         return items, filters
+
 
 class CompanySearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -1716,16 +1716,17 @@ def form_number_response_html(all_found_data, phone_num):
 
     return items, filters
 
+
 def form_input_pack_company(
-    input_pack,
-    company_name: str,
-    keyword: str,
-    keyword_type: str,
-    location,
-    plus_words,
-    minus_words,
-    lang,
-    base_url: str,
+        input_pack,
+        company_name: str,
+        keyword: str,
+        keyword_type: str,
+        location,
+        plus_words,
+        minus_words,
+        lang,
+        base_url: str,
 ):
     if company_name == f'"{company_name}"':
         url = f'''{base_url}{company_name}'''
@@ -1759,16 +1760,16 @@ def form_extra_titles(second_name, location):
 def delete_query_task(query_id):
     import logging
     logging.info(f"Celery: Попытка удалить query {query_id}")
+
     async def _delete():
         try:
             async with async_session() as db:
                 # Удаление файлов, связанных с query_id
-                file_storage = FileStorageService()
                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
                 text_data = result.scalars().first()
                 if text_data and text_data.file_path:
                     try:
-                        await file_storage.delete_query_data(text_data.file_path)
+                        await FileStorageService.delete_query_data(text_data.file_path)
                         logging.info(f"Файл {text_data.file_path} успешно удалён.")
                     except Exception as e:
                         logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")

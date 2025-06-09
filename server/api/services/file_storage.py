@@ -19,7 +19,8 @@ class FileStorageService:
             logging.error(f"Failed to save query data to file: {e}")
             raise HTTPException(status_code=500, detail="Failed to save query data")
 
-    async def get_query_data(self, file_path: str) -> str:
+    @staticmethod
+    async def get_query_data(file_path: str) -> str:
         try:
             path = Path(file_path)
             if not path.exists():
@@ -30,7 +31,8 @@ class FileStorageService:
             logging.error(f"Failed to read query data from file: {e}")
             raise HTTPException(status_code=500, detail="Failed to read query data")
 
-    async def delete_query_data(self, file_path: str) -> None:
+    @staticmethod
+    async def delete_query_data(file_path: str) -> None:
         try:
             path = Path(file_path)
             if path.exists():

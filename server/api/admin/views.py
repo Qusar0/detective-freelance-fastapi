@@ -1,11 +1,14 @@
-from sqladmin import ModelView
-from server.api.models.models import (
-    BalanceHistory, Blacklist, Events, Keywords, PaymentHistory,
-    ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
-    TextData, UserBalances, UserQueries, UserRole, Users, Language, ProhibitedPhoneSites
-)
-from server.api.database.database import async_session
 from contextlib import asynccontextmanager
+
+from sqladmin import ModelView
+
+from server.api.database.database import async_session
+from server.api.models.models import (
+    BalanceHistory, Events, Keywords, PaymentHistory,
+    ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
+    TextData, UserBalances, UserQueries, UserRole, Users, ProhibitedPhoneSites
+)
+
 
 @asynccontextmanager
 async def get_session():
@@ -17,7 +20,7 @@ class BalanceHistoryAdmin(ModelView, model=BalanceHistory):
     name = "История баланса"
     name_plural = "История балансов"
     icon = "fa-solid fa-coins"
-    
+
     column_list = [
         BalanceHistory.id,
         BalanceHistory.transaction_type,
@@ -50,7 +53,7 @@ class EventsAdmin(ModelView, model=Events):
     name = "Событие"
     name_plural = "События"
     icon = "fa-solid fa-calendar-check"
-    
+
     column_list = [
         Events.event_id,
         Events.event_type,
@@ -76,7 +79,7 @@ class KeywordsAdmin(ModelView, model=Keywords):
     name = "Ключевое слово"
     name_plural = "Ключевые слова"
     icon = "fa-solid fa-key"
-    
+
     column_list = [Keywords.id, Keywords.word, Keywords.word_type]
     column_labels = {
         Keywords.id: "ID",
@@ -91,7 +94,7 @@ class PaymentHistoryAdmin(ModelView, model=PaymentHistory):
     name = "История платежей"
     name_plural = "История платежей"
     icon = "fa-solid fa-credit-card"
-    
+
     column_list = [
         PaymentHistory.id,
         PaymentHistory.user,
@@ -129,7 +132,7 @@ class ProhibitedSitesAdmin(ModelView, model=ProhibitedSites):
     name = "Запрещенный сайт"
     name_plural = "Запрещенные сайты"
     icon = "fa-solid fa-globe"
-    
+
     column_list = [ProhibitedSites.id, ProhibitedSites.site_link]
     column_labels = {
         ProhibitedSites.id: "ID",
@@ -143,7 +146,7 @@ class ProhibitedPhoneSitesAdmin(ModelView, model=ProhibitedPhoneSites):
     name = "Запрещенный сайт (телефон)"
     name_plural = "Запрещенные сайты (телефон)"
     icon = "fa-solid fa-globe"
-    
+
     column_list = [ProhibitedSites.id, ProhibitedSites.site_link]
     column_labels = {
         ProhibitedSites.id: "ID",
@@ -157,7 +160,7 @@ class QueriesBalanceAdmin(ModelView, model=QueriesBalance):
     name = "Баланс запроса"
     name_plural = "Балансы запросов"
     icon = "fa-solid fa-file-invoice-dollar"
-    
+
     column_list = [
         QueriesBalance.id,
         QueriesBalance.query,
@@ -179,11 +182,12 @@ class QueriesBalanceAdmin(ModelView, model=QueriesBalance):
         QueriesBalance.balance: lambda m, a: f"{m.balance:,.2f}".replace(",", " ").replace(".", ",")
     }
 
+
 class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
     name = "Баланс сервиса"
     name_plural = "Балансы сервисов"
     icon = "fa-solid fa-server"
-    
+
     column_list = [
         ServicesBalance.id,
         ServicesBalance.service_name,
@@ -202,11 +206,12 @@ class ServicesBalanceAdmin(ModelView, model=ServicesBalance):
         ServicesBalance.balance: lambda m, a: f"{m.balance:,.2f}".replace(",", " ").replace(".", ",")
     }
 
+
 class TelegramNotificationsAdmin(ModelView, model=TelegramNotifications):
     name = "Телеграм уведомления"
     name_plural = "Телеграм уведомления"
     icon = "fa-solid fa-user"
-    
+
     column_list = [
         TelegramNotifications.id,
         TelegramNotifications.user,
@@ -226,7 +231,7 @@ class TextDataAdmin(ModelView, model=TextData):
     name = "Текстовые данные"
     name_plural = "Текстовые данные"
     icon = "fa-solid fa-file-lines"
-    
+
     column_list = [
         TextData.id,
         TextData.query,
@@ -244,11 +249,12 @@ class TextDataAdmin(ModelView, model=TextData):
     can_edit = False
     can_create = False
 
+
 class UserBalancesAdmin(ModelView, model=UserBalances):
     name = "Баланс пользователя"
     name_plural = "Балансы пользователей"
     icon = "fa-solid fa-wallet"
-    
+
     column_list = [
         UserBalances.id,
         UserBalances.user,
@@ -265,11 +271,12 @@ class UserBalancesAdmin(ModelView, model=UserBalances):
     can_delete = False
     can_create = False
 
+
 class UserQueriesAdmin(ModelView, model=UserQueries):
     name = "Запрос пользователя"
     name_plural = "Запросы пользователей"
     icon = "fa-solid fa-magnifying-glass"
-    
+
     column_list = [
         UserQueries.query_id,
         UserQueries.user,
@@ -310,7 +317,7 @@ class UserRoleAdmin(ModelView, model=UserRole):
     name = "Роль пользователя"
     name_plural = "Роли пользователей"
     icon = "fa-solid fa-user-tag"
-    
+
     column_list = [
         UserRole.id,
         UserRole.role_name,
@@ -329,7 +336,7 @@ class UsersAdmin(ModelView, model=Users):
     name = "Пользователь"
     name_plural = "Пользователи"
     icon = "fa-solid fa-user"
-    
+
     column_list = [
         Users.id,
         Users.email,

@@ -17,13 +17,12 @@ from server.api.admin.views import (
     UsersAdmin,
 )
 
-
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def setup_admin(app: FastAPI):
     admin = init_admin(app)
-    
+
     admin.add_view(BalanceHistoryAdmin)
     admin.add_view(EventsAdmin)
     admin.add_view(KeywordsAdmin)
@@ -39,4 +38,4 @@ def setup_admin(app: FastAPI):
     admin.add_view(UserRoleAdmin)
     admin.add_view(UsersAdmin)
 
-    router.mount("/admin", admin) 
+    router.mount("/admin", admin)
