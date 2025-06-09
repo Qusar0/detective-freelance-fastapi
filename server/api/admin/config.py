@@ -1,18 +1,19 @@
-from sqladmin import Admin
-from sqladmin.authentication import AuthenticationBackend
+from contextlib import asynccontextmanager
+
 from fastapi import Request, FastAPI
 from fastapi_jwt_auth import AuthJWT
-from fastapi.responses import RedirectResponse
-from sqlalchemy.future import select
-from server.api.models.models import (
-    Users, UserQueries, UserBalances, PaymentHistory,
-    ServicesBalance, UserRole, Events, BalanceHistory
-)
 from passlib.hash import bcrypt
-from server.api.database.database import engine
+from sqladmin import Admin
+from sqladmin.authentication import AuthenticationBackend
+from sqlalchemy.future import select
+from starlette.responses import RedirectResponse
+
 from server.api.conf.config import settings
-from contextlib import asynccontextmanager
 from server.api.database.database import async_session
+from server.api.database.database import engine
+from server.api.models.models import (
+    Users, UserRole
+)
 
 
 @asynccontextmanager
@@ -66,15 +67,15 @@ class AdminAuth(AuthenticationBackend):
 
     async def logout(self, request: Request) -> bool:
         request.session.clear()
-        
+
         temp_response = RedirectResponse(url="/admin/login")
         auth = AuthJWT(req=request, res=temp_response)
         auth.unset_jwt_cookies(temp_response)
-        
+
         request.state.response = temp_response
         return True
 
-    async def authenticate(self, request: Request) -> bool:
+    async def authenticate(self, request: Request) -> RedirectResponse | bool:
         access_token = request.session.get("access_token")
         if not access_token:
             return RedirectResponse(url="/admin/login")
@@ -114,4 +115,4 @@ def init_admin(app: FastAPI) -> Admin:
         title="Панель администратора",
         authentication_backend=AdminAuth(secret_key=settings.secret_key),
     )
-    return admin 
+    return admin
