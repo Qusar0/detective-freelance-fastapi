@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
@@ -13,7 +14,6 @@ from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
     FindByNameModel,
-    SearchResponseModel,
     FindByNumberModel,
     FindByEmailModel,
     FindByCompanyModel,
@@ -21,19 +21,15 @@ from server.api.schemas.query import (
     PriceResponse,
     DownloadQueryRequest,
 )
-from server.celery_tasks import (
-    start_search_by_name,
-    start_search_by_num,
-    start_search_by_email,
-    start_search_by_company,
-    start_search_by_telegram,
-    SEARCH_ENGINES,
-)
+
 from server.api.scripts import utils
 from server.api.scripts import db_transactions
 from server.api.services.file_storage import FileStorageService
-import logging
 from server.api.scripts.utils import translate_name_fields, translate_company_fields
+from server.tasks.search.company import start_search_by_company
+from server.tasks.search.email import start_search_by_email
+from server.tasks.search.name import start_search_by_name
+from server.tasks.search.number import start_search_by_num
 
 router = APIRouter(
     prefix="/queries",
