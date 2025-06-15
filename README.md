@@ -1,3 +1,4 @@
+[![Linter](https://github.com/ekaterinakrylovao/tg-bot-project/actions/workflows/linter.yaml/badge.svg)](https://github.com/ekaterinakrylovao/tg-bot-project/actions/workflows/linter.yaml)
 # Detective Freelance
 
 ### Запуск проекта
@@ -14,7 +15,7 @@ python3.10 -m pip install -r requirements.txt
 2. Создайте конфигурационный файл и запишите в него все настройки
 
 ```bash
-cd ./server && cp .env.example .env
+cp .env.example .env
 ```
 
 3. Проведите миграции через alembic
