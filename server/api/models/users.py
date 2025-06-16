@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -14,6 +14,9 @@ from sqlalchemy.orm import Mapped, relationship, mapped_column
 from sqlalchemy.sql import func
 
 from server.api.models.models import Base
+
+if TYPE_CHECKING:
+    from server.api.models import UserRole, UserBalances, UserQueries, PaymentHistory, TelegramNotifications
 
 
 class Users(Base):
