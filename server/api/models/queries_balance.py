@@ -1,5 +1,6 @@
 import datetime
 import decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     DateTime,
@@ -10,6 +11,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 from server.api.models.models import Base
+
+if TYPE_CHECKING:
+    from server.api.models import UserQueries
 
 
 class QueriesBalance(Base):
