@@ -7,7 +7,7 @@ from typing import Any, Callable, Coroutine
 from functools import wraps
 from server.api.conf.config import settings
 from server.api.database.database import async_session
-from server.api.models.models import ServicesBalance
+from server.api.models import ServicesBalance
 
 
 bot = Bot(token=settings.notification_bot_token, parse_mode=ParseMode.HTML)

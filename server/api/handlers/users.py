@@ -14,13 +14,7 @@ from server.api.schemas.users import (
 import logging
 from typing import Dict
 from passlib.hash import bcrypt
-from server.api.models.models import (
-    Events,
-    UserQueries,
-    UserBalances,
-    PaymentHistory,
-    Users,
-)
+from server.api.models import UserQueries, Events, PaymentHistory, UserBalances, Users
 from server.api.conf.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import publish_event

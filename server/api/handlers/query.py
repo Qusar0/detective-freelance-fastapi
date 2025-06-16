@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from server.api.database.database import get_db
-from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
+from server.api.models import UserQueries, Events, QueriesBalance, TextData, Language
 from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
