@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from sqladmin import ModelView
 
 from server.api.database.database import async_session
+from server.api.models.balance_history import BalanceHistory
 from server.api.models.models import (
-    BalanceHistory, Events, Keywords, PaymentHistory,
+    Events, Keywords, PaymentHistory,
     ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
     TextData, UserBalances, UserQueries, UserRole, Users, ProhibitedPhoneSites
 )
