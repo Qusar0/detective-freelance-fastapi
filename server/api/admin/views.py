@@ -4,11 +4,11 @@ from sqladmin import ModelView
 
 from server.api.database.database import async_session
 from server.api.models.balance_history import BalanceHistory
-from server.api.models.models import (
-    Events, Keywords, PaymentHistory,
-    ProhibitedSites, QueriesBalance, ServicesBalance, TelegramNotifications,
-    TextData, UserBalances, UserQueries, UserRole, Users, ProhibitedPhoneSites
-)
+from server.api.models import (
+    UserQueries, Events, Keywords,
+    PaymentHistory, ProhibitedSites, QueriesBalance,
+    ServicesBalance, TelegramNotifications, TextData,
+    UserBalances, UserRole, Users, ProhibitedPhoneSites)
 
 
 @asynccontextmanager

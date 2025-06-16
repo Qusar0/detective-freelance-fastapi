@@ -22,8 +22,7 @@ from sqlalchemy import select
 
 from server.api.conf.config import settings
 from server.api.database.database import async_session
-from server.api.models.models import ProhibitedPhoneSites
-from server.api.models.models import TextData
+from server.api.models import ProhibitedPhoneSites, TextData
 from server.api.scripts import lampyre_email_script
 from server.api.scripts import utils, db_transactions
 from server.api.scripts.db_transactions import delete_query_by_id

@@ -1,18 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
-from server.api.models.models import (
-    Keywords,
-    ServicesBalance,
-    ProhibitedSites,
-    Users,
-    TelegramNotifications,
-    UserQueries,
-    UserBalances,
-    Events,
-    Language,
-    CountryLanguage,
-)
+from server.api.models import (
+    UserQueries, Events, Keywords,
+    ProhibitedSites, ServicesBalance, TelegramNotifications,
+    UserBalances, Users, CountryLanguage, Language)
 from typing import Dict, List, Any
 from server.api.database.database import get_db
 import base64
