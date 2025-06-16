@@ -16,3 +16,7 @@ requests~=2.32.3
 phonenumbers~=9.0.7
 xmltodict~=0.14.2
 recordtype~=1.4
+aiohttp~=3.11.18
+aiogram~=3.20.0.post0
+aiosmtplib~=4.0.1
+itsdangerous~=2.2.0

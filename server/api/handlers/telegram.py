@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import RedirectResponse
-from fastapi_jwt_auth import AuthJWT
 import logging
-from server.bots.support_bot import send_message_async
-from server.api.scripts import utils
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_jwt_auth import AuthJWT
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from server.api.database.database import get_db
 from server.api.schemas.telegram import (
     WriteSupportRequest,
     WriteSupportResponse,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-from server.api.database.database import get_db
-from server.api.conf.config import settings
-
+from server.api.scripts import utils
+from server.bots.support_bot import send_message_async
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 

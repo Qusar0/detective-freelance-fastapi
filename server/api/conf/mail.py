@@ -1,11 +1,11 @@
 from email.message import EmailMessage
+
 from aiosmtplib import send
-from server.api.conf.config import settings
 from itsdangerous import URLSafeTimedSerializer
-from server.api.templates.email_message import get_confirmation_email
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+
+from server.api.conf.config import settings
 from server.api.models.models import Users
+from server.api.templates.email_message import get_confirmation_email
 
 
 async def send_email(
@@ -35,7 +35,6 @@ async def send_email(
 
 def generate_conformation_token(email):
     serializer = URLSafeTimedSerializer(settings.secret_key)
-
     return serializer.dumps(email, salt=settings.security_password_salt)
 
 
@@ -50,17 +49,6 @@ def confirm_token(token, expiration=3600):
     except Exception:
         return False
     return email
-
-
-async def check_user_confirmation(user_id: int, db: AsyncSession) -> bool:
-    result = await db.execute(
-        select(Users)
-        .where(Users.id == user_id),
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        return False
-    return user.is_confirmed
 
 
 async def send_confirmation_email(user: Users):
