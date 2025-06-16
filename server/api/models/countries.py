@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import (
     Integer,
@@ -7,6 +7,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 from server.api.models.models import Base
+
+if TYPE_CHECKING:
+    from server.api.models import CountryLanguage
 
 
 class Countries(Base):
