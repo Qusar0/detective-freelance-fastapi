@@ -1194,6 +1194,7 @@ class NumberSearchTask(BaseSearchTask):
         items, filters = {}, {}
         lampyre_html, leaks_html, acc_search_html = '', '', ''
         tags = []
+        getcontact_data = {}
 
         if 'mentions' in self.methods_type:
             try:
@@ -1204,7 +1205,7 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'tags' in self.methods_type:
             try:
-                tags, self.requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
+                tags, self.requests_getcontact_left, getcontact_data = get_tags_in_getcontact(self.phone_num)
             except Exception as e:
                 self.money_to_return += 25
                 print(e)
@@ -1216,6 +1217,7 @@ class NumberSearchTask(BaseSearchTask):
             lampyre_html,
             tags,
             acc_search_html,
+            getcontact_data,
         )
         self.save_stats_to_file('search_num.log')
         try:
