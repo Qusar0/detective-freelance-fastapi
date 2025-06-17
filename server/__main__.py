@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from server.api.handlers.auth import router as auth_router
-from server.api.handlers.users import router as user_router
-from server.api.handlers.query import router as query_router
-from server.api.handlers.telegram import router as telegram_router
-from server.api.admin.router import router as admin_router, setup_admin
+from server.api.routers.auth_router import router as auth_router
+from server.api.routers.users_router import router as user_router
+from server.api.routers.query import router as query_router
+from server.api.routers.telegram_router import router as telegram_router
+from server.api.routers.admin_router import router as admin_router, setup_admin
 from fastapi.responses import StreamingResponse
 import asyncio
 from server.api.scripts.sse_manager import (
