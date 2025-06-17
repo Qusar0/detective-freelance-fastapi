@@ -1,6 +1,11 @@
-from fastapi import APIRouter, FastAPI
-from server.api.admin.config import init_admin
-from server.api.admin.views import (
+from fastapi import APIRouter
+from fastapi import FastAPI
+from sqladmin import Admin
+
+from server.api.conf.config import settings
+from server.api.database.database import engine
+from server.api.routers.admin.admin_auth import AdminAuth
+from server.api.routers.admin.views import (
     BalanceHistoryAdmin,
     EventsAdmin,
     KeywordsAdmin,
@@ -21,7 +26,13 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def setup_admin(app: FastAPI):
-    admin = init_admin(app)
+    admin = Admin(
+        app=app,
+        engine=engine,
+        templates_dir="templates",
+        title="Панель администратора",
+        authentication_backend=AdminAuth(secret_key=settings.secret_key),
+    )
 
     admin.add_view(BalanceHistoryAdmin)
     admin.add_view(EventsAdmin)

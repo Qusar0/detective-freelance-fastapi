@@ -1,16 +1,14 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Request, FastAPI
+from fastapi import Request
 from fastapi_jwt_auth import AuthJWT
 from passlib.hash import bcrypt
-from sqladmin import Admin
 from sqladmin.authentication import AuthenticationBackend
 from sqlalchemy.future import select
 from starlette.responses import RedirectResponse
 
 from server.api.conf.config import settings
 from server.api.database.database import async_session
-from server.api.database.database import engine
 from server.api.models import UserRole, Users
 
 
@@ -103,14 +101,3 @@ class AdminAuth(AuthenticationBackend):
         except Exception as e:
             print(f"Admin auth error: {e}")
             return RedirectResponse(url="/admin/login")
-
-
-def init_admin(app: FastAPI) -> Admin:
-    admin = Admin(
-        app=app,
-        engine=engine,
-        templates_dir="templates",
-        title="Панель администратора",
-        authentication_backend=AdminAuth(secret_key=settings.secret_key),
-    )
-    return admin
