@@ -41,7 +41,9 @@ exclude =
     ui*,
     resources*
     alembic,
-    env
+    env,
+    templates,
+    html_work.py,
 
 # Настройки кавычек
 
