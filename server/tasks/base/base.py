@@ -54,7 +54,7 @@ class BaseSearchTask(ABC):
         channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
         await db_transactions.change_query_status(user_query, "done", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
-        
+
         chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
             await send_notification(chat_id, user_query.query_title)
@@ -63,7 +63,7 @@ class BaseSearchTask(ABC):
         channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
         await db_transactions.change_query_status(user_query, "failed", db)
         await db_transactions.send_sse_notification(user_query, channel, db)
-        
+
         if self.money_to_return > 0:
             await db_transactions.return_balance(
                 user_query.user_id,
@@ -73,7 +73,7 @@ class BaseSearchTask(ABC):
                 db,
             )
 
-    @abstractmethod 
+    @abstractmethod
     async def _update_balances(self, db):
         pass
 
@@ -87,14 +87,24 @@ class BaseSearchTask(ABC):
             stats_text = [
                 f"=== СТАТИСТИКА ЗАПРОСА ID: {self.query_id} ===",
                 f"Общее количество запросов: {total}",
-                f"Успешно с 1 попытки: {self.request_stats['success_first_try']} ({self.request_stats['success_first_try'] / total * 100:.1f}%)",
-                *[f"Успешно после {attempt} попыток: {count} ({count / total * 100:.1f}%)" 
-                for attempt, count in sorted(self.request_stats['success_after_retry'].items())],
-                f"Не удалось после всех попыток: {self.request_stats['failed_after_max_retries']} ({self.request_stats['failed_after_max_retries'] / total * 100:.1f}%)",
+                f"Успешно с 1 попытки: \
+                {self.request_stats['success_first_try']} \
+                ({self.request_stats['success_first_try'] / total * 100:.1f}%)",
+
+                *[
+                    f"Успешно после {attempt} попыток: {count} ({count / total * 100:.1f}%)"
+                    for attempt, count in sorted(
+                        self.request_stats['success_after_retry'].items()
+                    )
+                ],
+
+                f"Не удалось после всех попыток: \
+                {self.request_stats['failed_after_max_retries']} \
+                ({self.request_stats['failed_after_max_retries'] / total * 100:.1f}%)",
                 f"Время формирования отчета: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                 "===================================="
             ]
-            
+
             with open(filename, "a", encoding="utf-8") as f:
                 f.write("\n".join(stats_text) + "\n\n")
 
@@ -103,6 +113,7 @@ class BaseSearchTask(ABC):
 def delete_query_task(query_id):
     import logging
     logging.info(f"Celery: Попытка удалить query {query_id}")
+
     async def _delete():
         try:
             async with async_session() as db:
