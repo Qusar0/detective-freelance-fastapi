@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    UserRole)
+from server.api.models.models import UserRole
 
 
 class UserRoleAdmin(ModelView, model=UserRole):

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, func
 from server.api.database.database import get_db
 import logging
-from server.api.models import Users
+from server.api.models.models import Users
 
 
 def get_file_storage() -> FileStorageService:

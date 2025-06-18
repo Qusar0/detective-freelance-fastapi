@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
-from server.api.models import (
+from server.api.models.models import (
     UserQueries, Events, Keywords,
     ProhibitedSites, ServicesBalance, TelegramNotifications,
     UserBalances, Users, CountryLanguage, Language)

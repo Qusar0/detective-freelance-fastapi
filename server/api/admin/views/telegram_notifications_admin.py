@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    TelegramNotifications)
+from server.api.models.models import TelegramNotifications
 
 
 class TelegramNotificationsAdmin(ModelView, model=TelegramNotifications):

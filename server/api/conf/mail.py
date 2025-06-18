@@ -4,7 +4,7 @@ from aiosmtplib import send
 from itsdangerous import URLSafeTimedSerializer
 
 from server.api.conf.config import settings
-from server.api.models import Users
+from server.api.models.models import Users
 from server.api.templates.email_message import get_confirmation_email
 
 

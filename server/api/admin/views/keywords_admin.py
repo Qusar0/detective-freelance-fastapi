@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    Keywords)
+from server.api.models.models import Keywords
 
 
 class KeywordsAdmin(ModelView, model=Keywords):

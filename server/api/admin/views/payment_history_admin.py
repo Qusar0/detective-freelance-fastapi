@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    PaymentHistory)
+from server.api.models.models import PaymentHistory
 
 
 class PaymentHistoryAdmin(ModelView, model=PaymentHistory):

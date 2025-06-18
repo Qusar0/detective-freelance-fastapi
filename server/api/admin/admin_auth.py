@@ -9,7 +9,7 @@ from starlette.responses import RedirectResponse
 
 from server.api.conf.config import settings
 from server.api.database.database import async_session
-from server.api.models import UserRole, Users
+from server.api.models.models import UserRole, Users
 
 
 @asynccontextmanager

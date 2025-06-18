@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    Events)
+from server.api.models.models import Events
 
 
 class EventsAdmin(ModelView, model=Events):
