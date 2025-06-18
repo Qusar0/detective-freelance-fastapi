@@ -25,15 +25,23 @@ def form_phone_number(raw_number: str):
     except NumberParseException:
         return [raw_number]
 
+
 def form_extra_titles(second_name, location):
     extra_titles = ""
     if second_name != "":
-        extra_titles += f'<span class="max-text-length" title="Дополнительное наименование: {second_name}"><b>Дополнительное наименование:</b> {second_name}</span>'
+        extra_titles += f'< \
+            span class="max-text-length" \
+            title="Дополнительное наименование: {second_name}"> \
+            <b>Дополнительное наименование:</b> {second_name}</span>'
 
     if location != "":
-        extra_titles += f'<span class="max-text-length" title="Местонахождение: {location}"><b>Местонахождение:</b> {location}</span>'
+        extra_titles += f'< \
+        span class="max-text-length" \
+        title="Местонахождение: {location}"> \
+        <b>Местонахождение:</b> {location}</span>'
 
     return extra_titles
+
 
 def form_titles(
     fullname,
@@ -102,6 +110,7 @@ def form_titles(
     ]
     return titles
 
+
 async def form_name_cases(full_name: List[str]) -> List[List[str]]:
     url = "https://ws3.morpher.ru/russian/declension"
     token = "cfce1037-064f-425c-b40a-593875653972"
@@ -145,6 +154,7 @@ async def form_name_cases(full_name: List[str]) -> List[List[str]]:
 
     return unique_name_cases
 
+
 def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
     """
     Функция для формирования запроса.
@@ -181,6 +191,7 @@ def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
 
     return search_keys
 
+
 def form_js_data(
     title,
     snippet,
@@ -212,6 +223,7 @@ def form_js_data(
                         }},
                 """
     return js_data
+
 
 def filter_by_weight(all_found_info, search_type) -> List[FoundInfo]:
     def sort_key(data: FoundInfo):
