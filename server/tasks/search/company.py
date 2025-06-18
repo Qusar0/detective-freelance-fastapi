@@ -8,8 +8,8 @@ from server.api.scripts.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
-    FoundInfo, 
-    get_event_loop, 
+    FoundInfo,
+    get_event_loop,
 )
 from server.tasks.forms.forms import form_extra_titles, form_titles
 from server.tasks.forms.inputs import form_input_pack_company
@@ -18,8 +18,8 @@ from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
 from server.tasks.services import manage_threads, write_urls
-from server.tasks.xmlriver import do_request_to_xmlriver 
-    
+from server.tasks.xmlriver import do_request_to_xmlriver
+
 
 class CompanySearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -160,6 +160,7 @@ class CompanySearchTask(BaseSearchTask):
 
     async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
+
 
 @shared_task(bind=True, acks_late=True)
 def start_search_by_company(self, search_filters):

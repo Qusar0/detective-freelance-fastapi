@@ -8,8 +8,8 @@ from server.api.scripts.html_work import response_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
-    FoundInfo, 
-    get_event_loop, 
+    FoundInfo,
+    get_event_loop,
 )
 from server.tasks.forms.forms import form_name_cases, form_search_key, form_titles
 from server.tasks.forms.inputs import form_input_pack
@@ -18,7 +18,8 @@ from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
 from server.tasks.services import manage_threads, write_urls
-from server.tasks.xmlriver import do_request_to_xmlriver 
+from server.tasks.xmlriver import do_request_to_xmlriver
+
 
 class NameSearchTask(BaseSearchTask):
     def __init__(self, search_filters: Tuple):
@@ -34,7 +35,7 @@ class NameSearchTask(BaseSearchTask):
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
         self.logger = SearchLogger(self.query_id, 'search_name.log')
 
-    async def _process_search(self, db):       
+    async def _process_search(self, db):
         threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
@@ -89,11 +90,11 @@ class NameSearchTask(BaseSearchTask):
 
             languages_names = await utils.get_languages_by_code(db, self.languages)
             titles.append(languages_names)
-        
+
             manage_threads(threads)
             self.save_stats_to_file('search_name.log')
             await write_urls(urls, "name")
-            
+
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
 

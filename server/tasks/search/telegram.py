@@ -8,7 +8,7 @@ from server.api.scripts.ibhldr_script import get_groups_ibhldr_method, get_inter
 from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
-    get_event_loop, 
+    get_event_loop,
 )
 from server.tasks.base.base import BaseSearchTask
 

@@ -10,7 +10,7 @@ from server.api.scripts.get_contact_script import get_tags_in_getcontact
 from server.api.scripts.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
-    get_event_loop, 
+    get_event_loop,
 )
 from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_google_query, form_yandex_query_num
@@ -18,7 +18,7 @@ from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
 from server.tasks.services import read_needless_sites, update_stats, write_urls
-from server.tasks.xmlriver import handle_xmlriver_response 
+from server.tasks.xmlriver import handle_xmlriver_response
 
 
 class NumberSearchTask(BaseSearchTask):
@@ -31,7 +31,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _process_search(self, db):
         self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
-        lampyre_html, leaks_html, acc_search_html = '', '', ''
+        lampyre_html, acc_search_html = '', ''
         tags = []
 
         if 'mentions' in self.methods_type:
@@ -65,7 +65,7 @@ class NumberSearchTask(BaseSearchTask):
             logging.error(f"{str(e)}")
             self.money_to_return = self.price
             raise e
-    
+
     async def _update_balances(self, db):
         await utils.renew_xml_balance(db)
         await utils.renew_lampyre_balance(db)
@@ -85,7 +85,7 @@ class NumberSearchTask(BaseSearchTask):
                 try:
                     response = requests.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
-                    
+
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
@@ -106,12 +106,12 @@ class NumberSearchTask(BaseSearchTask):
         counter = 0
         while True:
             url = form_yandex_query_num(self.phone_num, page_num=counter)
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
-                    
+
                     if handling_resp == '15':
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
                         urls.append(url)
@@ -132,14 +132,14 @@ class NumberSearchTask(BaseSearchTask):
             else:
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
-            
+
             if handling_resp == '15':
                 break
 
         items, filters = form_number_response_html(all_found_data, self.phone_num)
         await write_urls(urls, "number")
         return items, filters
-    
+
 
 @shared_task(bind=True, acks_late=True)
 def start_search_by_num(self, phone_num, methods_type, query_id, price):
