@@ -1,16 +1,15 @@
 import logging
-from datetime import datetime, timezone
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
-from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-
+from sqlalchemy import delete, update
+from datetime import datetime, timezone
+from typing import List
+from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
-from server.api.models import UserQueries, Events, QueriesBalance, TextData, Language
+from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
 from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
@@ -22,17 +21,15 @@ from server.api.schemas.query import (
     PriceResponse,
     DownloadQueryRequest,
 )
-from server.api.scripts import db_transactions
+
 from server.api.scripts import utils
-from server.api.scripts.utils import translate_name_fields, translate_company_fields
+from server.api.scripts import db_transactions
 from server.api.services.file_storage import FileStorageService
-from server.bots.notification_bot import BalanceNotifier
-from server.celery_tasks import (
-    start_search_by_name,
-    start_search_by_num,
-    start_search_by_email,
-    start_search_by_company,
-)
+from server.api.scripts.utils import translate_name_fields, translate_company_fields
+from server.tasks.search.company import start_search_by_company
+from server.tasks.search.email import start_search_by_email
+from server.tasks.search.name import start_search_by_name
+from server.tasks.search.number import start_search_by_num
 
 router = APIRouter(
     prefix="/queries",
@@ -43,12 +40,13 @@ router = APIRouter(
 @router.post("/delete_query")
 async def delete_query(
     query_id: int = Query(..., description="ID запроса для удаления"),
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
+    file_storage: FileStorageService = Depends(),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
         text_data_result = await db.execute(
             select(TextData)
@@ -57,7 +55,7 @@ async def delete_query(
         text_data = text_data_result.scalar_one_or_none()
 
         if text_data and text_data.file_path:
-            await FileStorageService.delete_query_data(text_data.file_path)
+            await file_storage.delete_query_data(text_data.file_path)
 
         result = await db.execute(
             select(UserQueries)
@@ -91,12 +89,12 @@ async def delete_query(
 @router.get("/queries_count", response_model=QueriesCountResponse)
 async def queries_count(
     query_category: str,
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
         result = await db.execute(
             select(UserQueries).where(UserQueries.user_id == user_id, UserQueries.query_category == query_category)
@@ -112,14 +110,14 @@ async def queries_count(
 async def send_query_data(
     query_category: str = Query(..., description="Категория запроса"),
     page: int = Query(0),
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
-        user_queries = await utils.get_queries_page((user_id, query_category), page, db=db)
+        user_queries = await utils.get_queries_page([user_id, query_category], page, db=db)
 
         result_list = []
         query_ids = [str(q.query_id) for q in user_queries]
@@ -157,12 +155,12 @@ async def send_query_data(
 @BalanceNotifier.notify_balance
 async def find_by_name(
     request_data: FindByNameModel,
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
 
         original_data = {
@@ -245,12 +243,12 @@ async def find_by_name(
 @BalanceNotifier.notify_balance
 async def find_by_number(
     request_data: FindByNumberModel,
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
@@ -304,12 +302,12 @@ async def find_by_number(
 @BalanceNotifier.notify_balance
 async def find_by_email(
     request_data: FindByEmailModel,
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
         search_email = request_data.email.strip()
         methods_type = request_data.methods_type
@@ -362,12 +360,12 @@ async def find_by_email(
 @BalanceNotifier.notify_balance
 async def find_by_company(
     request_data: FindByCompanyModel,
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        authorize.jwt_required()
-        user_id = int(authorize.get_jwt_subject())
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
 
         original_data = {
             "company_name": request_data.company_name.strip(),
@@ -441,10 +439,10 @@ async def find_by_company(
 async def calculate_price(
     data: CalculatePriceRequest,
     db: AsyncSession = Depends(get_db),
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
 ):
     try:
-        authorize.jwt_required()
+        Authorize.jwt_required()
         price = await utils.calculate_name_price(
             db,
             data.search_patronymic.strip(),
@@ -462,11 +460,11 @@ async def calculate_price(
 async def download_query(
     data: DownloadQueryRequest,
     db: AsyncSession = Depends(get_db),
-    authorize: AuthJWT = Depends(),
+    Authorize: AuthJWT = Depends(),
     file_storage: FileStorageService = Depends(),
 ):
     try:
-        authorize.jwt_required()
+        Authorize.jwt_required()
     except Exception as e:
         logging.warning(f"JWT auth failed: {e}")
         raise HTTPException(status_code=401, detail="Unauthorized")
