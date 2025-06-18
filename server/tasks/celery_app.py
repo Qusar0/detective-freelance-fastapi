@@ -17,7 +17,14 @@ def create_celery() -> Celery:
         enable_utc=True,
     )
 
-    celery_app.autodiscover_tasks(['server.celery_tasks'])
+    celery_app.autodiscover_tasks([
+        'server.tasks.base.base',
+        'server.tasks.search.company',
+        'server.tasks.search.email',
+        'server.tasks.search.name',
+        'server.tasks.search.number',
+        'server.tasks.search.telegram',
+    ])
 
     return celery_app
 
