@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    QueriesBalance)
+from server.api.models.models import QueriesBalance
 
 
 class QueriesBalanceAdmin(ModelView, model=QueriesBalance):

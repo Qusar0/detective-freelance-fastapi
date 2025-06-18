@@ -5,7 +5,7 @@ from fastapi_jwt_auth import AuthJWT
 from passlib.hash import bcrypt
 from starlette.responses import JSONResponse
 from server.api.database.database import get_db
-from server.api.models import UserRole, Users
+from server.api.models.models import UserRole, Users
 from server.api.schemas.users import (
     RegisterRequest,
     LoginRequest,

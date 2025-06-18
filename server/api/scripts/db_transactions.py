@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import select, delete
 
 from server.api.database.database import get_db
-from server.api.models import BalanceHistory, UserQueries, QueriesBalance, TextData, UserBalances
+from server.api.models.models import BalanceHistory, UserQueries, QueriesBalance, TextData, UserBalances
 from server.api.scripts import utils
 from server.api.scripts.sse_manager import publish_event
 from server.api.services.file_storage import FileStorageService

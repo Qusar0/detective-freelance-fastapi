@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    TextData)
+from server.api.models.models import TextData
 
 
 class TextDataAdmin(ModelView, model=TextData):

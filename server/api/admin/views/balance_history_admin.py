@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    BalanceHistory)
+from server.api.models.models import BalanceHistory
 
 
 class BalanceHistoryAdmin(ModelView, model=BalanceHistory):

@@ -1,7 +1,6 @@
 from sqladmin import ModelView
 
-from server.api.models import (
-    UserQueries)
+from server.api.models.models import UserQueries
 
 
 class UserQueriesAdmin(ModelView, model=UserQueries):
