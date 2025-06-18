@@ -30,6 +30,7 @@ def form_input_pack_company(
     url += f"{plus_words}{minus_words}&lr={lang}"
     input_pack.append((url, keyword, keyword_type))
 
+
 def form_input_pack(
     input_pack,
     search_key: str,
@@ -61,7 +62,7 @@ def form_input_pack(
                 url += f"{plus_words}{minus_words}"
             elif generation_type == "system_keywords" and length > 1:
                 url += f"{plus_words}{minus_words}"
-        
+
         if base_url == SEARCH_ENGINES['google']:
             url += f"&lr={lang}"
         elif base_url == SEARCH_ENGINES['yandex']:

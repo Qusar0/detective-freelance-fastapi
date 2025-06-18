@@ -9,7 +9,7 @@ from server.api.scripts.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
-    get_event_loop, 
+    get_event_loop,
 )
 from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_yandex_query_email
@@ -74,13 +74,13 @@ class EmailSearchTask(BaseSearchTask):
 
         # Обработка Google запроса
         url = SEARCH_ENGINES['google'] + f'"{self.email}"'
-        
+
         for attempt in range(1, max_attempts + 1):
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url=url)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, [], self.email)
-                    
+
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)
@@ -101,13 +101,13 @@ class EmailSearchTask(BaseSearchTask):
         counter = 0
         while True:
             url = form_yandex_query_email(self.email, page_num=counter)
-            
+
             for attempt in range(1, max_attempts + 1):
                 try:
                     async with httpx.AsyncClient() as client:
                         response = await client.get(url=url)
                         handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.email)
-                        
+
                         if handling_resp == '15':
                             update_stats(self.request_stats, self.stats_lock, attempt, success=True)
                             urls.append(url)
@@ -128,7 +128,7 @@ class EmailSearchTask(BaseSearchTask):
             else:
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
-            
+
             if handling_resp == '15':
                 break
 
