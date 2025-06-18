@@ -24,7 +24,7 @@ def do_request_to_xmlriver(
     urls,
     request_stats,
     stats_lock,
-    logger : SearchLogger,
+    logger: SearchLogger,
 ):
     max_attempts = 5
     retry_delay = 2
@@ -56,24 +56,24 @@ def do_request_to_xmlriver(
         else:
             logger.log_error(f"Запрос полностью провален: {url}")
             update_stats(request_stats, stats_lock, attempt, success=False)
-    
+
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
         handling_resp = None
-        
+
         while handling_resp not in ('15'):
             for attempt in range(1, max_attempts + 1):
                 try:
                     new_url = form_page_query(url, page_num)
                     response = requests.get(new_url)
                     handling_resp = handle_xmlriver_response(
-                            url,
-                            response,
-                            all_found_data,
-                            prohibited_sites,
-                            keyword,
-                            name_case,
-                            keyword_type,
+                        url,
+                        response,
+                        all_found_data,
+                        prohibited_sites,
+                        keyword,
+                        name_case,
+                        keyword_type,
                     )
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(new_url)
@@ -81,7 +81,12 @@ def do_request_to_xmlriver(
                         page_num += 1
                         break
                     else:
-                        logging.error(f"Yandex request failed. URL: {new_url}, Status: {response.status_code}, Attempt: {attempt}")
+                        logging.error(
+                            f"Yandex request failed. \
+                            URL: {new_url}, \
+                            Status: {response.status_code}, \
+                            Attempt: {attempt}"
+                        )
                         if attempt < max_attempts:
                             time.sleep(retry_delay)
                 except Exception as e:
@@ -90,6 +95,7 @@ def do_request_to_xmlriver(
                         time.sleep(retry_delay)
             else:
                 update_stats(request_stats, stats_lock, attempt, success=False)
+
 
 def handle_xmlriver_response(
     url,
@@ -230,6 +236,7 @@ def handle_xmlriver_response(
                     info_snippet,
                 )
 
+
 def xml_errors_handler(xml_response):
     try:
         error_data = xml_response["yandexsearch"]["response"]["error"]
@@ -246,6 +253,7 @@ def xml_errors_handler(xml_response):
         raise CustomError("XMLriver на обновлении.")
 
     return error_code
+
 
 def color_keywords(name_case: List[str], snippet: str, keyword: str) -> str:
     if snippet is None:
