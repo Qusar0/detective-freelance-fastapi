@@ -21,9 +21,11 @@ def form_number_response_html(all_found_data, phone_num):
 
     return items, filters
 
+
 def form_response_html(found_info_test) -> str:
     keywords_from_user = []
-    all_js_objs, main_js_objs, free_js_objs, negative_js_objs, reputation_js_objs, relations_js_objs, soc_js_objs, doc_js_objs = "", "", "", "", "", "", "", ""
+    all_js_objs, main_js_objs, free_js_objs, negative_js_objs = "", "", "", ""
+    reputation_js_objs, relations_js_objs, soc_js_objs, doc_js_objs = "", "", "", ""
 
     neg_kwds, rep_kwds, rel_kwds, soc_kwds, doc_kwds = [], [], [], [], []
 

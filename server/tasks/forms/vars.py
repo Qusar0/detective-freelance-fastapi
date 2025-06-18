@@ -20,6 +20,7 @@ def form_var_items(
     }
     return items
 
+
 def form_var_filters(
     keywords_from_user="",
     neg_kwds="",

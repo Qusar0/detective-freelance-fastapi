@@ -5,14 +5,17 @@ from server.tasks.forms.forms import form_phone_number
 def form_page_query(url, page_num):
     return f'{url}&page={page_num}'
 
+
 def form_yandex_query_num(num: str, page_num):
     phone_num = num.replace("+", "%2B")
     url = SEARCH_ENGINES['yandex'] + f'{phone_num}&page={page_num}'
     return url
 
+
 def form_yandex_query_email(email: str, page_num):
     url = SEARCH_ENGINES['yandex'] + f'"{email}"&page={page_num}'
     return url
+
 
 def form_google_query(phone_num: str):
     search_keys = []
