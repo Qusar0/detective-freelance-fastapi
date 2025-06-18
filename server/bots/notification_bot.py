@@ -43,32 +43,37 @@ class BalanceNotifier:
         @wraps(func)
         async def wrapper(*args, **kwargs):
             original_result = await func(*args, **kwargs)
-            
+
             try:
                 async with async_session() as session:
                     result = await session.execute(select(ServicesBalance))
                     services = result.scalars().all()
-                    
+
                     for service in services:
                         if service.balance is None:
                             continue
-                            
-                        if (service.balance < service.balance_threshold 
-                            and service.service_name not in cls._notified_services):
+
+                        if all([
+                            service.balance < service.balance_threshold,
+                            service.service_name not in cls._notified_services
+                        ]):
                             message = (
                                 f"⚠️ <strong>Внимание!</strong> Баланс сервиса <strong>{service.service_name}</strong> "
-                                f"опустился ниже <strong>{service.balance_threshold}</strong>. Текущий баланс: <strong>{service.balance}</strong>"
+                                f"опустился ниже <strong>{service.balance_threshold}</strong>. \
+                                Текущий баланс: <strong>{service.balance}</strong>"
                             )
                             await send_balance_alert(settings.admin_chat_id, message)
                             cls._notified_services.add(service.service_name)
-                        elif (service.balance >= service.balance_threshold 
-                              and service.service_name in cls._notified_services):
+                        elif all([
+                            service.balance >= service.balance_threshold,
+                            service.service_name in cls._notified_services
+                        ]):
                             cls._notified_services.remove(service.service_name)
             except Exception as e:
                 logging.error(f"Balance check error: {e}")
-            
+
             return original_result
-            
+
         return wrapper
 
 
@@ -81,6 +86,3 @@ if __name__ == "__main__":
         logging.info("🛑 Бот остановлен вручную")
     except Exception as e:
         logging.error(f"🚨 Ошибка при запуске бота: {e}")
-    
-
-
