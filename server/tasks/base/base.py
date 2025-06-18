@@ -13,6 +13,7 @@ from server.api.scripts import utils, db_transactions
 from server.api.conf.config import settings
 from server.api.database.database import async_session
 
+
 class BaseSearchTask(ABC):
     def __init__(self, query_id: int, price: float):
         self.query_id = query_id
@@ -40,7 +41,7 @@ class BaseSearchTask(ABC):
                 await self._handle_error(user_query, db)
             finally:
                 delete_query_task.apply_async(
-                    args=[user_query.query_id], 
+                    args=[user_query.query_id],
                     countdown=settings.query_delete_delay_seconds
                 )
                 await self._update_balances(db)
