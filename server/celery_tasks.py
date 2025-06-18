@@ -20,6 +20,7 @@ from phonenumbers import parse, NumberParseException
 from recordtype import recordtype
 from sqlalchemy import select
 
+from server.api.conf.celery_worker import celery_app
 from server.api.conf.config import settings
 from server.api.database.database import async_session
 from server.api.models import ProhibitedPhoneSites, TextData

@@ -20,3 +20,6 @@ def create_celery() -> Celery:
     new_celery_app.autodiscover_tasks(['server.celery_tasks'])
 
     return new_celery_app
+
+
+celery_app = create_celery()
