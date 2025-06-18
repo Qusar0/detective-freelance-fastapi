@@ -31,7 +31,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _process_search(self, db):
         self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
-        lampyre_html, leaks_html, acc_search_html = '', '', ''
+        lampyre_html, acc_search_html = '', ''
         tags = []
 
         if 'mentions' in self.methods_type:
