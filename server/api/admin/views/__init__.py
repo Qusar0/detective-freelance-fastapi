@@ -13,7 +13,9 @@ from server.api.admin.views.user_queries_admin import UserQueriesAdmin
 from server.api.admin.views.user_role_admin import UserRoleAdmin
 from server.api.admin.views.users_admin import UsersAdmin
 
-__all__ = ['BalanceHistoryAdmin', 'EventsAdmin', 'KeywordsAdmin', 'PaymentHistoryAdmin',
-           'ProhibitedPhoneSitesAdmin', 'ProhibitedSitesAdmin', 'QueriesBalanceAdmin', 'ServicesBalanceAdmin',
-           'TelegramNotificationsAdmin', 'TextDataAdmin', 'UserBalancesAdmin', 'UserQueriesAdmin',
-           'UserRoleAdmin', 'UsersAdmin']
+__all__ = [
+    'BalanceHistoryAdmin', 'EventsAdmin', 'KeywordsAdmin', 'PaymentHistoryAdmin',
+    'ProhibitedPhoneSitesAdmin', 'ProhibitedSitesAdmin', 'QueriesBalanceAdmin', 'ServicesBalanceAdmin',
+    'TelegramNotificationsAdmin', 'TextDataAdmin', 'UserBalancesAdmin', 'UserQueriesAdmin',
+    'UserRoleAdmin', 'UsersAdmin'
+]
