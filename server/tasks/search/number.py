@@ -7,7 +7,7 @@ import requests
 
 from server.api.scripts import utils, db_transactions
 from server.api.scripts.get_contact_script import get_tags_in_getcontact
-from server.api.scripts.html_work import response_num_template
+from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     get_event_loop,

@@ -3,7 +3,7 @@ from typing import Tuple
 from celery import shared_task
 
 from server.api.scripts import db_transactions
-from server.api.scripts.html_work import response_tg_template
+from server.api.templates.html_work import response_tg_template
 from server.api.scripts.ibhldr_script import get_groups_ibhldr_method, get_interests, get_phones, get_profiles
 from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
 from server.api.services.file_storage import FileStorageService
