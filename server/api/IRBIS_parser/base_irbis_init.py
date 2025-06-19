@@ -1,4 +1,5 @@
 # from server.api.conf.config import settings
+from time import sleep
 from typing import Optional
 import requests
 
@@ -45,6 +46,21 @@ class BaseAuthIRBIS:
         if response["status"] == 0:
             return response["uuid"]
         return None
+
+    @staticmethod
+    def get_response(link):
+        r = requests.get(link)
+        response = r.json()
+
+        while response["status"] == 0:
+            sleep(float(response["waitTime"])/1000)
+            r = requests.get(link)
+            response = r.json()
+
+        if response["status"] == 1:
+            return response["response"]
+        else:
+            return None
 
 
 if __name__ == '__main__':

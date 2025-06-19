@@ -1,7 +1,5 @@
 from typing import Optional
 
-import requests
-
 from .base_irbis_init import BaseAuthIRBIS
 
 
@@ -17,9 +15,9 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
         self.full_fio_data_preview: Optional[dict] = None
         self.short_fio_data_preview: Optional[dict] = None
 
-        self.category: Optional[dict] = None
+        self.category: Optional[dict] = dict()
 
-        self.full_data: Optional[list] = None
+        self.full_data: Optional[list] = []
 
     def get_data_preview(self, filter_text: str, strategy: str):
         """
@@ -35,19 +33,13 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
             """
         link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=role-preview"
                 f"&filter_text={filter_text}&strategy={strategy}")
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        result_full = result_short = None
+        if response is not None:
+            self.full_fio_data_preview = response["full"]
+            self.short_fio_data_preview = response["short"]
 
-        if response["status"] == 1:
-            result_full = response["response"]["full"]
-            result_short = response["response"]["short"]
-
-        self.full_fio_data_preview = result_full
-        self.short_fio_data_preview = result_short
-
-        return result_full, result_short
+        return self.full_fio_data_preview, self.short_fio_data_preview
 
     def get_category_result(self, filter0: str, filter_text: str, strategy: str):
         """
@@ -62,17 +54,17 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
         Returns:
             dict: Результат запроса.
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=categorypreview&filter0={filter0}&filter_text={filter_text}&strategy={strategy}"
-        r = requests.get(link)
-        response = r.json()
+        link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event"
+                f"=categorypreview&filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
+        response = self.get_response(link)
 
         result = dict()
-        if response["status"] == 1:
-            for data in response["response"]:
+        if response is not None:
+            for data in response:
                 result[data["type"]] = data["count"]
 
         self.category = result
-        return result
+        return self.category
 
     def get_full_data(self, page: int, rows: int, strategy: str, filter0: str, filter_text: str):
         """
@@ -89,14 +81,11 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
         Returns:
             list: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=roledata&version=2&page={page}&rows={rows}&strategy={strategy}&filter0={filter0}&filter_text={filter_text}"
-        r = requests.get(link)
-        response = r.json()
+        link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=roledata"
+                f"&version=2&page={page}&rows={rows}&strategy={strategy}&filter0={filter0}&filter_text={filter_text}")
+        response = self.get_response(link)
 
-        full_data = None
+        if response is not None:
+            self.full_data = response["result"]
 
-        if response["status"] == 1:
-            full_data = response["response"]["result"]
-
-        self.full_data = full_data
-        return full_data
+        return self.full_data

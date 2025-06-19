@@ -1,11 +1,9 @@
 from typing import Optional
 
-import requests
-
 from .base_irbis_init import BaseAuthIRBIS
 
 
-class DisqualifiedPersons(BaseAuthIRBIS):
+class TerrorList(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
                  second_name: Optional[str] = None, birth_date: Optional[str] = None,
                  passport_series: Optional[str] = None, passport_number: Optional[str] = None,
@@ -20,13 +18,13 @@ class DisqualifiedPersons(BaseAuthIRBIS):
 
     def get_data_preview(self):
         """
-        Получение превью данных о дисквалификации физического лица.. Использовать повторно функцию для обновления данных.
-        Если нужны предыдущие, необходимо обратиться к полям count
+        Получение превью данных о нахождении физического лица в списке террористов и экстремистов. Использовать
+        повторно функцию для обновления данных. Если нужны предыдущие, необходимо обратиться к полям count
 
         Returns:
             int: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-disqualified.json?event=preview"
+        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-terrorist.json?event=preview"
         response = self.get_response(link)
 
         if response is not None:
@@ -36,7 +34,7 @@ class DisqualifiedPersons(BaseAuthIRBIS):
 
     def get_full_data(self, page: int, rows: int):
         """
-        Получение данных о дисквалификации физического лица. Использовать повторно функцию для обновления данных.
+        Получение данных о нахождении физического лица в списке террористов и экстремистов. Использовать повторно функцию для обновления данных.
         Если нужны предыдущие, необходимо обратиться к полям full_data
 
          Args:
@@ -46,7 +44,7 @@ class DisqualifiedPersons(BaseAuthIRBIS):
         Returns:
             list: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-disqualified.json?event=data&page={page}&rows={rows}"
+        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-terrorist.json?event=data&page={page}&rows={rows}"
         response = self.get_response(link)
 
         if response is not None:
