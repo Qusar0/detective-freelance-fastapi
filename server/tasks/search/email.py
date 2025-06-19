@@ -4,8 +4,10 @@ from typing import List
 from celery import shared_task
 import httpx
 
-from server.api.scripts import lampyre_email_script, utils, db_transactions
-from server.api.scripts.html_work import response_email_template
+from server.api.scripts.lampyre_email import LampyreMail
+from server.api.dao.services_balance import ServicesBalanceDAO
+from server.api.dao.text_data import TextDataDAO
+from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
@@ -41,7 +43,7 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'acc checker' in self.methods_type:
             try:
-                lampyre_email = lampyre_email_script.LampyreMail()
+                lampyre_email = LampyreMail()
                 acc_checker = lampyre_email.main(self.email, ['acc checker'])
             except Exception as e:
                 self.money_to_return += 130
@@ -59,11 +61,11 @@ class EmailSearchTask(BaseSearchTask):
 
         self.save_stats_to_file('search_email.log')
         file_storage = FileStorageService()
-        await db_transactions.save_html(html, self.query_id, db, file_storage)
+        await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
     async def _update_balances(self, db):
-        await utils.renew_xml_balance(db)
-        await utils.renew_lampyre_balance(db)
+        await ServicesBalanceDAO.renew_xml_balance(db)
+        await ServicesBalanceDAO.renew_lampyre_balance(db)
 
     async def xmlriver_email_do_request(self, db):
         all_found_data = []

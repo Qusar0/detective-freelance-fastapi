@@ -7,7 +7,6 @@ from typing import List
 from urllib.parse import urlparse
 import requests
 
-from server.api.error.errors import CustomError
 from server.tasks.celery_config import SEARCH_ENGINES, FoundInfo, NumberInfo
 from server.tasks.forms.sites import form_page_query
 from server.tasks.logger import SearchLogger
@@ -247,10 +246,10 @@ def xml_errors_handler(xml_response):
 
     except KeyError:
         print(xml_response)
-        raise CustomError("XMLriver на обновлении.")
+        raise ("XMLriver на обновлении.")
 
     if error_code == '101' and error_text == 'Сервис сбора данных на обновлении. Попробуйте чуть позже.':
-        raise CustomError("XMLriver на обновлении.")
+        raise ("XMLriver на обновлении.")
 
     return error_code
 
