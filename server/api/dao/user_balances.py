@@ -1,23 +1,36 @@
-async def subtract_balance(user_id: int, amount: float, channel: str, db: AsyncSession):
-    result = await db.execute(
-        select(UserBalances)
-        .filter_by(user_id=user_id),
-    )
-    user_balance = result.scalars().first()
+import logging
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    if not user_balance:
-        return
+from server.api.dao.base import BaseDAO
+from server.api.models.models import UserBalances
+from server.api.scripts.sse_manager import publish_event
 
-    user_balance.balance = round(
-        user_balance.balance + (-amount),
-        2,
-    )
 
-    await db.commit()
+class UserBalancesDAO(BaseDAO):
+    model = UserBalances
 
-    event_data = {
-        "event_type": "balance",
-        "balance": user_balance.balance,
-    }
+    @classmethod
+    async def subtract_balance(cls, user_id: int, amount: float, channel: str, db: AsyncSession):
+        result = await db.execute(
+            select(UserBalances)
+            .filter_by(user_id=user_id),
+        )
+        user_balance = result.scalars().first()
 
-    await publish_event(channel, event_data)
+        if not user_balance:
+            return
+
+        user_balance.balance = round(
+            user_balance.balance + (-amount),
+            2,
+        )
+
+        await db.commit()
+
+        event_data = {
+            "event_type": "balance",
+            "balance": user_balance.balance,
+        }
+
+        await publish_event(channel, event_data)

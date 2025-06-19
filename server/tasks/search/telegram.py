@@ -2,7 +2,7 @@ from typing import Tuple
 
 from celery import shared_task
 
-from server.api.scripts import db_transactions
+from server.api.dao.text_data import TextDataDAO
 from server.api.templates.html_work import response_tg_template
 from server.api.scripts.ibhldr_script import get_groups_ibhldr_method, get_interests, get_phones, get_profiles
 from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
@@ -64,7 +64,7 @@ class TelegramSearchTask(BaseSearchTask):
 
         file_storage = FileStorageService()
 
-        await db_transactions.save_html(html, self.query_id, db, file_storage)
+        await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
 
 @shared_task(bind=True, acks_late=True)

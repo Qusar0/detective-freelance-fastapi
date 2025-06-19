@@ -1,6 +1,18 @@
-# progibited dao
-async def add_sites_from_db(user_prohibited_sites: list, db) -> list:
-    result = await db.execute(select(ProhibitedSites.site_link))
-    sites_from_db = result.scalars().all()
+import logging
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 
-    return list(set(sites_from_db + user_prohibited_sites))
+from server.api.dao.base import BaseDAO
+from server.api.models.models import ProhibitedSites
+
+
+class ProhibitedSitesDAO(BaseDAO):
+    model = ProhibitedSites
+
+    @classmethod
+    async def add_sites_from_db(cls, user_prohibited_sites: list, db: AsyncSession) -> list:
+        result = await db.execute(select(ProhibitedSites.site_link))
+        sites_from_db = result.scalars().all()
+
+        return list(set(sites_from_db + user_prohibited_sites))

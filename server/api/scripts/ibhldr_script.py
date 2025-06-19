@@ -1,5 +1,6 @@
-from server.api.scripts.utils import renew_ibhldr_balance
 import requests
+
+from server.api.dao.services_balance import ServicesBalanceDAO
 
 
 url = "https://api.ibhldr.com:48480/v2/get-interests/"
@@ -21,7 +22,7 @@ async def get_interests(telegram_id):
     info = resp.json()
     interests = info['interests']
     balance = info['balance']
-    await renew_ibhldr_balance(balance)
+    await ServicesBalanceDAO.renew_ibhldr_balance(balance)
 
     interests_html = ""
     for i in interests:
@@ -67,7 +68,7 @@ async def get_groups_ibhldr_method(telegram_id):
 
     groups = info['groups']
     balance = info['balance']
-    await renew_ibhldr_balance(balance)
+    await ServicesBalanceDAO.renew_ibhldr_balance(balance)
 
     separated_groups = groups.split("\n")
 
@@ -82,7 +83,7 @@ async def get_profiles(telegram_id):
     info = resp.json()
     profiles = info['profiles']
     balance = info['balance']
-    await renew_ibhldr_balance(balance)
+    await ServicesBalanceDAO.renew_ibhldr_balance(balance)
 
     separated_profiles = profiles.split("\n")
 
@@ -97,6 +98,6 @@ async def get_phones(telegram_id):
     info = resp.json()
     phones = info['phones']
     balance = info['balance']
-    await renew_ibhldr_balance(balance)
+    await ServicesBalanceDAO.renew_ibhldr_balance(balance)
 
     return phones
