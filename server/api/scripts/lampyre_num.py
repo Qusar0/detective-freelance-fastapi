@@ -1,14 +1,14 @@
-from datetime import datetime
-from server.api.conf.config import settings
 import requests
 import json
-
+import base64
 import phonenumbers
+from datetime import datetime
 from phonenumbers.phonenumberutil import (
     region_code_for_country_code
 )
 
-import base64
+from server.api.conf.config import settings
+
 
 default_methods = [
     'phone_viber_v1',

@@ -1,8 +1,9 @@
 import requests
 import logging
+
 from server.api.conf.config import settings
 
-# contact
+
 def get_tags_in_getcontact(number):
     headers = {
         'x-bot-id': str(settings.telegram_api_id),

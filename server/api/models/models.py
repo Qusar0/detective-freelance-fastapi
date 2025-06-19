@@ -1,3 +1,5 @@
+import datetime
+import decimal
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -13,13 +15,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
-import datetime
-import decimal
+from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-
-class Base(DeclarativeBase):
-    pass
+from server.api.models.base import Base
 
 
 class BalanceHistory(Base):

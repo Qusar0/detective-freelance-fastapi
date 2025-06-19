@@ -15,7 +15,7 @@ from server.api.schemas.users import (
     StatusMessage,
     ResetPasswordRequest
 )
-from server.api.scripts.mail import (
+from server.api.services.mail import (
     send_email,
     generate_conformation_token,
     confirm_token,

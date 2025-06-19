@@ -4,7 +4,7 @@ from typing import List
 from celery import shared_task
 import httpx
 
-from server.api.scripts import lampyre_email_script, utils, db_transactions
+from server.api.scripts import lampyre_email, utils
 from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -41,7 +41,7 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'acc checker' in self.methods_type:
             try:
-                lampyre_email = lampyre_email_script.LampyreMail()
+                lampyre_email = lampyre_email.LampyreMail()
                 acc_checker = lampyre_email.main(self.email, ['acc checker'])
             except Exception as e:
                 self.money_to_return += 130
