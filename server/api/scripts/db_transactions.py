@@ -89,11 +89,11 @@ async def return_balance(user_id, query_id, amount, channel, db):
 async def save_html(html, query_id, db, file_storage: FileStorageService):
     try:
         file_path = await file_storage.save_query_data(query_id, html)
-        
+
         text_data = TextData(query_id=query_id, file_path=file_path)
         db.add(text_data)
         await db.commit()
-        
+
         return file_path
     except Exception as e:
         logging.error(f"Failed to save HTML for query {query_id}: {str(e)}")

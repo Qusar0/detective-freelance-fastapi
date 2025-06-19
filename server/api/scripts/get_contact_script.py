@@ -36,5 +36,5 @@ def get_tags_in_getcontact(number):
                     tags = extra['tags']
                     list_tags.extend([tag['tag'] for tag in tags if 'tag' in tag])
             else:
-                print(f"Для номера {number} теги не найдены.")
+                logging.info(f"Для номера {number} теги не найдены.")
     return list_tags, requests_left

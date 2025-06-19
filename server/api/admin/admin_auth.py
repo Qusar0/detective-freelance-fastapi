@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Request
@@ -58,7 +59,7 @@ class AdminAuth(AuthenticationBackend):
                 request.state.response = response
                 return True
         except Exception as e:
-            print(f"Admin login error: {e}")
+            logging.error(f"Admin login error: {e}")
             return False
 
     async def logout(self, request: Request) -> bool:
@@ -99,5 +100,5 @@ class AdminAuth(AuthenticationBackend):
             return True
 
         except Exception as e:
-            print(f"Admin auth error: {e}")
+            logging.error(f"Admin auth error: {e}")
             return RedirectResponse(url="/admin/login")

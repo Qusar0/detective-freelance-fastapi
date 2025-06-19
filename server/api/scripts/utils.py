@@ -51,10 +51,10 @@ async def translate_name_fields(data: Dict[str, Any], target_languages: List[str
         translated["name"][lang] = process_text(data["name"], lang)
         translated["surname"][lang] = process_text(data["surname"], lang)
         translated["patronymic"][lang] = process_text(data["patronymic"], lang)
-        
+
         translated["plus"][lang] = process_special_field(data["plus"], '+', lang)
         translated["minus"][lang] = process_special_field(data["minus"], '+-', lang)
-        
+
         translated["keywords"][lang] = process_keywords(data["keywords"], lang)[lang]
 
     translated["name"]['original'] = data["name"]
@@ -78,11 +78,11 @@ async def translate_company_fields(data: Dict[str, Any], target_languages: List[
 
     for lang in target_languages:
         translated["location"][lang] = process_text(data["location"], lang)
-        
+
         translated["keywords"][lang] = process_keywords(data["keywords"], lang)[lang]
-        
+
         translated["plus"][lang] = process_special_field(data["plus"], '+', lang)
-        
+
         translated["minus"][lang] = process_special_field(data["minus"], '+-', lang)
 
     translated["location"]['original'] = data["location"]
@@ -111,15 +111,15 @@ def translate_words(
     translations = {}
     if not target_languages:
         target_languages = ['ru']
-    
+
     for lang in target_languages:
         translations[lang] = {}
         for category, words in keywords_by_category.items():
             text_to_translate = '. '.join(words)
-            
+
             translated_words = translate_text(text_to_translate, source_language, lang)
             translations[lang][category] = list(set(translated_words))
-    
+
     return translations
 
 
@@ -130,7 +130,7 @@ async def get_countries_code_by_languages(
     """Получает коды стран, связанных с указанными языками."""
     if not language_codes:
         language_codes = ['ru']
-    
+
     query = (
         select(CountryLanguage)
         .join(CountryLanguage.language)
@@ -141,17 +141,17 @@ async def get_countries_code_by_languages(
             joinedload(CountryLanguage.country)
         )
     )
-    
+
     result = await db.execute(query)
     country_links = result.scalars().all()
-    
+
     result_dict = {}
     for link in country_links:
         lang_code = link.language.code
         if lang_code not in result_dict:
             result_dict[lang_code] = []
         result_dict[lang_code].append(link.country.country_id)
-    
+
     return result_dict
 
 
@@ -167,11 +167,12 @@ async def get_languages_by_code(
         select(Language)
         .where(Language.code.in_(language_codes))
     )
-    
+
     result = await db.execute(query)
     languages = result.scalars().all()
-    
+
     return [lang.russian_name for lang in languages]
+
 
 async def get_default_keywords(
     db: AsyncSession,
@@ -362,6 +363,7 @@ async def get_service_balance(db, service_name):
     if service:
         return service.balance
 
+
 async def is_user_subscribed_on_tg(user_id, db):
     result = await db.execute(
         select(TelegramNotifications).filter_by(user_id=user_id)
@@ -457,10 +459,10 @@ async def save_user_and_chat(user_id, chat_id, db):
         select(TelegramNotifications).filter_by(user_id=user_id, chat_id=chat_id)
     )
     existing_chat = result.scalar_one_or_none()
-    
+
     if existing_chat:
         return False
-        
+
     db.add(
         TelegramNotifications(
             user_id=user_id,
@@ -468,4 +470,5 @@ async def save_user_and_chat(user_id, chat_id, db):
         ),
     )
     await db.commit()
+
     return True

@@ -14,6 +14,7 @@ from server.api.schemas.users import (
 import logging
 from typing import Dict
 from passlib.hash import bcrypt
+
 from server.api.models.models import UserQueries, Events, PaymentHistory, UserBalances, Users
 from server.api.conf.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
@@ -231,7 +232,7 @@ async def top_up_balance(
         await db.commit()
 
         channel = await generate_sse_message_type(user_id, db)
-        
+
         await publish_event(channel, {
             "event_type": "balance",
             "balance": user_balance.balance,

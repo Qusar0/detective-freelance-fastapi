@@ -1,12 +1,10 @@
 import requests
 import json
-import asyncio
-import aiohttp
-
 import base64
 
 from datetime import datetime
 from server.api.conf.config import settings
+
 
 account_search_methods = [
     "email_haveibeenpwned_v1",
