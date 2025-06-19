@@ -16,7 +16,7 @@ from typing import Dict
 from passlib.hash import bcrypt
 
 from server.api.models.models import UserQueries, Events, PaymentHistory, UserBalances, Users
-from server.api.scripts.mail import send_confirmation_email, send_email
+from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import publish_event
 from server.api.scripts.utils import generate_sse_message_type

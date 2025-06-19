@@ -1,4 +1,5 @@
 from server.__main__ import app
+from server.tasks.celery_app import celery_app
 
 
 if __name__ == "__main__":
