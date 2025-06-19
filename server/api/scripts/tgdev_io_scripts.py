@@ -1,13 +1,19 @@
-from server.api.scripts.utils import renew_tgdev_balance
 import requests
+
+from server.api.scripts.utils import renew_tgdev_balance
 
 
 url = "https://api.tgdev.io/tgscan/v1/search"
 balance_url = "https://api.tgdev.io/tgscan/v1/balance"
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "AppleWebKit/537.36 (KHTML, like Gecko)"
+        "Chrome/117.0.0.0 Safari/537.36"
+    ),
     "Api-Key": "f6d604279a644923940d7583df9fa3b2",
-    "Content-Type": "application/json"}
+    "Content-Type": "application/json"
+}
 
 
 def get_tgdev_balance():

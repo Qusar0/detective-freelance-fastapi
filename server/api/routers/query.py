@@ -162,7 +162,6 @@ async def find_by_name(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-
         original_data = {
             "name": request_data.search_name.strip(),
             "surname": request_data.search_surname.strip(),
@@ -498,9 +497,9 @@ async def download_query(
 
         if not file_path:
             raise HTTPException(status_code=404, detail="Query data not found")
-        
+
         query_text = await file_storage.get_query_data(file_path)
-        
+
         return PlainTextResponse(content=query_text, media_type='text/plain; charset=UTF-8')
 
     except Exception as e:
@@ -522,7 +521,8 @@ async def get_available_languages(
         languages = result.fetchall()
 
         translated = {russian_name: code for russian_name, code in languages}
-        
+
         return translated
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Ошибка получения языков: {e}")
+        logging.error(f"Не удалось получить языки: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка получения языков")

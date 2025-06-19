@@ -44,6 +44,9 @@ exclude =
     env,
     templates,
     html_work.py,
+    lampyre_email_script.py,
+    lampyre_num_script.py,
+    sse_manager.py
 
 # Настройки кавычек
 

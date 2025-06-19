@@ -3,9 +3,15 @@ import requests
 
 
 url = "https://api.ibhldr.com:48480/v2/get-interests/"
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-           "Authorization": "Bearer 9220308ca1fcef03d76d16af52770598cf989a59",
-           "Content-Type": "application/json"}
+headers = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        "AppleWebKit/537.36 (KHTML, like Gecko)"
+        "Chrome/117.0.0.0 Safari/537.36"
+    ),
+    "Authorization": "Bearer 9220308ca1fcef03d76d16af52770598cf989a59",
+    "Content-Type": "application/json"
+}
 
 
 async def get_interests(telegram_id):
