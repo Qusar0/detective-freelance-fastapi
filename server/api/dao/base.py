@@ -18,7 +18,7 @@ class BaseDAO:
                 return result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
             logging.error(f"SQL error: {e}")
-    
+
     @classmethod
     async def _delete(cls, **filter_by):
         query = delete(cls.model).filter_by(**filter_by).returning(cls.model)
@@ -47,14 +47,14 @@ class BaseDAO:
         async with get_db() as session:
             result = await session.execute(query)
             return result.scalars().one_or_none()
-        
+
     @classmethod
     async def find_all(cls, **filter_by):
         query = select(cls.model).filter_by(**filter_by)
         async with get_db() as session:
             result = await session.execute(query)
             return result.scalars().all()
-        
+
     @classmethod
     async def _update(cls, filter_by: dict, **update_data):
         if not isinstance(filter_by, dict):
@@ -73,4 +73,3 @@ class BaseDAO:
                 return result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
             logging.error(f"SQL error: {e}")
-        

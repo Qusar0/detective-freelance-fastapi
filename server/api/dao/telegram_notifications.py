@@ -1,4 +1,3 @@
-import logging
 from sqlalchemy import select
 
 from server.api.dao.base import BaseDAO
