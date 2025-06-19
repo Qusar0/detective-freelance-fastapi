@@ -1,5 +1,7 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List
 
 from server.api.dao.base import BaseDAO
@@ -26,33 +28,36 @@ class KeywordsDAO(BaseDAO):
         if '' in splitted_kws:
             return (counter, {lang: {} for lang in languages})
 
-        if 'report' in splitted_kws:
-            types_belongs_report = ['reputation', 'negativ', 'relations']
-            for kwd_type in types_belongs_report:
-                query = select(Keywords.word).filter_by(word_type=kwd_type)
-                result = await db.execute(query)
-                keywords = [kwd for kwd in result.scalars()]
-                counter += len(keywords)
-                named_keywords[kwd_type] = keywords
-        elif 'company_report' in splitted_kws:
-            types_belongs_report = ['company_reputation', 'company_negativ', 'company_relations']
-            for kwd_type in types_belongs_report:
-                query = select(Keywords.word).filter_by(word_type=kwd_type)
-                result = await db.execute(query)
-                keywords = [kwd for kwd in result.scalars()]
-                counter += len(keywords)
-                named_keywords[kwd_type] = keywords
-        else:
-            for splitted_kwd in splitted_kws:
-                query = select(Keywords.word).filter_by(word_type=splitted_kwd)
-                result = await db.execute(query)
-                keywords = [kwd for kwd in result.scalars()]
-                counter += len(keywords)
-                named_keywords[splitted_kwd] = keywords
+        try:
+            if 'report' in splitted_kws:
+                types_belongs_report = ['reputation', 'negativ', 'relations']
+                for kwd_type in types_belongs_report:
+                    query = select(Keywords.word).filter_by(word_type=kwd_type)
+                    result = await db.execute(query)
+                    keywords = [kwd for kwd in result.scalars()]
+                    counter += len(keywords)
+                    named_keywords[kwd_type] = keywords
+            elif 'company_report' in splitted_kws:
+                types_belongs_report = ['company_reputation', 'company_negativ', 'company_relations']
+                for kwd_type in types_belongs_report:
+                    query = select(Keywords.word).filter_by(word_type=kwd_type)
+                    result = await db.execute(query)
+                    keywords = [kwd for kwd in result.scalars()]
+                    counter += len(keywords)
+                    named_keywords[kwd_type] = keywords
+            else:
+                for splitted_kwd in splitted_kws:
+                    query = select(Keywords.word).filter_by(word_type=splitted_kwd)
+                    result = await db.execute(query)
+                    keywords = [kwd for kwd in result.scalars()]
+                    counter += len(keywords)
+                    named_keywords[splitted_kwd] = keywords
 
-        translated_words = translate_words(
-            keywords_by_category=named_keywords,
-            target_languages=languages,
-        )
-        coefficient = len(languages) or 1
-        return (counter * coefficient, translated_words)
+            translated_words = translate_words(
+                keywords_by_category=named_keywords,
+                target_languages=languages,
+            )
+            coefficient = len(languages) or 1
+            return (counter * coefficient, translated_words)
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при получении ключевых слов: {e}")

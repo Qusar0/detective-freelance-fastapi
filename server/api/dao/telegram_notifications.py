@@ -1,4 +1,6 @@
+import logging
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import TelegramNotifications
@@ -29,9 +31,12 @@ class TelegramNorificationsDAO(BaseDAO):
 
     @classmethod
     async def is_user_subscribed_on_tg(cls, user_id, db):
-        result = await db.execute(
-            select(TelegramNotifications).filter_by(user_id=user_id)
-        )
-        user = result.scalar_one_or_none()
+        try:
+            result = await db.execute(
+                select(TelegramNotifications).filter_by(user_id=user_id)
+            )
+            user = result.scalar_one_or_none()
 
-        return user.chat_id if user else False
+            return user.chat_id if user else False
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при получении статуса пользователя: {e}")
