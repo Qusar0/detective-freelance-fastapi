@@ -1,13 +1,13 @@
 import logging
+import requests
 import time
 from typing import List
-
 from celery import shared_task
-import requests
 
-from server.api.scripts import utils, db_transactions
-from server.api.scripts.get_contact_script import get_tags_in_getcontact
-from server.api.scripts.html_work import response_num_template
+from server.api.dao.services_balance import ServicesBalanceDAO
+from server.api.dao.text_data import TextDataDAO
+from server.api.services.get_contact import get_tags_in_getcontact
+from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     get_event_loop,
@@ -29,7 +29,7 @@ class NumberSearchTask(BaseSearchTask):
         self.logger = SearchLogger(self.query_id, 'search_num.log')
 
     async def _process_search(self, db):
-        self.requests_getcontact_left = await utils.get_service_balance(db, 'GetContact')
+        self.requests_getcontact_left = await ServicesBalanceDAO.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
         lampyre_html, acc_search_html = '', ''
         tags = []
@@ -59,7 +59,7 @@ class NumberSearchTask(BaseSearchTask):
         self.save_stats_to_file('search_num.log')
         try:
             file_storage = FileStorageService()
-            await db_transactions.save_html(html, self.query_id, db, file_storage)
+            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             logging.error(f"{str(e)}")
@@ -67,9 +67,9 @@ class NumberSearchTask(BaseSearchTask):
             raise e
 
     async def _update_balances(self, db):
-        await utils.renew_xml_balance(db)
-        await utils.renew_lampyre_balance(db)
-        await utils.renew_getcontact_balance(self.requests_getcontact_left, db)
+        await ServicesBalanceDAO.renew_xml_balance(db)
+        await ServicesBalanceDAO.renew_lampyre_balance(db)
+        await ServicesBalanceDAO.renew_getcontact_balance(self.requests_getcontact_left, db)
 
     async def xmlriver_num_do_request(self, db):
         all_found_data = []

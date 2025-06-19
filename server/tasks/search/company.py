@@ -3,8 +3,12 @@ from threading import Thread
 
 from celery import shared_task
 
-from server.api.scripts import utils, db_transactions
-from server.api.scripts.html_work import response_company_template
+from server.api.dao.prohibited_sites import ProhibitedSitesDAO
+from server.api.dao.keywords import KeywordsDAO
+from server.api.dao.language import LanguageDAO
+from server.api.dao.services_balance import ServicesBalanceDAO
+from server.api.dao.text_data import TextDataDAO
+from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
@@ -42,8 +46,8 @@ class CompanySearchTask(BaseSearchTask):
         titles = []
 
         try:
-            prohibited_sites_list = await utils.add_sites_from_db([], db)
-            keywords: dict = await utils.get_default_keywords(db, self.default_keywords_type, self.languages)
+            prohibited_sites_list = await ProhibitedSitesDAO.add_sites_from_db([], db)
+            keywords: dict = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
 
             for lang in self.languages:
@@ -135,7 +139,7 @@ class CompanySearchTask(BaseSearchTask):
                 ),
             )
 
-            languages_names = await utils.get_languages_by_code(db, self.languages)
+            languages_names = await LanguageDAO.get_languages_by_code(db, self.languages)
             titles.append(languages_names)
 
             items, filters, fullname_counters = form_response_html(all_found_info)
@@ -149,7 +153,7 @@ class CompanySearchTask(BaseSearchTask):
             )
             file_storage = FileStorageService()
 
-            await db_transactions.save_html(html, self.query_id, db, file_storage)
+            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             print(e)
@@ -159,7 +163,7 @@ class CompanySearchTask(BaseSearchTask):
         await write_urls(urls, "company")
 
     async def _update_balances(self, db):
-        await utils.renew_xml_balance(db)
+        await ServicesBalanceDAO.renew_xml_balance(db)
 
 
 @shared_task(bind=True, acks_late=True)

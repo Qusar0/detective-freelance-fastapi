@@ -6,10 +6,13 @@ from threading import Lock
 from celery import shared_task
 from sqlalchemy import select
 
+from server.api.dao.user_queries import UserQueriesDAO
+from server.api.dao.telegram_notifications import TelegramNorificationsDAO
+from server.api.dao.balance_history import BalanceHistoryDAO
 from server.api.models.models import TextData
+from server.api.scripts.sse_manager import generate_sse_message_type, send_sse_notification
 from server.api.services.file_storage import FileStorageService
 from server.bots.notification_bot import send_notification
-from server.api.scripts import utils, db_transactions
 from server.api.conf.config import settings
 from server.api.database.database import async_session
 
@@ -29,7 +32,7 @@ class BaseSearchTask(ABC):
 
     async def execute(self):
         async with async_session() as db:
-            user_query = await db_transactions.get_user_query(self.query_id, db)
+            user_query = await UserQueriesDAO.get_user_query(self.query_id, db)
             if user_query.query_status == "done":
                 return
 
@@ -51,21 +54,21 @@ class BaseSearchTask(ABC):
         pass
 
     async def _handle_success(self, user_query, db):
-        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
-        await db_transactions.change_query_status(user_query, "done", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
+        channel = await generate_sse_message_type(user_id=user_query.user_id, db=db)
+        await UserQueriesDAO.change_query_status(user_query, "done", db)
+        await send_sse_notification(user_query, channel, db)
 
-        chat_id = await utils.is_user_subscribed_on_tg(user_query.user_id, db)
+        chat_id = await TelegramNorificationsDAO.is_user_subscribed_on_tg(user_query.user_id, db)
         if chat_id:
             await send_notification(chat_id, user_query.query_title)
 
     async def _handle_error(self, user_query, db):
-        channel = await utils.generate_sse_message_type(user_id=user_query.user_id, db=db)
-        await db_transactions.change_query_status(user_query, "failed", db)
-        await db_transactions.send_sse_notification(user_query, channel, db)
+        channel = await generate_sse_message_type(user_id=user_query.user_id, db=db)
+        await UserQueriesDAO.change_query_status(user_query, "failed", db)
+        await send_sse_notification(user_query, channel, db)
 
         if self.money_to_return > 0:
-            await db_transactions.return_balance(
+            await BalanceHistoryDAO.return_balance(
                 user_query.user_id,
                 user_query.query_id,
                 self.money_to_return,
@@ -126,7 +129,7 @@ def delete_query_task(query_id):
                         logging.info(f"Файл {text_data.file_path} успешно удалён.")
                     except Exception as e:
                         logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
-                await db_transactions.delete_query_by_id(query_id, db)
+                await UserQueriesDAO.delete_query_by_id(query_id, db)
         except Exception as e:
             logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
 
