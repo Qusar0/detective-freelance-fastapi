@@ -1,7 +1,5 @@
-import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import ProhibitedSites

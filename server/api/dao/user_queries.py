@@ -37,12 +37,11 @@ class UserQueriesDAO(BaseDAO):
             await session.refresh(user_query)
 
             return user_query
-        
+
     @classmethod
     async def change_query_status(cls, user_query, query_type, db):
         user_query.query_status = query_type
         await db.commit()
-
 
     @classmethod
     async def delete_query_by_id(cls, query_id, db):

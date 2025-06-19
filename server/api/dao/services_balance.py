@@ -1,4 +1,3 @@
-import logging
 import httpx
 from sqlalchemy import select
 

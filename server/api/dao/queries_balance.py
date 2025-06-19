@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 
 from server.api.dao.base import BaseDAO

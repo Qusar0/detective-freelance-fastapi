@@ -1,11 +1,10 @@
-import logging
 from datetime import datetime
 from sqlalchemy import select
 
 from server.api.models.models import BalanceHistory, UserBalances
 from server.api.scripts.sse_manager import publish_event
 from server.api.dao.base import BaseDAO
-from server.api.models.models import BalanceHistory
+
 
 class BalanceHistoryDAO(BaseDAO):
     model = BalanceHistory
