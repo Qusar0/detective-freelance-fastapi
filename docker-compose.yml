@@ -44,22 +44,22 @@ services:
       - redis
       - web
 
-  celery_telegram:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q telegram_tasks --loglevel=INFO
-    working_dir: /app/server
-    volumes:
-      - ./server:/app/server
-      - tdlib_data:/app/server/api/scripts/tdlib_sources
-      - db_data:/app/server/api/scripts/BotDB
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    depends_on:
-      - redis
-      - web
+  # celery_telegram:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q telegram_tasks --loglevel=INFO
+  #   working_dir: /app/server
+  #   volumes:
+  #     - ./server:/app/server
+  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
+  #     - db_data:/app/server/api/scripts/BotDB
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
+  #     - web
 
   celery_name:
     build:
@@ -129,21 +129,21 @@ services:
       - redis
       - web
 
-  telegram_bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: python3 bots/notification_bot.py
-    working_dir: /app/server
-    volumes:
-      - ./server:/app/server
-      - tdlib_data:/app/server/api/scripts/tdlib_sources
-      - db_data:/app/server/api/scripts/BotDB
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-    depends_on:
-      - redis
-      - web
+  # telegram_bot:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   command: python3 bots/notification_bot.py
+  #   working_dir: /app/server
+  #   volumes:
+  #     - ./server:/app/server
+  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
+  #     - db_data:/app/server/api/scripts/BotDB
+  #   environment:
+  #     - CELERY_BROKER_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
+  #     - web
 
   db_backup:
     image: postgres:14-alpine

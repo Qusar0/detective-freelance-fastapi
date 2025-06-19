@@ -1,8 +1,13 @@
 import json
 import redis
 import asyncio
+import base64
 from typing import Dict, List
+from sqlalchemy import select
 
+from server.api.models.models import Users
+from server.api.database.database import get_db
+from server.api.dao.events import EventsDAO
 from server.api.conf.config import settings
 
 
@@ -76,7 +81,7 @@ async def send_sse_notification(user_query, channel, db):
         }
     }
 
-    event_id, event_type, created_time, event_status = await utils.save_event(
+    event_id, event_type, created_time, event_status = await EventsDAO.save_event(
         event_data,
         user_query.query_id,
         db,

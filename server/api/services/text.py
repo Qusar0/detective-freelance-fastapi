@@ -1,6 +1,7 @@
 from typing import Dict, List, Any
 from deep_translator import GoogleTranslator
 
+
 def process_text(text: str, lang: str) -> str:
     """Обрабатывает и переводит текст с приведением к правильному регистру"""
     if not text:

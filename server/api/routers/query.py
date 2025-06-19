@@ -7,6 +7,8 @@ from sqlalchemy.future import select
 from sqlalchemy import delete, update
 from datetime import datetime, timezone
 from typing import List
+from server.api.scripts.sse_manager import generate_sse_message_type
+from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
 from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
@@ -22,10 +24,12 @@ from server.api.schemas.query import (
     DownloadQueryRequest,
 )
 
-from server.api.scripts import utils
-from server.api.scripts import db_transactions
+from server.api.dao.queries_balance import QueriesBalanceDAO
+from server.api.dao.user_queries import UserQueriesDAO
+from server.api.dao.user_balances import UserBalancesDAO
+from server.api.dao.balance_history import BalanceHistoryDAO
 from server.api.services.file_storage import FileStorageService
-from server.api.scripts.utils import translate_name_fields, translate_company_fields
+from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
 from server.tasks.search.email import start_search_by_email
 from server.tasks.search.name import start_search_by_name
@@ -117,7 +121,7 @@ async def send_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        user_queries = await utils.get_queries_page([user_id, query_category], page, db=db)
+        user_queries = await UserQueriesDAO.get_queries_page([user_id, query_category], page, db=db)
 
         result_list = []
         query_ids = [str(q.query_id) for q in user_queries]
@@ -178,9 +182,9 @@ async def find_by_name(
 
         translated_data = await translate_name_fields(original_data, languages)
 
-        channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
+        channel = await generate_sse_message_type(user_id=user_id, db=db)
 
-        price = await utils.calculate_name_price(
+        price = await calculate_name_price(
             db,
             original_data["patronymic"],
             original_data["keywords"],
@@ -217,15 +221,14 @@ async def find_by_name(
             languages
         )
 
-        await utils.subtract_balance(user_id, price, channel, db)
+        await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await db_transactions.save_payment_to_history(
-            user_id,
+        await BalanceHistoryDAO.save_payment_to_history(
             price,
             user_query.query_id,
             db,
         )
-        await db_transactions.save_query_balance(
+        await QueriesBalanceDAO.save_query_balance(
             user_query.query_id,
             price,
             db,
@@ -252,9 +255,9 @@ async def find_by_number(
         search_number = request_data.search_number.strip()
         methods_type = request_data.methods_type
 
-        channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
+        channel = await generate_sse_message_type(user_id=user_id, db=db)
 
-        price = utils.calculate_num_price(methods_type)
+        price = calculate_num_price(methods_type)
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
@@ -272,15 +275,14 @@ async def find_by_number(
         await db.commit()
         await db.refresh(user_query)
 
-        await utils.subtract_balance(user_id, price, channel, db)
+        await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await db_transactions.save_payment_to_history(
-            user_id,
+        await BalanceHistoryDAO.save_payment_to_history(
             price,
             user_query.query_id,
             db,
         )
-        await db_transactions.save_query_balance(
+        await QueriesBalanceDAO.save_query_balance(
             user_query.query_id,
             price,
             db,
@@ -311,9 +313,9 @@ async def find_by_email(
         search_email = request_data.email.strip()
         methods_type = request_data.methods_type
 
-        channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
+        channel = await generate_sse_message_type(user_id=user_id, db=db)
 
-        price = utils.calculate_email_price(methods_type)
+        price = calculate_email_price(methods_type)
 
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
@@ -330,15 +332,14 @@ async def find_by_email(
         db.add(user_query)
         await db.commit()
 
-        await utils.subtract_balance(user_id, price, channel, db)
+        await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await db_transactions.save_payment_to_history(
-            user_id,
+        await BalanceHistoryDAO.save_payment_to_history(
             price,
             user_query.query_id,
             db,
         )
-        await db_transactions.save_query_balance(
+        await QueriesBalanceDAO.save_query_balance(
             user_query.query_id,
             price,
             db,
@@ -381,7 +382,7 @@ async def find_by_company(
 
         translated_data = await translate_company_fields(original_data, languages)
 
-        channel = await utils.generate_sse_message_type(user_id=user_id, db=db)
+        channel = await generate_sse_message_type(user_id=user_id, db=db)
 
         price = 10
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
@@ -413,15 +414,14 @@ async def find_by_company(
             languages
         )
 
-        await utils.subtract_balance(user_id, price, channel, db)
+        await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await db_transactions.save_payment_to_history(
-            user_id,
+        await BalanceHistoryDAO.save_payment_to_history(
             price,
             user_query.query_id,
             db,
         )
-        await db_transactions.save_query_balance(
+        await QueriesBalanceDAO.save_query_balance(
             user_query.query_id,
             price,
             db,
@@ -442,7 +442,7 @@ async def calculate_price(
 ):
     try:
         Authorize.jwt_required()
-        price = await utils.calculate_name_price(
+        price = await calculate_name_price(
             db,
             data.search_patronymic.strip(),
             data.keywords,

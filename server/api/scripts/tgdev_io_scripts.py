@@ -1,6 +1,6 @@
 import requests
 
-from server.api.scripts.utils import renew_tgdev_balance
+from server.api.dao.services_balance import ServicesBalanceDAO
 
 
 url = "https://api.tgdev.io/tgscan/v1/search"
@@ -34,6 +34,6 @@ async def get_groups_tgdev_method(telegram_id: str):
         response_user_groups.append("@" + group['username'] + " / " + group["title"] + ' | ' + group['date_updated'])
 
     tgdev_balance = get_tgdev_balance()
-    await renew_tgdev_balance(tgdev_balance)
+    await ServicesBalanceDAO.renew_tgdev_balance(tgdev_balance)
 
     return response_user_groups

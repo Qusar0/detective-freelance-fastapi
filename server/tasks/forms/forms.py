@@ -1,6 +1,6 @@
 import logging
-from typing import List
 import httpx
+from typing import List
 from phonenumbers import parse, NumberParseException
 
 from server.tasks.celery_config import FoundInfo

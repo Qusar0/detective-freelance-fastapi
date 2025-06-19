@@ -1,7 +1,9 @@
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# price
+from server.api.dao.keywords import KeywordsDAO
+
+
 async def calculate_name_price(
     db: AsyncSession,
     search_patronymic: str,
@@ -12,7 +14,7 @@ async def calculate_name_price(
     NAME_CASES = 5
 
     len_user_kwds = len(keywords)
-    default_kwds = await get_default_keywords(db, default_keywords_type, languages, count=True)
+    default_kwds = await KeywordsDAO.get_default_keywords(db, default_keywords_type, languages)
     len_default_kwds = default_kwds[0]
 
     len_all_keywords = 1 if len_user_kwds + len_default_kwds == 0 else len_user_kwds + len_default_kwds
@@ -30,8 +32,6 @@ async def calculate_name_price(
     return round(price, 2)
 
 
-
-# price
 def calculate_num_price(methods_type):
     price = 0
     if 'mentions' in methods_type:
@@ -41,7 +41,7 @@ def calculate_num_price(methods_type):
 
     return price
 
-# price
+
 def calculate_email_price(methods_type):
     price = 0
     if 'mentions' in methods_type:

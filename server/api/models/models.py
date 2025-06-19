@@ -15,9 +15,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
 
-from server.api.models.base import Base
+
+class Base(DeclarativeBase):
+    pass
 
 
 class BalanceHistory(Base):

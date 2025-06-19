@@ -9,7 +9,7 @@ from server.api.schemas.telegram import (
     WriteSupportRequest,
     WriteSupportResponse,
 )
-from server.api.scripts import utils
+from server.api.dao.telegram_notifications import TelegramNorificationsDAO
 from server.bots.support_bot import send_message_async
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
@@ -29,7 +29,7 @@ async def connect_tg(
         raise HTTPException(status_code=422, detail="Invalid token")
 
     try:
-        success = await utils.save_user_and_chat(user_id, chat, db)
+        success = await TelegramNorificationsDAO.save_user_and_chat(user_id, chat, db)
         if not success:
             raise HTTPException(status_code=422, detail="Пользователь уже привязан")
         return {
