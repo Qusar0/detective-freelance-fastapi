@@ -1,5 +1,4 @@
 from datetime import datetime
-from server.api.conf.config import settings
 
 BASE_HTML = """
 <!DOCTYPE html>
@@ -68,6 +67,7 @@ BASE_HTML = """
 </html>
 """
 
+
 def get_confirmation_email(email: str, confirm_url: str) -> dict:
     """Генерирует письмо подтверждения регистрации"""
     content = f"""
@@ -84,14 +84,14 @@ def get_confirmation_email(email: str, confirm_url: str) -> dict:
         
         <p>Если вы не регистрировались, проигнорируйте это письмо.</p>
     """
-    
+
     html_content = BASE_HTML.format(
         header_color="#4a6fa5",
         button_color="#4a6fa5",
         header_text="Подтверждение регистрации",
         content=content
     )
-    
+
     text_content = f"""
     Подтверждение регистрации
     
@@ -100,13 +100,14 @@ def get_confirmation_email(email: str, confirm_url: str) -> dict:
     
     Если вы не регистрировались, проигнорируйте это письмо.
     """
-    
+
     return {
         "subject": "Подтвердите ваш email",
         "recipients": [email],
         "html": html_content,
         "body": text_content
     }
+
 
 def get_beware_email(email: str) -> dict:
     """Генерирует предупреждающее письмо"""
@@ -116,27 +117,28 @@ def get_beware_email(email: str) -> dict:
             <p>Пожалуйста, срочно измените пароль и проверьте свою безопасность.</p>
         </div>
     """
-    
+
     html_content = BASE_HTML.format(
         header_color="#721c24",
         button_color="#721c24",
         header_text="Внимание: Безопасность",
         content=content
     )
-    
+
     text_content = f"""
     Внимание: Безопасность
     
     Ваш аккаунт может быть компрометирован!
     Пожалуйста, срочно измените пароль и проверьте свою безопасность.
     """
-    
+
     return {
         "subject": "Внимание: Проверьте безопасность",
         "recipients": [email],
         "html": html_content,
         "body": text_content
     }
+
 
 def get_already_registered_email(email: str, login_url: str) -> dict:
     """Генерирует письмо для уже зарегистрированного пользователя"""
@@ -163,14 +165,14 @@ def get_already_registered_email(email: str, login_url: str) -> dict:
             <li>Измените пароль, если у вас есть подозрения о несанкционированном доступе</li>
         </ul>
     """
-    
+
     html_content = BASE_HTML.format(
         header_color="#f39c12",
         button_color="#f39c12",
         header_text="Ваш аккаунт уже существует",
         content=content
     )
-    
+
     text_content = f"""
     Ваш аккаунт уже существует
     
@@ -184,7 +186,7 @@ def get_already_registered_email(email: str, login_url: str) -> dict:
     - Проигнорируйте это письмо
     - Измените пароль, если есть подозрения о несанкционированном доступе
     """
-    
+
     return {
         "subject": "Ваш аккаунт уже зарегистрирован",
         "recipients": [email],
@@ -192,29 +194,30 @@ def get_already_registered_email(email: str, login_url: str) -> dict:
         "body": text_content
     }
 
+
 def get_password_changed_email(email: str) -> dict:
     """Генерирует письмо об успешной смене пароля"""
     current_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-    
+
     content = f"""
         <p>Ваш пароль был успешно изменён {current_time}.</p>
         <p>Если вы не выполняли эту операцию, пожалуйста, немедленно свяжитесь с нашей службой поддержки.</p>
     """
-    
+
     html_content = BASE_HTML.format(
         header_color="#4a6fa5",
         button_color="#4a6fa5",
         header_text="Смена пароля",
         content=content
     )
-    
+
     text_content = f"""
     Смена пароля
 
     Ваш пароль был успешно изменён {current_time}.
     Если вы не выполняли эту операцию, свяжитесь с поддержкой.
     """
-    
+
     return {
         "subject": "Ваш пароль был изменён",
         "recipients": [email],
@@ -222,24 +225,25 @@ def get_password_changed_email(email: str) -> dict:
         "body": text_content
     }
 
+
 def get_reset_password_email(email: str, reset_url: str) -> dict:
     """Генерирует письмо для сброса пароля"""
     current_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
-    
+
     content = f"""
         <p>Вы запросили сброс пароля {current_time}.</p>
         <p>Чтобы задать новый пароль, перейдите по ссылке ниже:</p>
         <p><a href="{reset_url}" class="button">Сбросить пароль</a></p>
         <p>Если вы не запрашивали сброс пароля, проигнорируйте это письмо.</p>
     """
-    
+
     html_content = BASE_HTML.format(
         header_color="#4a6fa5",
         button_color="#4a6fa5",
         header_text="Сброс пароля",
         content=content
     )
-    
+
     text_content = f"""
     Сброс пароля
 
@@ -250,7 +254,7 @@ def get_reset_password_email(email: str, reset_url: str) -> dict:
 
     Если вы не запрашивали сброс пароля, проигнорируйте это письмо.
     """
-    
+
     return {
         "subject": "Сброс пароля",
         "recipients": [email],

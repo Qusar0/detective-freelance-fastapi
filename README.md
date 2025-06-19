@@ -1,4 +1,4 @@
-[![Linter](https://github.com/ekaterinakrylovao/tg-bot-project/actions/workflows/linter.yaml/badge.svg)](https://github.com/ekaterinakrylovao/tg-bot-project/actions/workflows/linter.yaml)
+[![Linter](https://github.com/Qusar0/detective-freelance-fastapi/actions/workflows/linter.yml/badge.svg)](https://github.com/Qusar0/detective-freelance-fastapi/actions/workflows/linter.yml)
 # Detective Freelance
 
 ### Запуск проекта
