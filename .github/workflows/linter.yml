@@ -22,6 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python3.10 -m pip install --upgrade pip
+          pip install flake8
           pip uninstall -y flake8-docstrings
 
       - name: Run Flake8
