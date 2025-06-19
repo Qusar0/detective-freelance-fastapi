@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     # Query delete delay (seconds)
     query_delete_delay_seconds: int = Field(7200, env="QUERY_DELETE_DELAY_SECONDS")
 
+    # IRBIS token
+    irbis_token: str = Field(..., env="IRBIS_TOKEN")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
