@@ -1,7 +1,5 @@
 from typing import Optional
 
-import requests
-
 from .base_irbis_init import BaseAuthIRBIS
 
 
@@ -14,9 +12,9 @@ class Corruption(BaseAuthIRBIS):
                          second_name, birth_date, passport_series,
                          passport_number, inn)
 
-        self.count: Optional[int] = None
+        self.count: Optional[int] = 0
 
-        self.full_data: Optional[list] = None
+        self.full_data: Optional[list] = []
 
     def get_data_preview(self):
         """
@@ -27,17 +25,12 @@ class Corruption(BaseAuthIRBIS):
             int: Результат запроса
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-corrupt.json?event=preview"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        count = None
+        if response is not None:
+            self.count = response["count"]
 
-        if response["status"] == 1:
-            count = response["response"]["count"]
-
-        self.count = count
-
-        return count
+        return self.count
 
     def get_full_data(self, page: int, rows: int):
         """
@@ -52,13 +45,9 @@ class Corruption(BaseAuthIRBIS):
             list: Результат запроса
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-corrupt.json?event=data&page={page}&rows={rows}"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        full_data = None
+        if response is not None:
+            self.full_data = response["result"]
 
-        if response["status"] == 1:
-            full_data = response["response"]["result"]
-
-        self.full_data = full_data
-        return full_data
+        return self.full_data

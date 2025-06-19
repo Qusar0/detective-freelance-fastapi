@@ -1,7 +1,5 @@
 from typing import Optional
 
-import requests
-
 from .base_irbis_init import BaseAuthIRBIS
 
 
@@ -14,10 +12,10 @@ class Bankruptcy(BaseAuthIRBIS):
                          second_name, birth_date, passport_series,
                          passport_number, inn)
 
-        self.amount_by_name: Optional[int] = None
-        self.amount_by_inn: Optional[int] = None
+        self.amount_by_name: Optional[int] = 0
+        self.amount_by_inn: Optional[int] = 0
 
-        self.full_data: Optional[list] = None
+        self.full_data: Optional[list] = []
 
     def get_data_preview(self):
         """
@@ -29,19 +27,13 @@ class Bankruptcy(BaseAuthIRBIS):
             int: Результат запроса по инн.
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-bankrot.json?event=preview"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        result_name = result_inn = None
+        if response is not None:
+            self.amount_by_name = response["name"]
+            self.amount_by_inn = response["inn"]
 
-        if response["status"] == 1:
-            result_name = response["response"]["name"]
-            result_inn = response["response"]["inn"]
-
-        self.amount_by_name = result_name
-        self.amount_by_inn = result_inn
-
-        return result_name, result_inn
+        return self.amount_by_name, self.amount_by_inn
 
     def get_full_data(self, page: int, rows: int, search_type: str):
         """
@@ -57,13 +49,9 @@ class Bankruptcy(BaseAuthIRBIS):
             list: Результат запроса
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-bankrot.json?event=data&page={page}&rows={rows}&search_type={search_type}&version=2"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        full_data = None
+        if response is not None:
+            self.full_data = response["result"]
 
-        if response["status"] == 1:
-            full_data = response["response"]["result"]
-
-        self.full_data = full_data
-        return full_data
+        return self.full_data

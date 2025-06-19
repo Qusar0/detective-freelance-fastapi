@@ -14,9 +14,9 @@ class FSSP(BaseAuthIRBIS):
                          second_name, birth_date, passport_series,
                          passport_number, inn)
 
-        self.fssp_preview: Optional[list] = None
+        self.fssp_preview: Optional[list] = []
 
-        self.full_data: Optional[list] = None
+        self.full_data: Optional[list] = []
 
     def get_data_preview(self):
         """
@@ -27,16 +27,12 @@ class FSSP(BaseAuthIRBIS):
             list: Результат запроса
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-fssp.json?event=preview"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        fssp_preview = None
+        if response is not None:
+            self.fssp_preview = response
 
-        if response["status"] == 1:
-            fssp_preview = response["response"]
-
-        self.fssp_preview = fssp_preview
-        return fssp_preview
+        return self.fssp_preview
 
     def get_full_data(self, page: int, rows: int):
         """
@@ -51,13 +47,9 @@ class FSSP(BaseAuthIRBIS):
             list: Результат запроса
         """
         link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-fssp.json?event=data&page={page}&rows={rows}"
-        r = requests.get(link)
-        response = r.json()
+        response = self.get_response(link)
 
-        full_data = None
+        if response is not None:
+            self.full_data = response["result"]
 
-        if response["status"] == 1:
-            full_data = response["response"]["result"]
-
-        self.full_data = full_data
-        return full_data
+        return self.full_data
