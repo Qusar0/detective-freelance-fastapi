@@ -1,4 +1,4 @@
-# from server.api.conf.config import settings
+from server.api.conf.config import settings
 from time import sleep
 from typing import Optional
 import requests
@@ -10,7 +10,7 @@ class BaseAuthIRBIS:
                  passport_series: Optional[str] = None, passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         # Обязательные поля
-        self._token_id: str = "settings.irbis_token"
+        self._token_id: str = settings.irbis_token
         self._first_name: str = first_name
         self._last_name: str = last_name
         self._regions: list[int] = regions
