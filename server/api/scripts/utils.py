@@ -14,7 +14,7 @@ from deep_translator import GoogleTranslator
 from server.api.conf.config import settings
 from server.api.scripts.sse_manager import publish_event
 
-
+# text
 def process_text(text: str, lang: str) -> str:
     """Обрабатывает и переводит текст с приведением к правильному регистру"""
     if not text:
@@ -22,12 +22,12 @@ def process_text(text: str, lang: str) -> str:
     translated = translate_text(text, 'ru', lang)[0]
     return translated.replace("-", " ").title().replace(" ", "-")
 
-
+# text
 def process_keywords(keywords: List[str], lang: str) -> List[str]:
     """Переводит список ключевых слов"""
     return translate_words({"keywords": keywords}, [lang])
 
-
+# text
 def process_special_field(text: str, prefix: str, lang: str) -> str:
     """Обрабатывает специальные поля (plus/minus) с разделителями"""
     if not text:
@@ -36,7 +36,7 @@ def process_special_field(text: str, prefix: str, lang: str) -> str:
     translated_terms = [translate_text(term, 'ru', lang)[0] for term in terms if term]
     return prefix + prefix.join(translated_terms) if translated_terms else ''
 
-
+# text
 async def translate_name_fields(data: Dict[str, Any], target_languages: List[str]) -> Dict[str, Any]:
     """Переводит все текстовые поля на указанные языки"""
     translated = {
@@ -66,7 +66,7 @@ async def translate_name_fields(data: Dict[str, Any], target_languages: List[str
 
     return translated
 
-
+# text
 async def translate_company_fields(data: Dict[str, Any], target_languages: List[str]) -> Dict[str, Any]:
     """Переводит поля для поиска компании на указанные языки"""
     translated = {
@@ -92,7 +92,7 @@ async def translate_company_fields(data: Dict[str, Any], target_languages: List[
 
     return translated
 
-
+# text
 def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
     """Функция для перевода текста с разделением по точкам"""
     try:
@@ -102,7 +102,7 @@ def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
         print(f"Translation error for '{text}' to '{target_lang}': {e}")
         return []
 
-
+# text
 def translate_words(
     keywords_by_category: Dict[str, List[str]],
     target_languages: List[str],
@@ -122,7 +122,7 @@ def translate_words(
 
     return translations
 
-
+# country dao
 async def get_countries_code_by_languages(
     db: AsyncSession,
     language_codes: List[str] = None,
@@ -154,7 +154,7 @@ async def get_countries_code_by_languages(
 
     return result_dict
 
-
+# languages dao
 async def get_languages_by_code(
     db: AsyncSession,
     language_codes: List[str] = None,
@@ -220,7 +220,7 @@ async def get_default_keywords(
     coefficient = len(languages) or 1
     return (counter * coefficient, translated_words)
 
-
+# price
 async def calculate_name_price(
     db: AsyncSession,
     search_patronymic: str,
@@ -248,7 +248,7 @@ async def calculate_name_price(
     price = (query_count * 0.02) * 3
     return round(price, 2)
 
-
+# sevice dao
 async def renew_ibhldr_balance(requests_left):
     async with get_db() as db:
         result = await db.execute(
@@ -261,7 +261,7 @@ async def renew_ibhldr_balance(requests_left):
             ibhldr_balance.balance = requests_left
             await db.commit()
 
-
+# service dao
 async def renew_tgdev_balance(requests_left):
     async with get_db() as db:
         TgDev_io_balance = await db.execute(
@@ -273,7 +273,7 @@ async def renew_tgdev_balance(requests_left):
             TgDev_io_balance.balance = requests_left
             await db.commit()
 
-
+# progibited dao
 async def add_sites_from_db(user_prohibited_sites: list, db) -> list:
     result = await db.execute(select(ProhibitedSites.site_link))
     sites_from_db = result.scalars().all()
@@ -304,7 +304,7 @@ async def generate_sse_message_type(user_id: int, db=None) -> str:
 
     return base64_string
 
-
+# service dao
 async def renew_xml_balance(db):
     url = f"http://xmlriver.com/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
 
@@ -322,7 +322,7 @@ async def renew_xml_balance(db):
         xmlriver_balance.balance = balance
         await db.commit()
 
-
+# service dao
 async def renew_lampyre_balance(db):
     token = settings.utils_token
     url = settings.lighthouse_url
@@ -340,7 +340,7 @@ async def renew_lampyre_balance(db):
         lampyre_balance.balance = resp.json()['balance']
         await db.commit()
 
-
+# service dao
 async def renew_getcontact_balance(requests_left, db):
     getcontact_balance = await db.execute(
         select(ServicesBalance)
@@ -352,7 +352,7 @@ async def renew_getcontact_balance(requests_left, db):
         getcontact_balance.balance = requests_left
         await db.commit()
 
-
+# service dao
 async def get_service_balance(db, service_name):
     service = await db.execute(
         select(ServicesBalance)
@@ -363,7 +363,7 @@ async def get_service_balance(db, service_name):
     if service:
         return service.balance
 
-
+# telegram dao
 async def is_user_subscribed_on_tg(user_id, db):
     result = await db.execute(
         select(TelegramNotifications).filter_by(user_id=user_id)
@@ -372,7 +372,7 @@ async def is_user_subscribed_on_tg(user_id, db):
 
     return user.chat_id if user else False
 
-
+# queries dao
 async def get_queries_page(filter: tuple, page: int = 0, page_size: int = 20, db: AsyncSession = None):
     stmt = (
         select(UserQueries)
@@ -390,7 +390,7 @@ async def get_queries_page(filter: tuple, page: int = 0, page_size: int = 20, db
 
     return queries
 
-
+# balance dao
 async def subtract_balance(user_id: int, amount: float, channel: str, db: AsyncSession):
     result = await db.execute(
         select(UserBalances)
@@ -415,7 +415,7 @@ async def subtract_balance(user_id: int, amount: float, channel: str, db: AsyncS
 
     await publish_event(channel, event_data)
 
-
+# event dao
 async def save_event(data: str, query_id: int, db: AsyncSession):
     now = datetime.now()
 
@@ -433,7 +433,7 @@ async def save_event(data: str, query_id: int, db: AsyncSession):
 
     return user_query.event_id, user_query.event_type, user_query.created_time, user_query.event_status
 
-
+# price
 def calculate_num_price(methods_type):
     price = 0
     if 'mentions' in methods_type:
@@ -443,7 +443,7 @@ def calculate_num_price(methods_type):
 
     return price
 
-
+# price
 def calculate_email_price(methods_type):
     price = 0
     if 'mentions' in methods_type:
@@ -453,7 +453,7 @@ def calculate_email_price(methods_type):
 
     return price
 
-
+# telegram dao
 async def save_user_and_chat(user_id, chat_id, db):
     result = await db.execute(
         select(TelegramNotifications).filter_by(user_id=user_id, chat_id=chat_id)

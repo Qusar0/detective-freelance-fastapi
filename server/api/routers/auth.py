@@ -1,9 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi_jwt_auth import AuthJWT
 from passlib.hash import bcrypt
 from starlette.responses import JSONResponse
+
 from server.api.database.database import get_db
 from server.api.models.models import UserRole, Users
 from server.api.schemas.users import (
@@ -13,7 +15,7 @@ from server.api.schemas.users import (
     StatusMessage,
     ResetPasswordRequest
 )
-from server.api.conf.mail import (
+from server.api.scripts.mail import (
     send_email,
     generate_conformation_token,
     confirm_token,
@@ -23,7 +25,6 @@ from server.api.templates.email_message import (
     get_already_registered_email,
     get_reset_password_email,
 )
-import logging
 from server.api.conf.config import settings
 
 

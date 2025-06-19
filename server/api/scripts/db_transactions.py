@@ -9,7 +9,7 @@ from server.api.scripts import utils
 from server.api.scripts.sse_manager import publish_event
 from server.api.services.file_storage import FileStorageService
 
-
+# queries dao
 async def get_user_query(query_id, db):
     result = await db.execute(
         select(UserQueries)
@@ -17,7 +17,7 @@ async def get_user_query(query_id, db):
     )
     return result.scalars().first()
 
-
+# queries dao
 async def save_user_query(user_id, query_title, category):
     async with get_db() as session:
         now = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
@@ -36,7 +36,7 @@ async def save_user_query(user_id, query_title, category):
 
         return user_query
 
-
+# balance dao
 async def save_payment_to_history(user_id, price, query_id, db):
     balance_history = BalanceHistory(
         transaction_type='payment',
@@ -47,7 +47,7 @@ async def save_payment_to_history(user_id, price, query_id, db):
     db.add(balance_history)
     await db.commit()
 
-
+# balance dao
 async def save_query_balance(query_id, price, db):
     balance = QueriesBalance(
         query_id=query_id,
@@ -57,7 +57,7 @@ async def save_query_balance(query_id, price, db):
     db.add(balance)
     await db.commit()
 
-
+# balance dao
 async def return_balance(user_id, query_id, amount, channel, db):
     result = await db.execute(
         select(BalanceHistory)
@@ -85,7 +85,7 @@ async def return_balance(user_id, query_id, amount, channel, db):
             "balance": user_balance.balance
         })
 
-
+# text data dao
 async def save_html(html, query_id, db, file_storage: FileStorageService):
     try:
         file_path = await file_storage.save_query_data(query_id, html)
@@ -100,12 +100,12 @@ async def save_html(html, query_id, db, file_storage: FileStorageService):
         await db.rollback()
         raise
 
-
+# query dao
 async def change_query_status(user_query, query_type, db):
     user_query.query_status = query_type
     await db.commit()
 
-
+# sse
 async def send_sse_notification(user_query, channel, db):
     event_data = {
         "message": {
@@ -132,7 +132,7 @@ async def send_sse_notification(user_query, channel, db):
 
     await publish_event(channel, event_data)
 
-
+# queries dao
 async def delete_query_by_id(query_id, db):
     try:
         user_query = await get_user_query(query_id, db)

@@ -4,7 +4,7 @@ from threading import Thread
 from celery import shared_task
 
 from server.api.scripts import utils, db_transactions
-from server.api.scripts.html_work import response_template
+from server.api.templates.html_work import response_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,

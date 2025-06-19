@@ -5,7 +5,7 @@ from celery import shared_task
 import httpx
 
 from server.api.scripts import lampyre_email_script, utils, db_transactions
-from server.api.scripts.html_work import response_email_template
+from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
     SEARCH_ENGINES,
