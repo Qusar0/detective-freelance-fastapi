@@ -1,5 +1,7 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 from typing import List
 
 from server.api.dao.base import BaseDAO
@@ -23,8 +25,10 @@ class LanguageDAO(BaseDAO):
             select(Language)
             .where(Language.code.in_(language_codes))
         )
+        try:
+            result = await db.execute(query)
+            languages = result.scalars().all()
 
-        result = await db.execute(query)
-        languages = result.scalars().all()
-
-        return [lang.russian_name for lang in languages]
+            return [lang.russian_name for lang in languages]
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при получении кода: {e}")

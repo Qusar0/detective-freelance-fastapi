@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
@@ -13,11 +14,14 @@ class UserQueriesDAO(BaseDAO):
 
     @classmethod
     async def get_user_query(cls, query_id, db):
-        result = await db.execute(
-            select(UserQueries)
-            .filter_by(query_id=query_id),
-        )
-        return result.scalars().first()
+        try:
+            result = await db.execute(
+                select(UserQueries)
+                .filter_by(query_id=query_id),
+            )
+            return result.scalars().first()
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при получении запроса пользователя: {e}")
 
     @classmethod
     async def save_user_query(cls, user_id, query_title, category):
@@ -32,16 +36,22 @@ class UserQueriesDAO(BaseDAO):
                 query_status="pending",
                 query_category=category
             )
-            session.add(user_query)
-            await session.commit()
-            await session.refresh(user_query)
+            try:
+                session.add(user_query)
+                await session.commit()
+                await session.refresh(user_query)
 
-            return user_query
+                return user_query
+            except (SQLAlchemyError, Exception) as e:
+                logging.error(f"Ошибка при сохранении запроса пользователя: {e}")
 
     @classmethod
     async def change_query_status(cls, user_query, query_type, db):
         user_query.query_status = query_type
-        await db.commit()
+        try:
+            await db.commit()
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при смене статуса запроса: {e}")
 
     @classmethod
     async def delete_query_by_id(cls, query_id, db):
@@ -51,7 +61,7 @@ class UserQueriesDAO(BaseDAO):
                 await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
                 await db.commit()
                 logging.info(f"Celery: Query {query_id} удалён автоматически.")
-        except Exception as e:
+        except (SQLAlchemyError, Exception) as e:
             await db.rollback()
             logging.error(f"Ошибка при удалении query {query_id}: {str(e)}")
             raise
@@ -68,8 +78,10 @@ class UserQueriesDAO(BaseDAO):
             stmt = stmt.limit(page_size)
         if page:
             stmt = stmt.offset(page * page_size)
+        try:
+            result = await db.execute(stmt)
+            queries = result.scalars().all()
 
-        result = await db.execute(stmt)
-        queries = result.scalars().all()
-
-        return queries
+            return queries
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при получении страницы запроса: {e}")

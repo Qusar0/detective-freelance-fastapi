@@ -1,5 +1,7 @@
+import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserBalances
@@ -11,25 +13,29 @@ class UserBalancesDAO(BaseDAO):
 
     @classmethod
     async def subtract_balance(cls, user_id: int, amount: float, channel: str, db: AsyncSession):
-        result = await db.execute(
-            select(UserBalances)
-            .filter_by(user_id=user_id),
-        )
-        user_balance = result.scalars().first()
+        try:
+            result = await db.execute(
+                select(UserBalances)
+                .filter_by(user_id=user_id),
+            )
+            user_balance = result.scalars().first()
 
-        if not user_balance:
-            return
+            if not user_balance:
+                return
 
-        user_balance.balance = round(
-            user_balance.balance + (-amount),
-            2,
-        )
+            user_balance.balance = round(
+                user_balance.balance + (-amount),
+                2,
+            )
 
-        await db.commit()
+            await db.commit()
 
-        event_data = {
-            "event_type": "balance",
-            "balance": user_balance.balance,
-        }
+            event_data = {
+                "event_type": "balance",
+                "balance": user_balance.balance,
+            }
 
-        await publish_event(channel, event_data)
+            await publish_event(channel, event_data)
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при списании с баланса: {e}")
+            await db.rollback()

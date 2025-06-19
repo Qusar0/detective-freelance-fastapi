@@ -1,4 +1,5 @@
 import logging
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.services.file_storage import FileStorageService
 from server.api.dao.base import BaseDAO
@@ -18,7 +19,7 @@ class TextDataDAO(BaseDAO):
             await db.commit()
 
             return file_path
-        except Exception as e:
+        except (SQLAlchemyError, Exception) as e:
             logging.error(f"Failed to save HTML for query {query_id}: {str(e)}")
             await db.rollback()
             raise

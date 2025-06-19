@@ -1,4 +1,6 @@
+import logging
 from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import QueriesBalance
@@ -14,5 +16,8 @@ class QueriesBalanceDAO(BaseDAO):
             balance=price,
             transaction_date=datetime.now()
         )
-        db.add(balance)
-        await db.commit()
+        try:
+            db.add(balance)
+            await db.commit()
+        except (SQLAlchemyError, Exception) as e:
+            logging.error(f"Ошибка при сохранении баланса: {e}")
