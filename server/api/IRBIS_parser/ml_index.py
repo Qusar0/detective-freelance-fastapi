@@ -5,8 +5,10 @@ from .base_irbis_init import BaseAuthIRBIS
 
 class MLIndex(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         super().__init__(first_name, last_name, regions,
                          second_name, birth_date, passport_series,
@@ -22,7 +24,8 @@ class MLIndex(BaseAuthIRBIS):
         Returns:
             int: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-scoring.json?event=scoring"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-scoring.json?event=scoring")
         response = self.get_response(link)
 
         if response is not None:

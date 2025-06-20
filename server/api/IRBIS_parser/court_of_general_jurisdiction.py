@@ -5,8 +5,10 @@ from .base_irbis_init import BaseAuthIRBIS
 
 class CourtGeneralJurisdiction(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         super().__init__(first_name, last_name, regions,
                          second_name, birth_date, passport_series,
@@ -31,7 +33,8 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
             Returns:
                 dict: Результат запроса.
             """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=role-preview"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-judge.json?event=role-preview"
                 f"&filter_text={filter_text}&strategy={strategy}")
         response = self.get_response(link)
 
@@ -54,8 +57,9 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
         Returns:
             dict: Результат запроса.
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event"
-                f"=categorypreview&filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-judge.json?event=categorypreview&"
+                f"filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
         response = self.get_response(link)
 
         result = dict()
@@ -81,8 +85,10 @@ class CourtGeneralJurisdiction(BaseAuthIRBIS):
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-judge.json?event=roledata"
-                f"&version=2&page={page}&rows={rows}&strategy={strategy}&filter0={filter0}&filter_text={filter_text}")
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-judge.json?event=roledata&version=2"
+                f"&page={page}&rows={rows}&strategy={strategy}"
+                f"&filter0={filter0}&filter_text={filter_text}")
         response = self.get_response(link)
 
         if response is not None:

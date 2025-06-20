@@ -5,8 +5,10 @@ from .base_irbis_init import BaseAuthIRBIS
 
 class Bankruptcy(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         super().__init__(first_name, last_name, regions,
                          second_name, birth_date, passport_series,
@@ -26,7 +28,8 @@ class Bankruptcy(BaseAuthIRBIS):
             int: Результат запроса по имени.
             int: Результат запроса по инн.
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-bankrot.json?event=preview"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-bankrot.json?event=preview")
         response = self.get_response(link)
 
         if response is not None:
@@ -48,7 +51,9 @@ class Bankruptcy(BaseAuthIRBIS):
         Returns:
             list: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-bankrot.json?event=data&page={page}&rows={rows}&search_type={search_type}&version=2"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-bankrot.json?event=data&"
+                f"page={page}&rows={rows}&search_type={search_type}&version=2")
         response = self.get_response(link)
 
         if response is not None:

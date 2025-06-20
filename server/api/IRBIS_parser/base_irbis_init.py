@@ -6,8 +6,10 @@ import requests
 
 class BaseAuthIRBIS:
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         # Обязательные поля
         self._token_id: str = settings.irbis_token
@@ -25,12 +27,18 @@ class BaseAuthIRBIS:
         self.person_uuid: Optional[str] = self.get_person_uuid()
 
     def generate_link(self):
-        temp_dict = {"PeopleQuery.LastName": self._last_name, "PeopleQuery.FirstName": self._first_name,
-                     "PeopleQuery.SecondName": self._second_name, "PeopleQuery.BirthDate": self._birth_date,
-                     "regions": self._regions, "PeopleQuery.PassportSeries": self._passport_series,
-                     "PeopleQuery.PassportNumber": self._passport_number, "PeopleQuery.INN": self._inn}
+        temp_dict = {"PeopleQuery.LastName": self._last_name,
+                     "PeopleQuery.FirstName": self._first_name,
+                     "PeopleQuery.SecondName": self._second_name,
+                     "PeopleQuery.BirthDate": self._birth_date,
+                     "regions": self._regions,
+                     "PeopleQuery.PassportSeries": self._passport_series,
+                     "PeopleQuery.PassportNumber": self._passport_number,
+                     "PeopleQuery.INN": self._inn
+                     }
 
-        result = [f"https://ir-bis.org/ru/base/-/services/people-check.json?token={self._token_id}"]
+        result = [(f"https://ir-bis.org/ru/base/-/services/"
+                  f"people-check.json?token={self._token_id}")]
         for key, value in temp_dict.items():
             if value is not None:
                 result.append(f"{key}={value}")
@@ -64,5 +72,5 @@ class BaseAuthIRBIS:
 
 
 if __name__ == '__main__':
-    test = BaseAuthIRBIS("Иван", "Иванов",[1, 2], )
+    test = BaseAuthIRBIS("Иван", "Иванов", [1, 2])
     print(test.generate_link())
