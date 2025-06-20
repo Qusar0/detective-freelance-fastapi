@@ -3,59 +3,85 @@ import logging
 from server.api.conf.config import settings
 
 
+def _handle_callapp(response):
+    """Обрабатывает ответ от сервиса CallApp."""
+    data = {}
+    if 'name' in response:
+        data['name'] = response['name']
+    if 'addresses' in response:
+        data['addresses'] = [addr['street'] for addr in response['addresses']]
+    if 'categories' in response:
+        data['categories'] = [cat['name'] for cat in response['categories']]
+    if 'websites' in response:
+        data['websites'] = [site['websiteUrl'] for site in response['websites']]
+    if 'facebookID' in response:
+        data['facebook_id'] = response['facebookID']['id']
+    return data
+
+
+def _handle_whatsapp(response):
+    """Обрабатывает ответ от сервиса WhatsApp."""
+    data = {}
+    if 'businessProfile' in response:
+        profile = response['businessProfile']
+        data['business_address'] = profile.get('address', '')
+        data['business_category'] = profile.get('category', '')
+        data['business_description'] = profile.get('description', '')
+        data['business_email'] = profile.get('email', '')
+        if 'website' in profile:
+            data['business_websites'] = [site['url'] for site in profile['website']]
+    if 'status' in response:
+        data['whatsapp_status'] = response['status']
+    return data
+
+
+def _handle_callerid(response):
+    """Обрабатывает ответ от сервиса CallerID."""
+    data = {}
+    if 'name' in response:
+        data['caller_name'] = response['name']
+    return data
+
+
+def _handle_eyecon(response):
+    """Обрабатывает ответ от сервиса Eyecon."""
+    data = {}
+    if 'contacts' in response:
+        data['contacts'] = [contact['name'] for contact in response['contacts']]
+    return data
+
+
 def parse_getcontact_response(response_data):
     """
-    Парсит данные из JSON-ответа GetContact API, пропуская 404 ошибки
+    Парсит данные из JSON-ответа GetContact API, пропуская 404 ошибки.
+    Делегирует обработку каждого источника отдельной функции.
     """
     if response_data.get('apiStatusCode') != 200:
         return {}
-    
+
     phone_data = {
         'phone': response_data['data']['request'],
         'sources': {}
     }
-    
+
+    handler_map = {
+        'callapp': _handle_callapp,
+        'whatsapp': _handle_whatsapp,
+        'callerid': _handle_callerid,
+        'eyecon': _handle_eyecon,
+    }
+
     for source in response_data['data']['responce']:
         if source['results']['statusCode'] == 404:
             continue
-            
+
         source_name = source['source']
         response = source['results']['response']
-        
-        if source_name == 'callapp':
-            if 'name' in response:
-                phone_data['sources']['name'] = response['name']
-            if 'addresses' in response:
-                phone_data['sources']['addresses'] = [addr['street'] for addr in response['addresses']]
-            if 'categories' in response:
-                phone_data['sources']['categories'] = [cat['name'] for cat in response['categories']]
-            if 'websites' in response:
-                phone_data['sources']['websites'] = [site['websiteUrl'] for site in response['websites']]
-            if 'facebookID' in response:
-                phone_data['sources']['facebook_id'] = response['facebookID']['id']
-                
-        elif source_name == 'whatsapp':
-            if 'businessProfile' in response:
-                profile = response['businessProfile']
-                phone_data['sources']['business_address'] = profile.get('address', '')
-                phone_data['sources']['business_category'] = profile.get('category', '')
-                phone_data['sources']['business_description'] = profile.get('description', '')
-                phone_data['sources']['business_email'] = profile.get('email', '')
-                if 'website' in profile:
-                    phone_data['sources']['business_websites'] = [site['url'] for site in profile['website']]
-            if 'status' in response:
-                phone_data['sources']['whatsapp_status'] = response['status']
-                
-        elif source_name == 'callerid':
-            if 'name' in response:
-                phone_data['sources']['caller_name'] = response['name']
-                
-        elif source_name == 'eyecon':
-            if 'contacts' in response:
-                phone_data['sources']['contacts'] = [contact['name'] for contact in response['contacts']]
-    
-    return phone_data
 
+        if handler := handler_map.get(source_name):
+            phone_data['sources'].update(handler(response))
+
+    return phone_data
 
 def get_tags_in_getcontact(number):
     headers = {
