@@ -328,7 +328,7 @@ async def set_default_language(
     }
 
 
-async def get_available_languages(db: AsyncSession) -> list:
+async def get_available_languages_db(db: AsyncSession) -> list:
     """Получает список всех доступных языков."""
     try:
         result = await db.execute(
@@ -362,7 +362,7 @@ async def get_available_languages(
         logging.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
-    languages = await get_available_languages(db)
+    languages = await get_available_languages_db(db)
     return {
         "status": "success",
         "languages": languages
@@ -391,7 +391,6 @@ async def set_user_default_language(db: AsyncSession, user_id: int, language_id:
             .where(Language.id == language_id)
         )
         language = lang_result.scalar_one_or_none()
-        
         if not language:
             logging.warning(f"Язык с ID {language_id} не найден")
             return False
