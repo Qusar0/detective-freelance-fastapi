@@ -345,6 +345,10 @@ class Users(Base):
         onupdate=func.now(),
         nullable=True
     )
+    default_language_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('languages.id'),
+        nullable=True
+    )
 
     user_role: Mapped['UserRole'] = relationship(
         'UserRole',
@@ -369,6 +373,10 @@ class Users(Base):
         'TelegramNotifications',
         back_populates='user',
         cascade='all, delete-orphan',
+    )
+    default_language: Mapped['Language'] = relationship(
+        'Language',
+        foreign_keys=[default_language_id]
     )
 
     def __str__(self):

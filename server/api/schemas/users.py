@@ -76,3 +76,18 @@ class ChangePasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+
+class SetDefaultLanguageRequest(BaseModel):
+    default_language_id: int = Field(..., description="ID языка по умолчанию из таблицы languages")
+
+
+class SetDefaultLanguageResponse(BaseModel):
+    status: str = Field(..., example="success")
+    message: str = Field(..., example="Язык по умолчанию обновлен")
+    default_language_id: int = Field(..., description="ID текущего языка по умолчанию")
+
+
+class GetDefaultLanguageResponse(BaseModel):
+    status: str = Field(..., example="success")
+    default_language_id: int = Field(..., description="ID языка по умолчанию пользователя")
