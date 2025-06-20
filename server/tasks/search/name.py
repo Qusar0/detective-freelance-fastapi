@@ -60,7 +60,7 @@ class NameSearchTask(BaseSearchTask):
                 if self.search_patronymic[lang]:
                     full_name.append(self.search_patronymic[lang])
 
-                name_cases = await form_name_cases(full_name, language=lang)
+                name_cases = await form_name_cases(full_name)
                 len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
                 len_keywords_from_db = len(keywords_from_db[lang])
 
