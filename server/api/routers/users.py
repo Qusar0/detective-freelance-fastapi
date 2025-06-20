@@ -2,22 +2,21 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from server.api.database.database import get_db
 from server.api.schemas.users import (
-    RegisterRequest, LoginRequest, AuthResponse, StatusMessage, AuthStatusResponse,
+    AuthStatusResponse,
     TopUpBalanceResponse, TopUpBalanceQueryParams, ConfirmResponse,
-    ChangeEventStatusRequest, ChangePasswordRequest, ResetPasswordRequest,
+    ChangeEventStatusRequest, ChangePasswordRequest,
     SetDefaultLanguageRequest, SetDefaultLanguageResponse, GetDefaultLanguageResponse
 )
-from typing import Dict
-from passlib.hash import bcrypt
-from server.api.models.models import Users, Language
+from server.api.models.models import Users, Language, UserQueries, Events, PaymentHistory, UserBalances
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import generate_sse_message_type, publish_event
+from typing import Dict
+from passlib.hash import bcrypt
 
 
 router = APIRouter(
