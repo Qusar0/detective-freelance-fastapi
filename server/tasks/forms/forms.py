@@ -4,7 +4,6 @@ from typing import List
 from phonenumbers import parse, NumberParseException
 
 from server.tasks.celery_config import FoundInfo
-from server.tasks.forms.language_config import get_default_language
 
 
 def form_phone_number(raw_number: str):
@@ -112,41 +111,8 @@ def form_titles(
     return titles
 
 
-async def form_name_cases(full_name: List[str], language: str = None) -> List[List[str]]:
-    """
-    Склоняет имя используя API Морфера для указанного языка.
-    
-    Args:
-        full_name: Список частей имени (имя, фамилия, отчество)
-        language: Код языка ('ru', 'uk', 'kk') - если None, используется язык по умолчанию
-        
-    Returns:
-        Список вариантов склонения имени
-    """
-    # Если язык не указан, используем язык по умолчанию
-    if language is None:
-        language = get_default_language()
-    
-    # Поддерживаемые языки и их эндпоинты
-    language_endpoints = {
-        'ru': '/russian/declension',
-        'uk': '/ukrainian/declension', 
-        'kk': '/kazakh/declension'
-    }
-    
-    # Падежи для разных языков
-    language_cases = {
-        'ru': ['Р', 'Д', 'В', 'Т', 'П'],  # Родительный, Дательный, Винительный, Творительный, Предложный
-        'uk': ['Р', 'Д', 'З', 'О', 'М'],  # Родовий, Давальний, Знахідний, Орудний, Місцевий
-        'kk': ['Р', 'Д', 'З', 'О', 'М']   # Жілік, Барыс, Табыс, Көмеkтес, Жатыс
-    }
-    
-    # Проверяем поддерживаемый язык
-    if language not in language_endpoints:
-        logging.warning(f"Неподдерживаемый язык: {language}. Используется русский.")
-        language = 'ru'
-    
-    url = f"https://ws3.morpher.ru{language_endpoints[language]}"
+async def form_name_cases(full_name: List[str]) -> List[List[str]]:
+    url = "https://ws3.morpher.ru/russian/declension"
     token = "cfce1037-064f-425c-b40a-593875653972"
     headers = {
         'User-Agent': (
@@ -174,15 +140,8 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
             response = await client.get(url, params=params, headers=headers)
             response.raise_for_status()
             data = response.json()
-            
-            # Получаем падежи для конкретного языка
-            cases_to_get = language_cases[language]
-            for case in cases_to_get:
-                if case in data:
-                    cases.add(data[case])
-                    
-        except (httpx.HTTPError, KeyError) as e:
-            logging.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
+            cases.update([data['Р'], data['Д'], data['В'], data['Т'], data['П']])
+        except (httpx.HTTPError, KeyError):
             pass
 
     name_cases = [name.split(" ") for name in cases]
