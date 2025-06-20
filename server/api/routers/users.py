@@ -298,7 +298,6 @@ async def get_default_language(
         raise HTTPException(status_code=422, detail="Invalid token")
 
     default_language_id = await get_user_default_language(db, user_id)
-    
     return {
         "status": "success",
         "default_language_id": default_language_id
@@ -320,7 +319,6 @@ async def set_default_language(
         raise HTTPException(status_code=422, detail="Invalid token")
 
     success = await set_user_default_language(db, user_id, request.default_language_id)
-    
     if not success:
         raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
 
@@ -344,7 +342,6 @@ async def get_available_languages(
         raise HTTPException(status_code=422, detail="Invalid token")
 
     languages = await get_available_languages(db)
-    
     return {
         "status": "success",
         "languages": languages
@@ -359,10 +356,7 @@ async def get_user_default_language(db: AsyncSession, user_id: int) -> int:
             .where(Users.id == user_id)
         )
         default_language_id = result.scalar_one_or_none()
-        
-        # Возвращаем русский язык (ID = 1) по умолчанию
         return default_language_id or 1
-            
     except (SQLAlchemyError, Exception) as e:
         logging.error(f"Ошибка при получении языка пользователя: {e}")
         return 1
@@ -371,7 +365,6 @@ async def get_user_default_language(db: AsyncSession, user_id: int) -> int:
 async def set_user_default_language(db: AsyncSession, user_id: int, language_id: int) -> bool:
     """Устанавливает язык по умолчанию пользователя."""
     try:
-        # Проверяем, что язык существует
         lang_result = await db.execute(
             select(Language)
             .where(Language.id == language_id)
