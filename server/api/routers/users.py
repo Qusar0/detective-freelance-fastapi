@@ -321,12 +321,33 @@ async def set_default_language(
     success = await set_user_default_language(db, user_id, request.default_language_id)
     if not success:
         raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
-
     return {
         "status": "success",
         "message": "Язык по умолчанию обновлен",
         "default_language_id": request.default_language_id
     }
+
+
+async def get_available_languages(db: AsyncSession) -> list:
+    """Получает список всех доступных языков."""
+    try:
+        result = await db.execute(
+            select(Language)
+            .order_by(Language.russian_name)
+        )
+        languages = result.scalars().all()
+        return [
+            {
+                'id': lang.id,
+                'code': lang.code,
+                'name': lang.russian_name,
+                'english_name': lang.english_name
+            }
+            for lang in languages
+        ]
+    except (SQLAlchemyError, Exception) as e:
+        logging.error(f"Ошибка при получении языков: {e}")
+        return []
 
 
 @router.get("/available_languages")
@@ -386,26 +407,3 @@ async def set_user_default_language(db: AsyncSession, user_id: int, language_id:
         logging.error(f"Ошибка при обновлении языка пользователя: {e}")
         await db.rollback()
         return False
-
-
-async def get_available_languages(db: AsyncSession) -> list:
-    """Получает список всех доступных языков."""
-    try:
-        result = await db.execute(
-            select(Language)
-            .order_by(Language.russian_name)
-        )
-        languages = result.scalars().all()
-        
-        return [
-            {
-                'id': lang.id,
-                'code': lang.code,
-                'name': lang.russian_name,
-                'english_name': lang.english_name
-            }
-            for lang in languages
-        ]
-    except (SQLAlchemyError, Exception) as e:
-        logging.error(f"Ошибка при получении языков: {e}")
-        return []
