@@ -5,8 +5,10 @@ from .base_irbis_init import BaseAuthIRBIS
 
 class ArbitrationCourt(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         super().__init__(first_name, last_name, regions,
                          second_name, birth_date, passport_series,
@@ -26,7 +28,8 @@ class ArbitrationCourt(BaseAuthIRBIS):
             dict: Результат запроса по имени.
             dict: Результат запроса по инн.
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-arbitr.json?event=preview"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-arbitr.json?event=preview")
         response = self.get_response(link)
 
         if response is not None:
@@ -48,7 +51,9 @@ class ArbitrationCourt(BaseAuthIRBIS):
         Returns:
             list: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-arbitr.json?event=data&page={page}&rows={rows}&search_type={search_type}"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-arbitr.json?event=data&page={page}"
+                f"&rows={rows}&search_type={search_type}")
         response = self.get_response(link)
 
         if response is not None:

@@ -5,8 +5,10 @@ from .base_irbis_init import BaseAuthIRBIS
 
 class PassportCheck(BaseAuthIRBIS):
     def __init__(self, first_name: str, last_name: str, regions: list[int],
-                 second_name: Optional[str] = None, birth_date: Optional[str] = None,
-                 passport_series: Optional[str] = None, passport_number: Optional[str] = None,
+                 second_name: Optional[str] = None,
+                 birth_date: Optional[str] = None,
+                 passport_series: Optional[str] = None,
+                 passport_number: Optional[str] = None,
                  inn: Optional[str] = None):
         super().__init__(first_name, last_name, regions,
                          second_name, birth_date, passport_series,
@@ -22,7 +24,8 @@ class PassportCheck(BaseAuthIRBIS):
         Returns:
             bool: Результат запроса
         """
-        link = f"http://ir-bis.org/ru/base/-/services/report/{self.person_uuid}/people-passport.json?event=result"
+        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+                f"{self.person_uuid}/people-passport.json?event=result")
         response = self.get_response(link)
 
         if response is not None:
