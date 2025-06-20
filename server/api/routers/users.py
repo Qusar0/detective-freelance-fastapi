@@ -5,17 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from server.api.database.database import get_db
 from server.api.schemas.users import (
-    AuthStatusResponse,
-    TopUpBalanceResponse,
-    TopUpBalanceQueryParams,
-    ConfirmResponse,
-    ChangeEventStatusRequest,
-    ChangePasswordRequest,
+    RegisterRequest, LoginRequest, AuthResponse, StatusMessage, AuthStatusResponse,
+    TopUpBalanceResponse, TopUpBalanceQueryParams, ConfirmResponse,
+    ChangeEventStatusRequest, ChangePasswordRequest, ResetPasswordRequest,
+    SetDefaultLanguageRequest, SetDefaultLanguageResponse, GetDefaultLanguageResponse
 )
 from typing import Dict
 from passlib.hash import bcrypt
-
-from server.api.models.models import UserQueries, Events, PaymentHistory, UserBalances, Users
+from server.api.models.models import Users, Language
+from sqlalchemy import select, update
+from sqlalchemy.exc import SQLAlchemyError
 from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import generate_sse_message_type, publish_event
@@ -284,3 +283,137 @@ async def change_password(
     await send_email(**email_content)
 
     return {"status": "success", "message": "Пароль успешно изменён"}
+
+
+@router.get("/default_language", response_model=GetDefaultLanguageResponse)
+async def get_default_language(
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    """Получает язык по умолчанию пользователя."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    default_language_id = await get_user_default_language(db, user_id)
+    
+    return {
+        "status": "success",
+        "default_language_id": default_language_id
+    }
+
+
+@router.post("/set_default_language", response_model=SetDefaultLanguageResponse)
+async def set_default_language(
+    request: SetDefaultLanguageRequest,
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    """Устанавливает язык по умолчанию пользователя."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    success = await set_user_default_language(db, user_id, request.default_language_id)
+    
+    if not success:
+        raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
+
+    return {
+        "status": "success",
+        "message": "Язык по умолчанию обновлен",
+        "default_language_id": request.default_language_id
+    }
+
+
+@router.get("/available_languages")
+async def get_available_languages(
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    """Получает список всех доступных языков."""
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    languages = await get_available_languages(db)
+    
+    return {
+        "status": "success",
+        "languages": languages
+    }
+
+
+async def get_user_default_language(db: AsyncSession, user_id: int) -> int:
+    """Получает ID языка по умолчанию пользователя."""
+    try:
+        result = await db.execute(
+            select(Users.default_language_id)
+            .where(Users.id == user_id)
+        )
+        default_language_id = result.scalar_one_or_none()
+        
+        # Возвращаем русский язык (ID = 1) по умолчанию
+        return default_language_id or 1
+            
+    except (SQLAlchemyError, Exception) as e:
+        logging.error(f"Ошибка при получении языка пользователя: {e}")
+        return 1
+
+
+async def set_user_default_language(db: AsyncSession, user_id: int, language_id: int) -> bool:
+    """Устанавливает язык по умолчанию пользователя."""
+    try:
+        # Проверяем, что язык существует
+        lang_result = await db.execute(
+            select(Language)
+            .where(Language.id == language_id)
+        )
+        language = lang_result.scalar_one_or_none()
+        
+        if not language:
+            logging.warning(f"Язык с ID {language_id} не найден")
+            return False
+
+        await db.execute(
+            update(Users)
+            .where(Users.id == user_id)
+            .values(default_language_id=language_id)
+        )
+        await db.commit()
+        return True
+    except (SQLAlchemyError, Exception) as e:
+        logging.error(f"Ошибка при обновлении языка пользователя: {e}")
+        await db.rollback()
+        return False
+
+
+async def get_available_languages(db: AsyncSession) -> list:
+    """Получает список всех доступных языков."""
+    try:
+        result = await db.execute(
+            select(Language)
+            .order_by(Language.russian_name)
+        )
+        languages = result.scalars().all()
+        
+        return [
+            {
+                'id': lang.id,
+                'code': lang.code,
+                'name': lang.russian_name,
+                'english_name': lang.english_name
+            }
+            for lang in languages
+        ]
+    except (SQLAlchemyError, Exception) as e:
+        logging.error(f"Ошибка при получении языков: {e}")
+        return []
