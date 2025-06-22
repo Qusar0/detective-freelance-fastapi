@@ -1,24 +1,29 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from server.api.handlers.auth import router as auth_router
-from server.api.handlers.users import router as user_router
-from server.api.handlers.query import router as query_router
-from server.api.handlers.telegram import router as telegram_router
-from server.api.admin.router import router as admin_router, setup_admin
-from fastapi.responses import StreamingResponse
 import asyncio
+import logging
+from fastapi.responses import StreamingResponse
+from fastapi import (
+    FastAPI,
+    Request,
+    Depends,
+    HTTPException
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi_jwt_auth import AuthJWT
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import update, func
+
+from server.api.routers.auth import router as auth_router
+from server.api.routers.users import router as user_router
+from server.api.routers.query import router as query_router
+from server.api.routers.telegram import router as telegram_router
+from server.api.routers.admin import router as admin_router, setup_admin
 from server.api.scripts.sse_manager import (
     event_generator,
     add_subscriber,
     redis_listener,
 )
 from server.api.services.file_storage import FileStorageService
-from fastapi import Depends, HTTPException
-from fastapi_jwt_auth import AuthJWT
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update, func
 from server.api.database.database import get_db
-import logging
 from server.api.models.models import Users
 
 
