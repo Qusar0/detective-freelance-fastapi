@@ -1,3 +1,5 @@
+import datetime
+import decimal
 from typing import List, Optional
 
 from sqlalchemy import (
@@ -13,9 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Mapped, relationship, mapped_column
-import datetime
-import decimal
+from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -100,6 +100,7 @@ class Keywords(Base):
     def __str__(self):
         return f"Ключевое слово ({self.word})"
 
+
 class PaymentHistory(Base):
     __tablename__ = 'payment_history'
 
@@ -183,6 +184,7 @@ class ServicesBalance(Base):
 
     def __str__(self):
         return f"Баланс сервиса ({self.id})"
+
 
 class TelegramNotifications(Base):
     __tablename__ = 'telegram_notifications'
@@ -402,11 +404,11 @@ class Countries(Base):
 
 class CountryLanguage(Base):
     __tablename__ = 'country_languages'
-    
+
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     country_id: Mapped[int] = mapped_column(ForeignKey('countries.id'))
     language_id: Mapped[int] = mapped_column(ForeignKey('languages.id'))
-    
+
     country: Mapped['Countries'] = relationship(back_populates='language_links')
     language: Mapped['Language'] = relationship(back_populates='country_links')
 

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.db_user}:{self.db_pass}@{self.db_host}:{self.db_port}/{self.db_name}"
-    
+
     sqlalchemy_track_modifications: bool = Field(True, env="SQLALCHEMY_TRACK_MODIFICATIONS")
 
     # JWT
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     telegram_db_encryption_key: str = Field(..., env="TELEGRAM_DB_ENCRYPTION_KEY")
     admin_chat_id: int = Field(..., env="ADMIN_CHAT_ID")
     balance_threshold: int = Field(..., env="BALANCE_THRESHOLD")
-    check_interval: int = Field(..., env="CHECK_INTERVAL")    
+    check_interval: int = Field(..., env="CHECK_INTERVAL")
 
     # Notification Bot
     notification_bot_token: str = Field(..., env="NOTIFICATION_BOT_TOKEN")

@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q num_tasks --loglevel=INFO
+    command: celery  -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q num_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
@@ -48,7 +48,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q telegram_tasks --loglevel=INFO
+    command: celery  -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q telegram_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
@@ -65,7 +65,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A run.celery_app worker --concurrency 50 -P eventlet -Q name_tasks --loglevel=INFO
+    command: celery -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q name_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
@@ -82,7 +82,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q email_tasks --loglevel=INFO
+    command: celery  -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q email_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
@@ -99,7 +99,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery  -A run.celery_app worker --concurrency 50 -P eventlet -Q company_tasks --loglevel=INFO
+    command: celery  -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q company_tasks --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
@@ -116,7 +116,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A server.celery_tasks worker --loglevel=INFO
+    command: celery -A server.tasks.celery_app worker --loglevel=INFO
     working_dir: /app/server
     volumes:
       - ./server:/app/server
