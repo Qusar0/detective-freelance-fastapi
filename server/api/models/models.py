@@ -376,7 +376,7 @@ class Users(Base):
     )
     default_language: Mapped['Language'] = relationship(
         'Language',
-        foreign_keys=[default_language_id]
+        back_populates='users_with_default_language'
     )
 
     def __str__(self):
@@ -394,6 +394,12 @@ class Language(Base):
     country_links: Mapped[List['CountryLanguage']] = relationship(
         back_populates='language',
         cascade='all, delete-orphan'
+    )
+    
+    users_with_default_language: Mapped[List['Users']] = relationship(
+        'Users',
+        foreign_keys='Users.default_language_id',
+        back_populates='default_language'
     )
 
 
