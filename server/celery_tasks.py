@@ -22,7 +22,7 @@ from pathlib import Path
 from server.api.error.errors import CustomError
 from server.api.scripts.lampyre_num_script import Lampyre
 from server.api.scripts import lampyre_email_script
-from server.api.scripts.get_contact_script import get_tags_in_getcontact
+from server.api.handlers.getcontact import GetContactService
 from server.api.scripts.ibhldr_script import (
     get_interests,
     get_groups_ibhldr_method,
@@ -1205,10 +1205,13 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'tags' in self.methods_type:
             try:
-                tags, self.requests_getcontact_left, getcontact_data = get_tags_in_getcontact(self.phone_num)
+                tags, self.requests_getcontact_left, getcontact_data = GetContactService.get_tags_and_data(self.phone_num)
             except Exception as e:
                 self.money_to_return += 25
                 print(e)
+                getcontact_data = ''
+        else:
+            getcontact_data = ''
 
         html = response_num_template(
             self.phone_num,
