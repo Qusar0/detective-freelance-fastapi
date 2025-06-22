@@ -79,15 +79,15 @@ class ResetPasswordRequest(BaseModel):
 
 
 class SetDefaultLanguageRequest(BaseModel):
-    default_language_id: int = Field(..., description="ID языка по умолчанию из таблицы languages")
+    default_language_code: str = Field(..., description="Код языка по умолчанию (например, 'ru', 'en', 'uk')")
 
 
 class SetDefaultLanguageResponse(BaseModel):
     status: str = Field(..., example="success")
     message: str = Field(..., example="Язык по умолчанию обновлен")
-    default_language_id: int = Field(..., description="ID текущего языка по умолчанию")
+    default_language_code: str = Field(..., description="Код текущего языка по умолчанию")
 
 
 class GetDefaultLanguageResponse(BaseModel):
     status: str = Field(..., example="success")
-    default_language_id: int = Field(..., description="ID языка по умолчанию пользователя")
+    default_language_code: str = Field(..., description="Код языка по умолчанию пользователя (например, 'ru', 'en', 'uk')")
