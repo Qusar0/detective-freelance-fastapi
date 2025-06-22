@@ -4,7 +4,6 @@ from typing import List
 from phonenumbers import parse, NumberParseException
 
 from server.tasks.celery_config import FoundInfo
-from server.tasks.forms.language_config import get_default_language
 
 
 def form_phone_number(raw_number: str):
@@ -117,26 +116,29 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
     Склоняет имя используя API Морфера для указанного языка.
     Args:
         full_name: Список частей имени (имя, фамилия, отчество)
-        language: Код языка ('ru', 'uk', 'kk') - если None, используется язык по умолчанию
+        language: Код языка ('ru', 'uk', 'kk') - если None, используется русский язык
     Returns:
         Список вариантов склонения имени
     """
     if language is None:
-        language = get_default_language()
+        language = 'ru'
+
+    supported_languages = ['ru', 'uk', 'kk']
+    if language not in supported_languages:
+        logging.info(f"Язык {language} не поддерживается Морфером. Возвращаем исходные данные.")
+        return [full_name]
     language_endpoints = {
-        'ru': '/russian/declension',
-        'uk': '/ukrainian/declension',
-        'kk': '/kazakh/declension'
+        'ru': '/russian',
+        'uk': '/ukrainian',
+        'kk': '/qazaq'
     }
     language_cases = {
         'ru': ['Р', 'Д', 'В', 'Т', 'П'],
-        'uk': ['Р', 'Д', 'З', 'О', 'М'],
-        'kk': ['Р', 'Д', 'З', 'О', 'М']
+        'uk': ['Р', 'Д', 'З', 'О', 'М', 'K'],
+        'kk': ['A', 'І', 'Б', 'Т', 'Ш', 'Ж', 'К']
     }
-    if language not in language_endpoints:
-        logging.warning(f"Неподдерживаемый язык: {language}. Используется русский.")
-        language = 'ru'
-    url = f"https://ws3.morpher.ru{language_endpoints[language]}"
+    
+    url = f"https://ws3.morpher.ru{language_endpoints[language]}/declension"
     token = "cfce1037-064f-425c-b40a-593875653972"
     headers = {
         'User-Agent': (
@@ -170,7 +172,6 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
                     cases.add(data[case])
         except (httpx.HTTPError, KeyError) as e:
             logging.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
-            pass
 
     name_cases = [name.split(" ") for name in cases]
     name_cases.insert(0, full_name)
