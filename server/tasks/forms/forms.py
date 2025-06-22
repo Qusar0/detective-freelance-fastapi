@@ -137,7 +137,6 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
         'uk': ['Р', 'Д', 'З', 'О', 'М', 'K'],
         'kk': ['A', 'І', 'Б', 'Т', 'Ш', 'Ж', 'К']
     }
-    
     url = f"https://ws3.morpher.ru{language_endpoints[language]}/declension"
     token = "cfce1037-064f-425c-b40a-593875653972"
     headers = {
