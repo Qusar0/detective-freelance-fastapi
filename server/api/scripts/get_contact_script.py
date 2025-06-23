@@ -1,6 +1,4 @@
-import requests
 import logging
-import re
 from server.api.conf.config import settings
 import httpx
 
