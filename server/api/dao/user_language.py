@@ -57,25 +57,3 @@ class UserLanguageDAO:
             logging.error(f"Ошибка при обновлении языка пользователя: {e}")
             await db.rollback()
             return False
-    
-    @staticmethod
-    async def get_available_languages(db: AsyncSession) -> list:
-        """Получает список всех доступных языков."""
-        try:
-            result = await db.execute(
-                select(Language)
-                .order_by(Language.russian_name)
-            )
-            languages = result.scalars().all()
-            return [
-                {
-                    'id': lang.id,
-                    'code': lang.code,
-                    'name': lang.russian_name,
-                    'english_name': lang.english_name
-                }
-                for lang in languages
-            ]
-        except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении языков: {e}")
-            return []
