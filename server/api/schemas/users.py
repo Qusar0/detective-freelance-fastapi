@@ -90,4 +90,4 @@ class SetDefaultLanguageResponse(BaseModel):
 
 class GetDefaultLanguageResponse(BaseModel):
     status: str = Field(..., example="success")
-    default_language_code: str = Field(..., description="Код языка по умолчанию пользователя (например, 'ru', 'en', 'uk')")
+    default_language_code: str = Field(..., description="Код языка по умолчанию (например, 'ru', 'en', 'uk')")
