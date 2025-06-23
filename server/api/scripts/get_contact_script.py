@@ -5,7 +5,7 @@ import httpx
 
 class GetContactService:
     """Статический класс для работы с GetContact API"""
-    
+
     @staticmethod
     def _handle_getcontact(response):
         """Обрабатывает ответ от сервиса GetContact."""
@@ -105,7 +105,7 @@ class GetContactService:
     def _handle_eyecon(response):
         """Обрабатывает ответ от сервиса Eyecon."""
         data = {}
-        
+
         # Поля из реальных JSON-ответов
         if 'contacts' in response:
             data['contacts'] = [contact['name'] for contact in response['contacts']]
@@ -154,7 +154,7 @@ class GetContactService:
         Получает данные из GetContact API для указанного номера.
         Args:
             number: Номер телефона для поиска
-            
+
         Returns:
             tuple: (количество_оставшихся_запросов, распарсенные_данные)
         """
@@ -176,10 +176,10 @@ class GetContactService:
 
                 contacs_json = r.json()
                 requests_left = contacs_json['data']['subscription']['remainingRequestCount']
-                
+
                 parsed_data = GetContactService.parse_response(contacs_json)
                 return requests_left, parsed_data
 
         except httpx.RequestError as e:
             logging.error(f"Request failed: {e}")
-            return 0, {} 
+            return 0, {}
