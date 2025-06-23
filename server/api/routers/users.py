@@ -21,8 +21,6 @@ from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import generate_sse_message_type, publish_event
 from typing import Dict
 from passlib.hash import bcrypt
-from server.api.dao.user_balances import UserBalancesDAO
-from server.api.dao.payment_history import PaymentHistoryDAO
 from server.api.dao.user_language import UserLanguageDAO
 
 
@@ -332,23 +330,4 @@ async def set_default_language(
         "status": "success",
         "message": "Язык по умолчанию обновлен",
         "default_language_code": request.default_language_code
-    }
-
-
-@router.get("/available_languages")
-async def get_available_languages(
-    db: AsyncSession = Depends(get_db),
-    Authorize: AuthJWT = Depends(),
-):
-    """Получает список всех доступных языков."""
-    try:
-        Authorize.jwt_required()
-    except Exception as e:
-        logging.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
-
-    languages = await UserLanguageDAO.get_available_languages(db)
-    return {
-        "status": "success",
-        "languages": languages
     }
