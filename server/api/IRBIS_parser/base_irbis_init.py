@@ -37,13 +37,13 @@ class BaseAuthIRBIS:
                      "PeopleQuery.INN": self._inn
                      }
 
-        result = [(f"https://ir-bis.org/ru/base/-/services/"
+        result_link_list = [(f"https://ir-bis.org/ru/base/-/services/"
                   f"people-check.json?token={self._token_id}")]
         for key, value in temp_dict.items():
             if value is not None:
-                result.append(f"{key}={value}")
+                result_link_list.append(f"{key}={value}")
 
-        result_link = "&".join(result)
+        result_link = "&".join(result_link_list)
         return result_link
 
     async def get_person_uuid(self):

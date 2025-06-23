@@ -1,6 +1,6 @@
 from typing import Optional
 
-from .base_irbis_init import BaseAuthIRBIS
+from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class CourtGeneralJurisdiction:
@@ -55,12 +55,12 @@ class CourtGeneralJurisdiction:
                 f"filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        result = dict()
+        result_response = dict()
         if response is not None:
-            for data in response:
-                result[data["type"]] = data["count"]
+            for data_response in response:
+                result_response[data_response["type"]] = data_response["count"]
 
-        self.category = result
+        self.category = result_response
         return self.category
 
     async def get_full_data(self, person_uuid: str, page: int, rows: int, strategy: str, filter0: str, filter_text: str):
