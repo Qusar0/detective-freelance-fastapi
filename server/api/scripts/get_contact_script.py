@@ -10,7 +10,7 @@ class GetContactService:
     def _handle_getcontact(response):
         """Обрабатывает ответ от сервиса GetContact."""
         data = {}
-        
+
         # Специфичные поля GetContact - теги
         if 'tagCount' in response and response['tagCount'] > 0:
             extra = response.get('extra', [])
@@ -19,14 +19,14 @@ class GetContactService:
                 data['tags'] = [tag['tag'] for tag in tags if 'tag' in tag]
         else:
             data['tags'] = []
-            
+
         return data
 
     @staticmethod
     def _handle_callapp(response):
         """Обрабатывает ответ от сервиса CallApp."""
         data = {}
-        
+
         # Поля из реальных JSON-ответов
         if 'name' in response:
             data['name'] = response['name']
@@ -50,14 +50,14 @@ class GetContactService:
             data['lng'] = response['lng']
         if 'googlePlacesId' in response:
             data['google_places_id'] = response['googlePlacesId']
-            
+
         return data
 
     @staticmethod
     def _handle_whatsapp(response):
         """Обрабатывает ответ от сервиса WhatsApp."""
         data = {}
-        
+
         # Поля из реальных JSON-ответов
         if 'businessName' in response:
             data['business_name'] = response['businessName']
@@ -79,14 +79,14 @@ class GetContactService:
                 data['business_email'] = profile['email']
             if 'website' in profile:
                 data['business_websites'] = [site['url'] for site in profile['website']]
-                
+
         return data
 
     @staticmethod
     def _handle_callerid(response):
         """Обрабатывает ответ от сервиса CallerID."""
         data = {}
-        
+
         # Поля из реальных JSON-ответов
         if 'name' in response:
             data['caller_name'] = response['name']
@@ -98,7 +98,7 @@ class GetContactService:
             data['type'] = response['type']
         if 'type_label' in response and response['type_label']:
             data['type_label'] = response['type_label']
-        
+
         return data
 
     @staticmethod
@@ -111,7 +111,7 @@ class GetContactService:
             data['contacts'] = [contact['name'] for contact in response['contacts']]
         if 'urlAvatar' in response and response['urlAvatar']:
             data['avatar'] = response['urlAvatar']
-            
+
         return data
 
     @staticmethod
@@ -152,7 +152,6 @@ class GetContactService:
     async def get_tags_and_data(number):
         """
         Получает данные из GetContact API для указанного номера.
-        
         Args:
             number: Номер телефона для поиска
             
@@ -180,7 +179,7 @@ class GetContactService:
                 
                 parsed_data = GetContactService.parse_response(contacs_json)
                 return requests_left, parsed_data
-                
+
         except httpx.RequestError as e:
             logging.error(f"Request failed: {e}")
             return 0, {} 
