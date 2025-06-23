@@ -395,10 +395,9 @@ class Language(Base):
         back_populates='language',
         cascade='all, delete-orphan'
     )
-    
+
     users_with_default_language: Mapped[List['Users']] = relationship(
         'Users',
-        foreign_keys='Users.default_language_id',
         back_populates='default_language'
     )
 
