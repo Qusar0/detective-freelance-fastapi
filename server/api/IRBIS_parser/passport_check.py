@@ -1,6 +1,6 @@
 from typing import Optional
 
-from .base_irbis_init import BaseAuthIRBIS
+from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class PassportCheck:
