@@ -1,7 +1,9 @@
-from server.api.conf.config import settings
-from time import sleep
+import asyncio
 from typing import Optional
-import requests
+
+import aiohttp
+
+from server.api.conf.config import settings
 
 
 class BaseAuthIRBIS:
@@ -24,8 +26,6 @@ class BaseAuthIRBIS:
         self._passport_number: Optional[str] = passport_number
         self._inn: Optional[str] = inn
 
-        self.person_uuid: Optional[str] = self.get_person_uuid()
-
     def generate_link(self):
         temp_dict = {"PeopleQuery.LastName": self._last_name,
                      "PeopleQuery.FirstName": self._first_name,
@@ -46,31 +46,28 @@ class BaseAuthIRBIS:
         result_link = "&".join(result)
         return result_link
 
-    def get_person_uuid(self):
+    async def get_person_uuid(self):
         link = self.generate_link()
 
-        r = requests.get(link)
-        response = r.json()
-        if response["status"] == 0:
-            return response["uuid"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as response:
+                response = await response.json()
+                if response["status"] == 0:
+                    return response["uuid"]
         return None
 
     @staticmethod
-    def get_response(link):
-        r = requests.get(link)
-        response = r.json()
+    async def get_response(link):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as response:
+                response_data = await response.json()
 
-        while response["status"] == 0:
-            sleep(float(response["waitTime"])/1000)
-            r = requests.get(link)
-            response = r.json()
+            if response_data["status"] == 0:
+                await asyncio.sleep(float(response_data["waitTime"]) / 1000)
+                async with session.get(link) as repeated_response:
+                    response_data = await repeated_response.json()
 
-        if response["status"] == 1:
-            return response["response"]
-        else:
-            return None
-
-
-if __name__ == '__main__':
-    test = BaseAuthIRBIS("Иван", "Иванов", [1, 2])
-    print(test.generate_link())
+            if response_data["status"] == 1:
+                return response_data["response"]
+            else:
+                return None
