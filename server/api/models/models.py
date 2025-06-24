@@ -345,6 +345,10 @@ class Users(Base):
         onupdate=func.now(),
         nullable=True
     )
+    default_language_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('languages.id'),
+        nullable=True
+    )
 
     user_role: Mapped['UserRole'] = relationship(
         'UserRole',
@@ -370,6 +374,10 @@ class Users(Base):
         back_populates='user',
         cascade='all, delete-orphan',
     )
+    default_language: Mapped['Language'] = relationship(
+        'Language',
+        back_populates='users_with_default_language'
+    )
 
     def __str__(self):
         return f"{self.email}"
@@ -386,6 +394,11 @@ class Language(Base):
     country_links: Mapped[List['CountryLanguage']] = relationship(
         back_populates='language',
         cascade='all, delete-orphan'
+    )
+
+    users_with_default_language: Mapped[List['Users']] = relationship(
+        'Users',
+        back_populates='default_language'
     )
 
 
