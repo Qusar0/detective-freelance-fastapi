@@ -11,7 +11,6 @@ class GetContactService:
         """Обрабатывает ответ от сервиса GetContact."""
         data = {}
 
-        # Специфичные поля GetContact - теги
         if 'tagCount' in response and response['tagCount'] > 0:
             extra = response.get('extra', [])
             if extra:
@@ -27,7 +26,6 @@ class GetContactService:
         """Обрабатывает ответ от сервиса CallApp."""
         data = {}
 
-        # Поля из реальных JSON-ответов
         if 'name' in response:
             data['name'] = response['name']
         if 'description' in response:
@@ -42,14 +40,6 @@ class GetContactService:
             data['websites'] = [site['websiteUrl'] for site in response['websites']]
         if 'facebookID' in response:
             data['facebook_id'] = response['facebookID']['id']
-        if 'priority' in response:
-            data['priority'] = response['priority']
-        if 'lat' in response:
-            data['lat'] = response['lat']
-        if 'lng' in response:
-            data['lng'] = response['lng']
-        if 'googlePlacesId' in response:
-            data['google_places_id'] = response['googlePlacesId']
 
         return data
 
@@ -58,11 +48,8 @@ class GetContactService:
         """Обрабатывает ответ от сервиса WhatsApp."""
         data = {}
 
-        # Поля из реальных JSON-ответов
         if 'businessName' in response:
             data['business_name'] = response['businessName']
-        if 'existsWhatsapp' in response:
-            data['exists_whatsapp'] = response['existsWhatsapp']
         if 'status' in response:
             data['status'] = response['status']
         if 'urlAvatar' in response and response['urlAvatar']:
@@ -87,7 +74,6 @@ class GetContactService:
         """Обрабатывает ответ от сервиса CallerID."""
         data = {}
 
-        # Поля из реальных JSON-ответов
         if 'name' in response:
             data['caller_name'] = response['name']
         if 'avatar' in response and response['avatar']:
@@ -106,7 +92,6 @@ class GetContactService:
         """Обрабатывает ответ от сервиса Eyecon."""
         data = {}
 
-        # Поля из реальных JSON-ответов
         if 'contacts' in response:
             data['contacts'] = [contact['name'] for contact in response['contacts']]
         if 'urlAvatar' in response and response['urlAvatar']:
