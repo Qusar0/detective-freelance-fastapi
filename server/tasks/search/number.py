@@ -6,7 +6,7 @@ from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
-from server.api.services.get_contact import get_tags_in_getcontact
+from server.api.scripts.get_contact_script import GetContactService
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -32,7 +32,7 @@ class NumberSearchTask(BaseSearchTask):
         self.requests_getcontact_left = await ServicesBalanceDAO.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
         lampyre_html, acc_search_html = '', ''
-        tags = []
+        parsed_data = {}
 
         if 'mentions' in self.methods_type:
             try:
@@ -43,10 +43,12 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'tags' in self.methods_type:
             try:
-                tags, self.requests_getcontact_left = get_tags_in_getcontact(self.phone_num)
+                self.requests_getcontact_left, parsed_data = await GetContactService.get_tags_and_data(self.phone_num)
             except Exception as e:
                 self.money_to_return += 25
                 print(e)
+
+        tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
 
         html = response_num_template(
             self.phone_num,
