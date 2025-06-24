@@ -15,6 +15,7 @@ class UsersAdmin(ModelView, model=Users):
         Users.user_role,
         Users.created,
         Users.last_visited,
+        Users.default_language,
     ]
     column_labels = {
         Users.id: "ID",
@@ -28,6 +29,7 @@ class UsersAdmin(ModelView, model=Users):
         Users.telegram_notification: "Телеграм",
         Users.confirmation_date: "Дата подтверждения",
         Users.last_visited: "Последнее посещение",
+        Users.default_language: "Язык по умолчанию",
     }
     column_details_exclude_list = [Users.user_role_id, Users.password]
     column_searchable_list = [Users.email]

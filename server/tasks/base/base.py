@@ -21,6 +21,7 @@ class BaseSearchTask(ABC):
     def __init__(self, query_id: int, price: float):
         self.query_id = query_id
         self.price = price
+        self.user_id = None
         self.money_to_return = 0
         self.request_stats = {
             'total_requests': 0,
@@ -35,6 +36,8 @@ class BaseSearchTask(ABC):
             user_query = await UserQueriesDAO.get_user_query(self.query_id, db)
             if user_query.query_status == "done":
                 return
+
+            self.user_id = user_query.user_id
 
             try:
                 await self._process_search(db)
@@ -54,22 +57,22 @@ class BaseSearchTask(ABC):
         pass
 
     async def _handle_success(self, user_query, db):
-        channel = await generate_sse_message_type(user_id=user_query.user_id, db=db)
+        channel = await generate_sse_message_type(user_id=self.user_id, db=db)
         await UserQueriesDAO.change_query_status(user_query, "done", db)
         await send_sse_notification(user_query, channel, db)
 
-        chat_id = await TelegramNorificationsDAO.is_user_subscribed_on_tg(user_query.user_id, db)
+        chat_id = await TelegramNorificationsDAO.is_user_subscribed_on_tg(self.user_id, db)
         if chat_id:
             await send_notification(chat_id, user_query.query_title)
 
     async def _handle_error(self, user_query, db):
-        channel = await generate_sse_message_type(user_id=user_query.user_id, db=db)
+        channel = await generate_sse_message_type(user_id=self.user_id, db=db)
         await UserQueriesDAO.change_query_status(user_query, "failed", db)
         await send_sse_notification(user_query, channel, db)
 
         if self.money_to_return > 0:
             await BalanceHistoryDAO.return_balance(
-                user_query.user_id,
+                self.user_id,
                 user_query.query_id,
                 self.money_to_return,
                 channel,
