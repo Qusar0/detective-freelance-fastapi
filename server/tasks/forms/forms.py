@@ -111,8 +111,33 @@ def form_titles(
     return titles
 
 
-async def form_name_cases(full_name: List[str]) -> List[List[str]]:
-    url = "https://ws3.morpher.ru/russian/declension"
+async def form_name_cases(full_name: List[str], language: str = None) -> List[List[str]]:
+    """
+    Склоняет имя используя API Морфера для указанного языка.
+    Args:
+        full_name: Список частей имени (имя, фамилия, отчество)
+        language: Код языка ('ru', 'uk', 'kk') - если None, используется русский язык
+    Returns:
+        Список вариантов склонения имени
+    """
+    if language is None:
+        language = 'ru'
+
+    supported_languages = ['ru', 'uk', 'kk']
+    if language not in supported_languages:
+        logging.info(f"Язык {language} не поддерживается Морфером. Возвращаем исходные данные.")
+        return [full_name]
+    language_endpoints = {
+        'ru': '/russian',
+        'uk': '/ukrainian',
+        'kk': '/qazaq'
+    }
+    language_cases = {
+        'ru': ['Р', 'Д', 'В', 'Т', 'П'],
+        'uk': ['Р', 'Д', 'З', 'О', 'М', 'K'],
+        'kk': ['A', 'І', 'Б', 'Т', 'Ш', 'Ж', 'К']
+    }
+    url = f"https://ws3.morpher.ru{language_endpoints[language]}/declension"
     token = "cfce1037-064f-425c-b40a-593875653972"
     headers = {
         'User-Agent': (
@@ -140,17 +165,17 @@ async def form_name_cases(full_name: List[str]) -> List[List[str]]:
             response = await client.get(url, params=params, headers=headers)
             response.raise_for_status()
             data = response.json()
-            cases.update([data['Р'], data['Д'], data['В'], data['Т'], data['П']])
-        except (httpx.HTTPError, KeyError):
-            pass
+            cases_to_get = language_cases[language]
+            for case in cases_to_get:
+                if case in data:
+                    cases.add(data[case])
+        except (httpx.HTTPError, KeyError) as e:
+            logging.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
 
     name_cases = [name.split(" ") for name in cases]
     name_cases.insert(0, full_name)
 
-    unique_name_cases = []
-    for case in name_cases:
-        if case not in unique_name_cases:
-            unique_name_cases.append(case)
+    unique_name_cases = list(set(name_cases))
 
     return unique_name_cases
 
