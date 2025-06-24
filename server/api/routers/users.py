@@ -2,7 +2,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from server.api.database.database import get_db
 from server.api.schemas.users import (
     AuthStatusResponse,
@@ -11,14 +10,18 @@ from server.api.schemas.users import (
     ConfirmResponse,
     ChangeEventStatusRequest,
     ChangePasswordRequest,
+    SetDefaultLanguageRequest,
+    SetDefaultLanguageResponse,
+    GetDefaultLanguageResponse
 )
-from typing import Dict
-from passlib.hash import bcrypt
-
-from server.api.models.models import UserQueries, Events, PaymentHistory, UserBalances, Users
+from server.api.models.models import Users, UserQueries, Events, PaymentHistory, UserBalances
+from sqlalchemy import select
 from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
 from server.api.scripts.sse_manager import generate_sse_message_type, publish_event
+from typing import Dict
+from passlib.hash import bcrypt
+from server.api.dao.user_language import UserLanguageDAO
 
 
 router = APIRouter(
@@ -284,3 +287,47 @@ async def change_password(
     await send_email(**email_content)
 
     return {"status": "success", "message": "Пароль успешно изменён"}
+
+
+@router.get("/default_language", response_model=GetDefaultLanguageResponse)
+async def get_default_language(
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    """Получает язык по умолчанию пользователя."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
+    return {
+        "status": "success",
+        "default_language_code": default_language_code
+    }
+
+
+@router.post("/set_default_language", response_model=SetDefaultLanguageResponse)
+async def set_default_language(
+    request: SetDefaultLanguageRequest,
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    """Устанавливает язык по умолчанию пользователя."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+    except Exception as e:
+        logging.warning(f"Invalid token: {e}")
+        raise HTTPException(status_code=422, detail="Invalid token")
+
+    success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)
+    if not success:
+        raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
+    return {
+        "status": "success",
+        "message": "Язык по умолчанию обновлен",
+        "default_language_code": request.default_language_code
+    }
