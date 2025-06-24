@@ -175,7 +175,10 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
     name_cases = [name.split(" ") for name in cases]
     name_cases.insert(0, full_name)
 
-    unique_name_cases = list(set(name_cases))
+    unique_name_cases = []
+    for case in name_cases:
+        if case not in unique_name_cases:
+            unique_name_cases.append(case)
 
     return unique_name_cases
 

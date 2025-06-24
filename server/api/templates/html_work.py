@@ -170,6 +170,21 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     <small class="prompt">Исключает из справки сервисы поиска аккаунтов в соц. сетях: socialbase.ru, bigbookname.com и другие.</small> 
                     <span style="font-size: 15px;">Скрыть архивы социальных сетей</span> 
                 </label>
+                <div class="weight-filter" style="display: flex; align-items: center; gap: 10px; margin: 6px 0; background: white; border-radius: 4px; height: 32px; padding: 0 11px;">
+                    <span style="font-weight: 600;">Фильтр:</span>
+                    
+                    <select id="weight-filter-select" onchange="updateWeightFilter()" 
+                            style="height: 26px; border: 1px solid #ddd; border-radius: 3px; padding: 0 5px; outline: none; cursor: pointer;">
+                        <option value="all">Все источники</option>
+                        <option value="weight">Вес источника</option>
+                    </select>
+                    
+                    <select id="sort-direction" onchange="updateSortDirection()" 
+                            style="height: 26px; border: 1px solid #ddd; border-radius: 3px; padding: 0 5px; outline: none; cursor: pointer; display: none;">
+                        <option value="desc">По убыванию</option>
+                        <option value="asc">По возрастанию</option>
+                    </select>
+                </div>
                 <!-- -->
                 <div style="
                     display: flex;
@@ -433,6 +448,32 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 }}
             }}
 
+            let currentWeightFilter = 'all'; // 'all' или 'weight'
+            let currentSortDirection = 'desc'; // 'asc' или 'desc'
+
+            function updateWeightFilter() {{
+                if (selected_tab_index == 1) return;
+
+                
+                currentWeightFilter = document.getElementById('weight-filter-select').value;
+                const sortSelect = document.getElementById('sort-direction');
+                
+                if (currentWeightFilter === 'weight') {{
+                    sortSelect.style.display = 'block';
+                }} else {{
+                    sortSelect.style.display = 'none';
+                }}
+                
+                render_items(false, true);
+            }}
+
+            function updateSortDirection() {{
+                if (selected_tab_index == 1) return;
+
+                currentSortDirection = document.getElementById('sort-direction').value;
+                render_items(false, true);
+            }}
+
             function add_minus_keyword() {{
                 let keyword_name = document.querySelector('#minus-keyword')?.value ?? '';
                 keyword_name = keyword_name.trim().toLowerCase()
@@ -575,6 +616,8 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 $('#socials').style.display = new_tab_index == 6 ? '' : 'none'
                 $('#documents').style.display = new_tab_index == 7 ? '' : 'none'
                 if (selected_tab_index == new_tab_index) return //  || items[tab_names[new_tab_index]]?.length == 0
+
+                $('.weight-filter').style.display = new_tab_index == 1 ? 'none' : 'flex';
 
                 $('#container').style.display = new_tab_index == 1 ? '' : 'none'
                 document.querySelector('.minus-keywords-block').parentElement.style.display = new_tab_index == 1 ? 'flex' : 'none';
@@ -753,6 +796,14 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                         if (filterable_tabs.includes(tab_indexes[tab_name])) {{
 
                             let temp_items = [...items[tab_name]];
+
+                            if (currentWeightFilter === 'weight') {{
+                                temp_items.sort((a, b) => {{
+                                    const aWeight = a.keyword_list?.length || 0;
+                                    const bWeight = b.keyword_list?.length || 0;
+                                    return currentSortDirection === 'asc' ? aWeight - bWeight : bWeight - aWeight;
+                                }});
+                            }}
 
                             if (minus_keywords.length) {{
                                 temp_items = temp_items.filter(item => !minus_keywords.some(minus_keyword => (item.title.toLowerCase().includes(minus_keyword) || item.link.toLowerCase().includes(minus_keyword) || item.content.toLowerCase().includes(minus_keyword))))
@@ -1092,11 +1143,18 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 let result = ``;
                 let tab_name = tab_names[selected_tab_index];
 
-
                 let temp_items = [...items[tab_name]];
 
                 // fullname_data
                 // fullname_filter
+
+                if (currentWeightFilter === 'weight' && selected_tab_index !== 1) {{
+                    temp_items.sort((a, b) => {{
+                        const aWeight = a.keyword_list?.length || 0;
+                        const bWeight = b.keyword_list?.length || 0;
+                        return currentSortDirection === 'asc' ? aWeight - bWeight : bWeight - aWeight;
+                    }});
+                }}
 
                 let fullname = fullname_filter[tab_name] ?? 0;
 
