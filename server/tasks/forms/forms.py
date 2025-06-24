@@ -277,5 +277,4 @@ def filter_by_weight(all_found_info, search_type) -> List[FoundInfo]:
         all_found_info,
         key=sort_key,
     )[::-1]
-
     return found_info_test
