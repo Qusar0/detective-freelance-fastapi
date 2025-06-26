@@ -1,0 +1,328 @@
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:00.449767",
+  "title": "Participation Organization Preview",
+  "data": [
+    [
+      {
+        "count": 6,
+        "type": "org"
+      },
+      {
+        "count": 1,
+        "type": "ip"
+      }
+    ],
+    [
+      {
+        "count": 6,
+        "type": "org"
+      },
+      {
+        "count": 1,
+        "type": "ip"
+      }
+    ]
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:00.546950",
+  "title": "Participation Organization Page 1",
+  "data": [
+    {
+      "org_data": {
+        "inn": "4345255896",
+        "name": "НКО \"ФОНД ПОДДЕРЖКИ ИНИЦИАТИВ ГУБЕРНАТОРА КИРОВСКОЙ ОБЛАСТИ\"",
+        "ogrn": "1094300000530",
+        "kpp": "434501001",
+        "okved": {
+          "code": "64.99",
+          "name": "Предоставление прочих финансовых услуг, кроме услуг по страхованию и пенсионному обеспечению, не включенных в другие группировки"
+        },
+        "death_date": "2019-11-12",
+        "address_obj": {
+          "flat": "КВ.318",
+          "house": "Д.23",
+          "doc_date": "2009-05-05",
+          "zip_code": "610019",
+          "city_name": "КИРОВ",
+          "city_type": "Г.",
+          "kladr_code": "430000010000092",
+          "record_date": "2009-05-05",
+          "region_code": "43",
+          "region_name": "Кировская область",
+          "street_name": "ДЕРЕНДЯЕВА",
+          "street_type": "УЛ.",
+          "full_address": "610019 Кировская область Г. КИРОВ УЛ. ДЕРЕНДЯЕВА Д.23 КВ.318"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": false,
+            "egrul_deleted": 1641168000000
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:00.671680",
+  "title": "Participation Organization Page 2",
+  "data": [
+    {
+      "org_data": {
+        "inn": "7709471429",
+        "name": "НО \"ФОНД БОРЬБЫ С КОРРУПЦИЕЙ\"",
+        "ogrn": "1117799018204",
+        "kpp": "772501001",
+        "okved": {
+          "code": "69",
+          "name": "Деятельность в области права и бухгалтерского учета"
+        },
+        "death_date": "2021-08-31",
+        "address_obj": {
+          "flat": "КОМ. 21А",
+          "house": "Д. 19",
+          "doc_date": "2014-07-08",
+          "zip_code": "115280",
+          "kladr_code": "770000000001688",
+          "record_date": "2014-07-08",
+          "region_code": "77",
+          "region_name": "Г.Москва",
+          "street_name": "ЛЕНИНСКАЯ СЛОБОДА",
+          "street_type": "УЛ.",
+          "full_address": "115280 Г.Москва УЛ. ЛЕНИНСКАЯ СЛОБОДА Д. 19 КОМ. 21А"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": false,
+            "egrul_deleted": 1639526400000
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:00.786882",
+  "title": "Participation Organization Page 3",
+  "data": [
+    {
+      "org_data": {
+        "inn": "7710577483",
+        "name": "НО \"ФОНД ПОДДЕРЖКИ ДЕМОКРАТИЧЕСКИХ ИНИЦИАТИВ\"",
+        "ogrn": "1057746456283",
+        "kpp": "771001001",
+        "okved": {
+          "code": "91.32",
+          "name": "Деятельность политических организаций"
+        },
+        "death_date": "2013-09-18",
+        "address_obj": {
+          "house": "Д.27",
+          "building": "СТР.5",
+          "doc_date": "2005-03-18",
+          "zip_code": "125047",
+          "kladr_code": "770000000002879",
+          "record_date": "2005-03-18",
+          "region_code": "77",
+          "region_name": "Г.Москва",
+          "street_name": "ТВЕРСКАЯ-ЯМСКАЯ 1-Я",
+          "street_type": "УЛ.",
+          "full_address": "125047 Г.Москва УЛ. ТВЕРСКАЯ-ЯМСКАЯ 1-Я Д.27 СТР.5"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "ПРЕЗИДЕНТ",
+            "active": true
+          },
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": false,
+            "egrul_deleted": 1641081600000
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:00.876583",
+  "title": "Participation Organization Page 4",
+  "data": [
+    {
+      "org_data": {
+        "inn": "772323358792",
+        "name": "ИП НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "ogrn": "314774601500561",
+        "okved": {
+          "code": "69.10",
+          "name": "Деятельность в области права"
+        },
+        "death_date": "2022-12-24"
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ",
+            "active": false
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:01.098749",
+  "title": "Participation Organization Page 5",
+  "data": [
+    {
+      "org_data": {
+        "inn": "7737075579",
+        "name": "ООО \"АЛЛЕКТ\"  ООО \"ALLEKT\" LTD",
+        "ogrn": "1037739467270",
+        "kpp": "773701001",
+        "death_date": "2012-06-05",
+        "address_obj": {
+          "house": "Д.10",
+          "building": "К.2",
+          "doc_date": "2003-02-06",
+          "zip_code": "115598",
+          "kladr_code": "770000000000487",
+          "record_date": "2003-02-06",
+          "region_code": "77",
+          "region_name": "МОСКВА",
+          "region_type": "ГОРОД",
+          "street_name": "ЗАГОРЬЕВСКАЯ",
+          "street_type": "УЛ.",
+          "full_address": "115598 ГОРОД МОСКВА УЛ. ЗАГОРЬЕВСКАЯ Д.10 К.2"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": true
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:01.424292",
+  "title": "Participation Organization Page 6",
+  "data": [
+    {
+      "org_data": {
+        "inn": "7703549904",
+        "name": "НО \"ФОНД ПОДДЕРЖКИ МОЛОДЁЖНЫХ ПРОГРАММ\"",
+        "ogrn": "1057746817083",
+        "kpp": "770301001",
+        "okved": {
+          "code": "91.32",
+          "name": "Деятельность политических организаций"
+        },
+        "death_date": "2014-02-28",
+        "address_obj": {
+          "house": "Д.5",
+          "doc_date": "2005-04-29",
+          "zip_code": "125993",
+          "kladr_code": "770000000003277",
+          "record_date": "2005-04-29",
+          "region_code": "77",
+          "region_name": "Г.Москва",
+          "street_name": "ГАЗЕТНЫЙ",
+          "street_type": "ПЕР.",
+          "full_address": "125993 Г.Москва ПЕР. ГАЗЕТНЫЙ Д.5"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": false,
+            "egrul_deleted": 1641081600000
+          }
+        ]
+      }
+    }
+  ]
+}
+{
+  "test_name": "participation_organization",
+  "timestamp": "2025-06-25T12:35:01.536156",
+  "title": "Participation Organization Page 7",
+  "data": [
+    {
+      "org_data": {
+        "inn": "5032202930",
+        "name": "ООО ЮК \"НАВАЛЬНЫЙ И ПАРТНЕРЫ\"",
+        "ogrn": "1095032001536",
+        "kpp": "503201001",
+        "okved": {
+          "code": "74.11",
+          "name": "Деятельность в области права"
+        },
+        "death_date": "2011-10-10",
+        "address_obj": {
+          "house": "Д.31",
+          "doc_date": "2009-03-03",
+          "zip_code": "143041",
+          "kladr_code": "500220000840001",
+          "place_name": "КОБЯКОВО (ГП ГОЛИЦЫНО)",
+          "place_type": "Д",
+          "record_date": "2009-03-03",
+          "region_code": "50",
+          "region_name": "МОСКОВСКАЯ",
+          "region_type": "ОБЛАСТЬ",
+          "street_name": "ЛЕСНАЯ",
+          "street_type": "УЛ.",
+          "full_address": "143041 ОБЛАСТЬ МОСКОВСКАЯ Д КОБЯКОВО (ГП ГОЛИЦЫНО) Р-Н ОДИНЦОВСКИЙ УЛ. ЛЕСНАЯ Д.31",
+          "district_name": "ОДИНЦОВСКИЙ",
+          "district_type": "Р-Н"
+        }
+      },
+      "individual_data": {
+        "inn": "772323358792",
+        "name": "НАВАЛЬНЫЙ АЛЕКСЕЙ АНАТОЛЬЕВИЧ",
+        "roles": [
+          {
+            "name": "ГЕНЕРАЛЬНЫЙ ДИРЕКТОР",
+            "active": true
+          },
+          {
+            "name": "УЧРЕДИТЕЛЬ",
+            "active": true
+          }
+        ]
+      }
+    }
+  ]
+}
