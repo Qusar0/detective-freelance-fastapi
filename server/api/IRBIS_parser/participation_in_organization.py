@@ -53,5 +53,5 @@ class ParticipationOrganization:
 
         if response is not None:
             self.full_data = response["result"]
-
-        return self.full_data
+            return self.full_data
+        return []

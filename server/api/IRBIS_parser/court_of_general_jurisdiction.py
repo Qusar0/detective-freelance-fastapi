@@ -51,7 +51,7 @@ class CourtGeneralJurisdiction:
             dict: Результат запроса.
         """
         link = (f"http://ir-bis.org/ru/base/-/services/report/"
-                f"{person_uuid}/people-judge.json?event=categorypreview&"
+                f"{person_uuid}/people-judge.json?event=category-preview&"
                 f"filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -80,7 +80,7 @@ class CourtGeneralJurisdiction:
             list: Результат запроса
         """
         link = (f"http://ir-bis.org/ru/base/-/services/report/"
-                f"{person_uuid}/people-judge.json?event=roledata&version=2"
+                f"{person_uuid}/people-judge.json?event=role-data&version=2"
                 f"&page={page}&rows={rows}&strategy={strategy}"
                 f"&filter0={filter0}&filter_text={filter_text}")
         response = await BaseAuthIRBIS.get_response(link)
