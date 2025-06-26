@@ -29,7 +29,7 @@ class DisqualifiedPersons:
 
         return self.count
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int):
+    async def get_full_data(self, person_uuid: str, page: int, rows: int):  # noqa: WPS615
         """
         Получение данных о дисквалификации физического лица. Использовать повторно функцию для обновления данных.
         Если нужны предыдущие, необходимо обратиться к полям full_data

@@ -12,7 +12,7 @@ class ArbitrationCourt:
 
     async def get_data_preview(self, person_uuid: str):
         """
-        Получение превью данных об участии физического лица в арбитражных судах. Использовать повторно функцию для обновления данных.
+        Получение превью данных об участии физического лица в арбитражных судах.
         Если нужны предыдущие, необходимо обратиться к полям amount_by_name и amount_by_inn
 
         Args:
@@ -32,16 +32,16 @@ class ArbitrationCourt:
 
         return self.amount_by_name, self.amount_by_inn
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):
+    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
         """
-        Получение данных об участии физического лица в арбитражных судах. Использовать повторно функцию для обновления данных.
+        Получение данных об участии физического лица в арбитражных судах.
         Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
             page (int): Номер страницы
             rows (int): Количество строк на странице
-            search_type (str): Соответствует переключателю 'По полным ФИО/ПоИНН'. Может принимать значения ['all', 'inn']
+            search_type (str): Соответствует переключателю 'По полным ФИО/ПоИНН'. Принимает значения 'all', 'inn'
 
         Returns:
             list: Результат запроса

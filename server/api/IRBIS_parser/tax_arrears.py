@@ -7,9 +7,9 @@ class TaxArrears:
     def __init__(self):
         self.full_data: Optional[list] = []
 
-    async def get_full_data(self, person_uuid: str):
+    async def get_full_data(self, person_uuid: str):  # noqa: WPS615
         """
-        Получение данных о налоговых задолженностях физического лица. Использовать повторно функцию для обновления данных.
+        Получение данных о налоговых задолженностях физического лица.
         Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:

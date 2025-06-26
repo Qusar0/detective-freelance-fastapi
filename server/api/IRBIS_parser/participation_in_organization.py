@@ -12,7 +12,7 @@ class ParticipationOrganization:
 
     async def get_data_preview(self, person_uuid: str):
         """
-        Получение превью данных об участии физического лица в организациях и ИП. Использовать повторно функцию для обновления данных.
+        Получение превью данных об участии физического лица в организациях и ИП.
         Если нужны предыдущие, необходимо обратиться к полям all_regions и selected_regions
 
         Args:
@@ -32,16 +32,16 @@ class ParticipationOrganization:
 
         return self.all_regions, self.selected_regions
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):
+    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
         """
-        Получение данных об участии физического лица в организациях и ИП. Использовать повторно функцию для обновления данных.
+        Получение данных об участии физического лица в организациях и ИП.
         Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
             page (int): Номер страницы
             rows (int): Количество строк на странице
-            search_type (str): Соответствует переключателю "Все регионы/Тольковыбранные регионы". Принимает одно из следующих значенйи ['selected', 'all']
+            search_type (str): Переключатель "Все регионы/Только выбранные регионы". Принимает 'selected', 'all'
 
         Returns:
             list: Результат запроса
