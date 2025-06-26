@@ -79,6 +79,8 @@ class Settings(BaseSettings):
     # IRBIS token
     irbis_token: str = Field(..., env="IRBIS_TOKEN")
 
+    morpher_token: str = Field(..., env="MORPHER_TOKEN")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

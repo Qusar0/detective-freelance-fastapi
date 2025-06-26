@@ -4,6 +4,7 @@ from typing import List
 from phonenumbers import parse, NumberParseException
 
 from server.tasks.celery_config import FoundInfo
+from server.api.conf.config import settings
 
 
 def form_phone_number(raw_number: str):
@@ -138,7 +139,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
         'kk': ['A', 'І', 'Б', 'Т', 'Ш', 'Ж', 'К']
     }
     url = f"https://ws3.morpher.ru{language_endpoints[language]}/declension"
-    token = "cfce1037-064f-425c-b40a-593875653972"
+    token = settings.morpher_token
     headers = {
         'User-Agent': (
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '

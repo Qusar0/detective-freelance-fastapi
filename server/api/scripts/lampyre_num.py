@@ -58,7 +58,7 @@ test2 = ['phone_telegram_v1']
 
 class Lampyre:
     def __init__(self):
-        self.token = "a05b0f96-008d-4e81-b5ea-b0792c764a1d"
+        self.token = settings.utils_token
         self.lampyre_handler = LampyreResultsHandler()
         self.tasks = []
         self.no_results_html = ''
