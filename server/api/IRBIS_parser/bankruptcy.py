@@ -32,7 +32,7 @@ class Bankruptcy:
 
         return self.amount_by_name, self.amount_by_inn
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):
+    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
         """
         Получение данных о банкротстве физического лица. Использовать повторно функцию для обновления данных.
         Если нужны предыдущие, необходимо обратиться к полям full_data
@@ -41,7 +41,7 @@ class Bankruptcy:
             person_uuid (str): uuid человека
             page (int): Номер страницы
             rows (int): Количество строк на странице
-            search_type (str): Соответствует переключателю 'По полным ФИО/ПоИНН'. Может принимать значения ['name', 'inn']
+            search_type (str): Соответствует переключателю 'По полным ФИО/ПоИНН'. Принимает значения 'name', 'inn'
 
         Returns:
             list: Результат запроса

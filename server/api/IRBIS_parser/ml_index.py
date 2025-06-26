@@ -7,7 +7,7 @@ class MLIndex:
     def __init__(self):
         self.full_data: Optional[dict] = dict()
 
-    async def get_full_data(self, person_uuid: str):
+    async def get_full_data(self, person_uuid: str):  # noqa: WPS615
         """
         Получение значения ML-индекса данного физического лица. Использовать повторно функцию для обновления данных.
         Если нужны предыдущие, необходимо обратиться к полю full_data

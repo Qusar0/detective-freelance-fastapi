@@ -29,9 +29,9 @@ class TerrorList:
 
         return self.count
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int):
+    async def get_full_data(self, person_uuid: str, page: int, rows: int):  # noqa: WPS615
         """
-        Получение данных о нахождении физического лица в списке террористов и экстремистов. Использовать повторно функцию для обновления данных.
+        Получение данных о нахождении физического лица в списке террористов и экстремистов.
         Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
