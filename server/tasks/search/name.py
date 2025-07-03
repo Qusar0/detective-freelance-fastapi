@@ -223,14 +223,14 @@ class NameSearchTask(BaseSearchTask):
         # Создаем очередь для сбора результатов из потоков
         from queue import Queue
         results_queue = Queue()
-        
+
         def worker(input_data, queue):
             try:
                 url = input_data[0]
                 keyword = input_data[1]
                 keyword_type = input_data[2]
                 name_case = input_data[3]
-                
+
                 raw_data = do_request_to_xmlriver(
                     url,
                     all_found_info,
@@ -271,32 +271,33 @@ class NameSearchTask(BaseSearchTask):
         try:
             found_info = []
             found_links = []
-            
+
             for item in raw_data:
                 title = item.get('title', '')
                 snippet = item.get('snippet', '')
-                
+
                 if title or snippet:
                     info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
                     found_info.append(info)
-                
+
                 if item.get('url'):
                     found_links.append(item['url'])
-            
+
             query_data = QueriesData(
                 query_id=self.query_id,
                 found_info="\n".join(found_info) if found_info else "No information found",
                 found_links=found_links if found_links else [],
             )
-            
+
             db.add(query_data)
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id}")
-            
+
         except Exception as e:
             logging.error(f"Failed to save raw results: {e}")
             await db.rollback()
             raise
+
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')
 def start_search_by_name(self, search_filters):

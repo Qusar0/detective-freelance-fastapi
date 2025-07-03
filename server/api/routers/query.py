@@ -562,17 +562,17 @@ async def get_query_data(
             raise HTTPException(status_code=404, detail="Данные запроса не найдены")
 
         results = []
-        
+
         if isinstance(query_data.found_info, str):
             infos = [info.strip() for info in query_data.found_info.split('\n') if info.strip()]
             links = query_data.found_links or []
-            
+
             for i, info in enumerate(infos):
                 result = {"info": info}
                 if i < len(links):
                     result["url"] = links[i]
                 results.append(result)
-        
+
         elif query_data.found_links:
             results = [{"url": link} for link in query_data.found_links]
 

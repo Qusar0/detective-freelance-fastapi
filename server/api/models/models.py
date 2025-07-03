@@ -471,4 +471,3 @@ class QueriesData(Base):
 
     def __str__(self):
         return f"Результаты запроса ({self.query_id})"
-

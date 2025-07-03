@@ -101,7 +101,7 @@ def do_request_to_xmlriver(
                         time.sleep(retry_delay)
             else:
                 update_stats(request_stats, stats_lock, attempt, success=False)
-    
+
     return raw_data
 
 
@@ -288,17 +288,23 @@ def color_keywords(name_case: List[str], snippet: str, keyword: str) -> str:
 
     return colored_snippet
 
+
 def parse_xml_response(response):
     """Парсит XML ответ и возвращает сырые данные без форматирования"""
     try:
         decoded_resp = response.content.decode('utf-8')
         data = xmltodict.parse(decoded_resp)
-        
+
         results = []
-        groups = data.get('yandexsearch', {}).get('response', {}).get('results', {}).get('grouping', {}).get('group', [])
+        groups = data \
+            .get('yandexsearch', {}) \
+            .get('response', {}) \
+            .get('results', {}) \
+            .get('grouping', {}) \
+            .get('group', [])
         if isinstance(groups, dict):
             groups = [groups]
-        
+
         for group in groups:
             doc = group.get('doc', {})
             results.append({
@@ -307,9 +313,9 @@ def parse_xml_response(response):
                 'url': doc.get('url', ''),
                 'domain': urlparse(doc.get('url', '')).netloc
             })
-        
+
         return results
-    
+
     except Exception as e:
         logging.error(f"XML parsing error: {e}")
         return []

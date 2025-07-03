@@ -18,8 +18,8 @@ from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
 from server.tasks.services import (
-    read_needless_sites, 
-    update_stats, 
+    read_needless_sites,
+    update_stats,
     write_urls,
 )
 from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
@@ -39,9 +39,9 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                result = await self.xmlriver_num_do_request(db)              
+                result = await self.xmlriver_num_do_request(db)
                 await self.save_raw_results(result['raw_data'], db)
-                
+
                 items, filters = result['processed_data']
 
             except Exception as e:
@@ -71,34 +71,34 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
-        
+
     async def save_raw_results(self, raw_data, db):
         """Сохраняет результаты поиска в таблицу queries_data"""
         try:
             found_info = []
             found_links = []
-            
+
             for item in raw_data:
                 title = item.get('raw_title', '') or item.get('title', '')
                 snippet = item.get('raw_snippet', '') or item.get('snippet', '')
-                
+
                 if title or snippet:
                     info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
                     found_info.append(info)
-                
+
                 if item.get('url'):
                     found_links.append(item['url'])
-            
+
             query_data = QueriesData(
                 query_id=self.query_id,
                 found_info="\n".join(found_info) if found_info else "No information found",
                 found_links=found_links if found_links else [],
             )
-            
+
             db.add(query_data)
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id}")
-            
+
         except Exception as e:
             logging.error(f"Failed to save raw results: {e}")
             await db.rollback()
