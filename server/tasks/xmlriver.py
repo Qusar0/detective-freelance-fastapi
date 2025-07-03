@@ -27,11 +27,14 @@ def do_request_to_xmlriver(
 ):
     max_attempts = 5
     retry_delay = 2
+    raw_data = []
 
     if SEARCH_ENGINES['google'] in url:
         for attempt in range(1, max_attempts + 1):
             try:
                 response = requests.get(url)
+                current_raw = parse_xml_response(response)
+                raw_data.extend(current_raw)
                 handling_resp = handle_xmlriver_response(
                     url,
                     response,
@@ -66,6 +69,9 @@ def do_request_to_xmlriver(
                 try:
                     new_url = form_page_query(url, page_num)
                     response = requests.get(new_url)
+                    current_raw = parse_xml_response(response)
+                    raw_data.extend(current_raw)
+
                     handling_resp = handle_xmlriver_response(
                         url,
                         response,
@@ -95,6 +101,8 @@ def do_request_to_xmlriver(
                         time.sleep(retry_delay)
             else:
                 update_stats(request_stats, stats_lock, attempt, success=False)
+    
+    return raw_data
 
 
 def handle_xmlriver_response(
