@@ -39,10 +39,6 @@ class NumberSearchTask(BaseSearchTask):
                 self.money_to_return += 5
                 print(e)
 
-            except Exception as e:
-                self.money_to_return += 25
-                print(e)
-
         tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
 
         html = response_num_template(
