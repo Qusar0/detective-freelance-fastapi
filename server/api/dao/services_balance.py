@@ -87,21 +87,6 @@ class ServicesBalanceDAO(BaseDAO):
             logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
             await db.rollback()
 
-    @classmethod
-    async def renew_getcontact_balance(cls, requests_left, db):
-        try:
-            getcontact_balance = await db.execute(
-                select(ServicesBalance)
-                .filter_by(service_name='GetContact')
-            )
-            getcontact_balance = getcontact_balance.scalars().first()
-
-            if getcontact_balance:
-                getcontact_balance.balance = requests_left
-                await db.commit()
-        except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
-            await db.rollback()
 
     @classmethod
     async def get_service_balance(cls, db, service_name):
