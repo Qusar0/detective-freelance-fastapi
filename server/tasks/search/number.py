@@ -71,7 +71,7 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
-    
+        
     async def save_raw_results(self, raw_data, db):
         """Сохраняет результаты поиска в таблицу queries_data"""
         try:
@@ -79,9 +79,13 @@ class NumberSearchTask(BaseSearchTask):
             found_links = []
             
             for item in raw_data:
-                info = f"{item.get('raw_title', '')}: {item.get('raw_snippet', '')}"
-                if info.strip(':'):
+                title = item.get('raw_title', '') or item.get('title', '')
+                snippet = item.get('raw_snippet', '') or item.get('snippet', '')
+                
+                if title or snippet:
+                    info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
                     found_info.append(info)
+                
                 if item.get('url'):
                     found_links.append(item['url'])
             
