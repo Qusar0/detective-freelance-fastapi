@@ -1,5 +1,7 @@
 from typing import Tuple, List
 from threading import Thread
+from queue import Queue
+import logging
 
 from celery import shared_task
 
@@ -8,6 +10,7 @@ from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -102,28 +105,49 @@ class CompanySearchTask(BaseSearchTask):
                                             url,
                                         )
 
-            for input_data in request_input_pack:
-                url = input_data[0]
-                keyword = input_data[1]
-                keyword_type = input_data[2]
+            # Создаем очередь для сбора результатов
+            results_queue = Queue()
+            
+            def worker(input_data, queue):
+                try:
+                    url = input_data[0]
+                    keyword = input_data[1]
+                    keyword_type = input_data[2]
+                    
+                    raw_data = do_request_to_xmlriver(
+                        url,
+                        all_found_info,
+                        prohibited_sites_list,
+                        keyword,
+                        None,
+                        keyword_type,
+                        urls,
+                        self.request_stats,
+                        self.stats_lock,
+                        self.logger,
+                    )
+                    queue.put(raw_data)
+                except Exception as e:
+                    self.logger.log_error(f"Error in worker thread: {str(e)}")
+                    queue.put([])
 
-                threads.append(
-                    Thread(
-                        target=do_request_to_xmlriver,
-                        args=(
-                            url,
-                            all_found_info,
-                            prohibited_sites_list,
-                            keyword,
-                            None,
-                            keyword_type,
-                            urls,
-                            self.request_stats,
-                            self.stats_lock,
-                            self.logger,
-                        ),
-                    ),
-                )
+            # Запускаем потоки
+            for input_data in request_input_pack:
+                t = Thread(target=worker, args=(input_data, results_queue))
+                threads.append(t)
+                t.start()
+
+            # Ждем завершения всех потоков
+            for t in threads:
+                t.join()
+
+            # Собираем все результаты
+            all_raw_data = []
+            while not results_queue.empty():
+                all_raw_data.extend(results_queue.get())
+
+            # Сохраняем сырые данные
+            await self.save_raw_results(all_raw_data, db)
 
             manage_threads(threads)
             self.save_stats_to_file('search_company.log')
@@ -154,13 +178,49 @@ class CompanySearchTask(BaseSearchTask):
             file_storage = FileStorageService()
 
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
+            await write_urls(urls, "company")
 
         except Exception as e:
             print(e)
             self.money_to_return = self.price
             raise e
 
-        await write_urls(urls, "company")
+    async def save_raw_results(self, raw_data, db):
+        """Сохраняет результаты поиска в таблицу queries_data"""
+        try:
+            found_info = []
+            found_links = []
+            
+            logging.info(f"Raw data to save: {raw_data}")
+            
+            for item in raw_data:
+                title = item.get('title', '')
+                snippet = item.get('snippet', '')
+                
+                if title or snippet:
+                    info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
+                    found_info.append(info)
+                
+                if item.get('url'):
+                    found_links.append(item['url'])
+            
+            logging.info(f"Processed info: {found_info}")
+            logging.info(f"Processed links: {found_links}")
+            
+            query_data = QueriesData(
+                query_id=self.query_id,
+                found_info="\n".join(found_info) if found_info else "No information found",
+                found_links=found_links if found_links else [],
+            )
+            
+            db.add(query_data)
+            await db.commit()
+            logging.info(f"Raw data saved for query {self.query_id}")
+            
+        except Exception as e:
+            logging.error(f"Failed to save raw results: {e}")
+            await db.rollback()
+            raise
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
