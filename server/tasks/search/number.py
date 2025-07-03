@@ -6,7 +6,6 @@ from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
-from server.api.scripts.get_contact_script import GetContactService
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -29,7 +28,6 @@ class NumberSearchTask(BaseSearchTask):
         self.logger = SearchLogger(self.query_id, 'search_num.log')
 
     async def _process_search(self, db):
-        self.requests_getcontact_left = await ServicesBalanceDAO.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
         lampyre_html, acc_search_html = '', ''
         parsed_data = {}
@@ -39,13 +37,6 @@ class NumberSearchTask(BaseSearchTask):
                 items, filters = await self.xmlriver_num_do_request(db)
             except Exception as e:
                 self.money_to_return += 5
-                print(e)
-
-        if 'tags' in self.methods_type:
-            try:
-                self.requests_getcontact_left, parsed_data = await GetContactService.get_tags_and_data(self.phone_num)
-            except Exception as e:
-                self.money_to_return += 25
                 print(e)
 
         tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
@@ -71,7 +62,6 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
-        await ServicesBalanceDAO.renew_getcontact_balance(self.requests_getcontact_left, db)
 
     async def xmlriver_num_do_request(self, db):
         all_found_data = []
