@@ -87,7 +87,6 @@ class ServicesBalanceDAO(BaseDAO):
             logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
             await db.rollback()
 
-
     @classmethod
     async def get_service_balance(cls, db, service_name):
         try:
