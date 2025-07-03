@@ -27,6 +27,7 @@ def do_request_to_xmlriver(
 ):
     max_attempts = 5
     retry_delay = 2
+
     if SEARCH_ENGINES['google'] in url:
         for attempt in range(1, max_attempts + 1):
             try:
@@ -278,3 +279,29 @@ def color_keywords(name_case: List[str], snippet: str, keyword: str) -> str:
     colored_snippet = re.sub(keyword, f'<span class="key-word">{keyword}</span>', marked_snippet, flags=re.IGNORECASE)
 
     return colored_snippet
+
+def parse_xml_response(response):
+    """Парсит XML ответ и возвращает сырые данные без форматирования"""
+    try:
+        decoded_resp = response.content.decode('utf-8')
+        data = xmltodict.parse(decoded_resp)
+        
+        results = []
+        groups = data.get('yandexsearch', {}).get('response', {}).get('results', {}).get('grouping', {}).get('group', [])
+        if isinstance(groups, dict):
+            groups = [groups]
+        
+        for group in groups:
+            doc = group.get('doc', {})
+            results.append({
+                'title': doc.get('title', ''),
+                'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),
+                'url': doc.get('url', ''),
+                'domain': urlparse(doc.get('url', '')).netloc
+            })
+        
+        return results
+    
+    except Exception as e:
+        logging.error(f"XML parsing error: {e}")
+        return []

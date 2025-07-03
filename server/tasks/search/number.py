@@ -6,6 +6,7 @@ from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -16,8 +17,12 @@ from server.tasks.forms.sites import form_google_query, form_yandex_query_num
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
-from server.tasks.services import read_needless_sites, update_stats, write_urls
-from server.tasks.xmlriver import handle_xmlriver_response
+from server.tasks.services import (
+    read_needless_sites, 
+    update_stats, 
+    write_urls,
+)
+from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
 
 
 class NumberSearchTask(BaseSearchTask):
@@ -34,14 +39,14 @@ class NumberSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                items, filters = await self.xmlriver_num_do_request(db)
-            except Exception as e:
-                self.money_to_return += 5
-                print(e)
+                result = await self.xmlriver_num_do_request(db)              
+                await self.save_raw_results(result['raw_data'], db)
+                
+                items, filters = result['processed_data']
 
             except Exception as e:
-                self.money_to_return += 25
-                print(e)
+                self.money_to_return += 5
+                logging.error(f"Ошибка в получении упоминаний: {e}")
 
         tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
 
@@ -66,8 +71,37 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
+    
+    async def save_raw_results(self, raw_data, db):
+        """Сохраняет результаты поиска в таблицу queries_data"""
+        try:
+            found_info = []
+            found_links = []
+            
+            for item in raw_data:
+                info = f"{item.get('raw_title', '')}: {item.get('raw_snippet', '')}"
+                if info.strip(':'):
+                    found_info.append(info)
+                if item.get('url'):
+                    found_links.append(item['url'])
+            
+            query_data = QueriesData(
+                query_id=self.query_id,
+                found_info="\n".join(found_info) if found_info else "No information found",
+                found_links=found_links if found_links else [],
+            )
+            
+            db.add(query_data)
+            await db.commit()
+            logging.info(f"Raw data saved for query {self.query_id}")
+            
+        except Exception as e:
+            logging.error(f"Failed to save raw results: {e}")
+            await db.rollback()
+            raise
 
     async def xmlriver_num_do_request(self, db):
+        all_raw_data = []
         all_found_data = []
         urls = []
         proh_sites = await read_needless_sites(db)
@@ -80,6 +114,8 @@ class NumberSearchTask(BaseSearchTask):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
+                    raw_data = parse_xml_response(response)
+                    all_raw_data.extend(raw_data)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp not in ('500', '110', '111'):
@@ -106,6 +142,8 @@ class NumberSearchTask(BaseSearchTask):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
+                    raw_data = parse_xml_response(response)
+                    all_raw_data.extend(raw_data)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp == '15':
@@ -132,9 +170,11 @@ class NumberSearchTask(BaseSearchTask):
             if handling_resp == '15':
                 break
 
-        items, filters = form_number_response_html(all_found_data, self.phone_num)
         await write_urls(urls, "number")
-        return items, filters
+        return {
+            'raw_data': all_raw_data,
+            'processed_data': form_number_response_html(all_found_data, self.phone_num)
+        }
 
 
 @shared_task(bind=True, acks_late=True)

@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete, update
 from datetime import datetime, timezone
-from typing import List
+from typing import Any, Dict, List
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
-from server.api.models.models import UserQueries, Events, TextData, QueriesBalance, Language
+from server.api.models.models import QueriesData, UserQueries, Events, TextData, QueriesBalance, Language
 from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
@@ -526,3 +526,63 @@ async def get_available_languages(
     except Exception as e:
         logging.error(f"Не удалось получить языки: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
+
+
+@router.get("/query_data", response_model=List[Dict[str, Any]])
+async def get_query_data(
+    query_id: int = Query(..., description="ID запроса"),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Получает данные о выполненном запросе в формате:
+    """
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+
+        query_exists = await db.execute(
+            select(UserQueries)
+            .where(
+                UserQueries.query_id == query_id,
+                UserQueries.user_id == user_id
+            )
+        )
+        if not query_exists.scalar():
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        data_result = await db.execute(
+            select(QueriesData)
+            .where(QueriesData.query_id == query_id)
+            .order_by(QueriesData.created_at.desc())
+        )
+        query_data = data_result.scalars().first()
+
+        if not query_data:
+            raise HTTPException(status_code=404, detail="Данные запроса не найдены")
+
+        results = []
+        
+        if isinstance(query_data.found_info, str):
+            infos = [info.strip() for info in query_data.found_info.split('\n') if info.strip()]
+            links = query_data.found_links or []
+            
+            for i, info in enumerate(infos):
+                result = {"info": info}
+                if i < len(links):
+                    result["url"] = links[i]
+                results.append(result)
+        
+        elif query_data.found_links:
+            results = [{"url": link} for link in query_data.found_links]
+
+        return results
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Произошла ошибка при получении данных запроса"
+        )
