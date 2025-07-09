@@ -4,15 +4,10 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class Deposits:
-    def __init__(self):
-        self.preview_data: Optional[list] = []
-
-        self.full_data: Optional[list] = []
-
-    async def get_data_preview(self, person_uuid: str):
+    @staticmethod
+    async def get_data_preview(person_uuid: str):
         """
         Получение превью данных о залогах (движимого имущества) физического лица.
-        Если нужны предыдущие, необходимо обратиться к полям preview_data
 
         Args:
             person_uuid (str): uuid человека
@@ -24,15 +19,17 @@ class Deposits:
                 f"{person_uuid}/people-pledge.json?event=preview-type")
         response = await BaseAuthIRBIS.get_response(link)
 
+        preview_data: Optional[list] = []
+
         if response is not None:
-            self.preview_data = response
+            preview_data = response
 
-        return self.preview_data
+        return preview_data
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int):  # noqa: WPS615
+    @staticmethod
+    async def get_full_data(person_uuid: str, page: int, rows: int):  # noqa: WPS615
         """
         Получение данных о залогах (движимого имущества) физического лица.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
@@ -47,7 +44,9 @@ class Deposits:
                 f"&page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        if response is not None:
-            self.full_data = response["result"]
+        full_data: Optional[list] = []
 
-        return self.full_data
+        if response is not None:
+            full_data = response["result"]
+
+        return full_data

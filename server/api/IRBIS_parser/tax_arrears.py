@@ -4,13 +4,10 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class TaxArrears:
-    def __init__(self):
-        self.full_data: Optional[list] = []
-
-    async def get_full_data(self, person_uuid: str):  # noqa: WPS615
+    @staticmethod
+    async def get_full_data(person_uuid: str):  # noqa: WPS615
         """
         Получение данных о налоговых задолженностях физического лица.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
@@ -22,7 +19,9 @@ class TaxArrears:
                 f"{person_uuid}/people-nalog.json?event=data")
         response = await BaseAuthIRBIS.get_response(link)
 
-        if response is not None:
-            self.full_data = response["payload"]
+        full_data: Optional[list] = []
 
-        return self.full_data
+        if response is not None:
+            full_data = response["payload"]
+
+        return full_data

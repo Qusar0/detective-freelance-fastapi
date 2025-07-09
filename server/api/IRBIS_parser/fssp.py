@@ -4,15 +4,10 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class FSSP:
-    def __init__(self):
-        self.fssp_preview: Optional[list] = []
-
-        self.full_data: Optional[list] = []
-
-    async def get_data_preview(self, person_uuid: str):
+    @staticmethod
+    async def get_data_preview(person_uuid: str):
         """
         Получение превью данных об исполнительных производствах, связанных с физическим лицом.
-        Если нужны предыдущие, необходимо обратиться к полям count
 
         Args:
             person_uuid (str): uuid человека
@@ -24,15 +19,17 @@ class FSSP:
                 f"{person_uuid}/people-fssp.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
+        fssp_preview: Optional[list] = []
+
         if response is not None:
-            self.fssp_preview = response
+            fssp_preview = response
 
-        return self.fssp_preview
+        return fssp_preview
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int):  # noqa: WPS615
+    @staticmethod
+    async def get_full_data(person_uuid: str, page: int, rows: int):  # noqa: WPS615
         """
         Получение данных об исполнительных производствах, связанных с физическим лицом.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
@@ -47,7 +44,9 @@ class FSSP:
                 f"page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        if response is not None:
-            self.full_data = response["result"]
+        full_data: Optional[list] = []
 
-        return self.full_data
+        if response is not None:
+            full_data = response["result"]
+
+        return full_data

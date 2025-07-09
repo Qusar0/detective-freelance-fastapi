@@ -4,16 +4,10 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class ParticipationOrganization:
-    def __init__(self):
-        self.all_regions: Optional[list] = []
-        self.selected_regions: Optional[list] = []
-
-        self.full_data: Optional[list] = []
-
-    async def get_data_preview(self, person_uuid: str):
+    @staticmethod
+    async def get_data_preview(person_uuid: str):
         """
         Получение превью данных об участии физического лица в организациях и ИП.
-        Если нужны предыдущие, необходимо обратиться к полям all_regions и selected_regions
 
         Args:
             person_uuid (str): uuid человека
@@ -26,16 +20,19 @@ class ParticipationOrganization:
                 f"{person_uuid}/people-orgs.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
+        all_regions: Optional[list] = []
+        selected_regions: Optional[list] = []
+
         if response is not None:
-            self.all_regions = response["all"]
-            self.selected_regions = response["selected"]
+            all_regions = response["all"]
+            selected_regions = response["selected"]
 
-        return self.all_regions, self.selected_regions
+        return all_regions, selected_regions
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
+    @staticmethod
+    async def get_full_data(person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
         """
         Получение данных об участии физического лица в организациях и ИП.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
@@ -51,7 +48,8 @@ class ParticipationOrganization:
                 f"search_type={search_type}&page={page}&rows={rows}&version=3")
         response = await BaseAuthIRBIS.get_response(link)
 
+        full_data: Optional[list] = []
+
         if response is not None:
-            self.full_data = response["result"]
-            return self.full_data
-        return []
+            full_data = response["result"]
+        return full_data
