@@ -438,3 +438,305 @@ class ProhibitedPhoneSites(Base):
 
     def __str__(self):
         return f"Запрещенный сайт для телефонов ({self.site_link})"
+
+
+# IRBIS TABLES!
+class PersonsUUID(Base):
+    __tablename__ = 'persons_uuid'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    person_uuid: Mapped[str] = mapped_column(String(64))
+
+
+class ArbitrationCourtPreviewTable(Base):
+    __tablename__ = 'arbitr_court_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    type: Mapped[str] = mapped_column(String(4))
+    plaintiff: Mapped[int] = mapped_column(Integer)
+    responder: Mapped[int] = mapped_column(Integer)
+
+
+class ArbitrationCourtFullTable(Base):
+    __tablename__ = 'arbitr_court_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    court_name_val: Mapped[str] = mapped_column(String(64))
+    role: Mapped[str] = mapped_column(String(1))
+    case_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    case_id: Mapped[str] = mapped_column(String(64))
+    inn: Mapped[Optional[int]] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(64))
+    case_type: Mapped[str] = mapped_column(String(1))
+    response_id: Mapped[str] = mapped_column(String(64))
+    address_val: Mapped[str] = mapped_column(String(64))
+
+
+class BankruptcyPreviewTable(Base):
+    __tablename__ = 'bankruptcy_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    name: Mapped[int] = mapped_column(Integer)
+    inn: Mapped[int] = mapped_column(Integer)
+
+
+class BankruptcyFullTable(Base):
+    __tablename__ = 'bankruptcy_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    first_name: Mapped[str] = mapped_column(String(64))
+    second_name: Mapped[str] = mapped_column(String(64))
+    last_name: Mapped[str] = mapped_column(String(64))
+    birth_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    born_place: Mapped[str] = mapped_column(String(256))
+    inn: Mapped[str] = mapped_column(String(64))
+    ogrn: Mapped[str] = mapped_column(String(64))
+    snils: Mapped[str] = mapped_column(String(64))
+    old_name: Mapped[Optional[str]] = mapped_column(String(64))
+    category_name: Mapped[str] = mapped_column(String(64))
+    location: Mapped[str] = mapped_column(String(256))
+    region_name: Mapped[str] = mapped_column(String(64))
+    information: Mapped[str] = mapped_column(String(256))
+    link: Mapped[str] = mapped_column(String(256))
+
+
+class CorruptionPreviewTable(Base):
+    __tablename__ = 'corruption_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class CorruptionFullTable(Base):
+    __tablename__ = 'corruption_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    key: Mapped[str] = mapped_column(String(256))
+    full_name: Mapped[str] = mapped_column(String(256))
+    organization: Mapped[str] = mapped_column(String(256))
+    position: Mapped[str] = mapped_column(String(256))
+    normative_act: Mapped[str] = mapped_column(String(256))
+    application_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    publish_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    excluded_reason: Mapped[str] = mapped_column(String(256))
+
+
+class CourtGeneralJurPreviewTable(Base):
+    __tablename__ = 'court_general_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    search_type: Mapped[str] = mapped_column(String(64))
+    court_type: Mapped[str] = mapped_column(String(1))
+    plan: Mapped[Optional[int]] = mapped_column(Integer)
+    deff: Mapped[Optional[int]] = mapped_column(Integer)
+    declarant: Mapped[Optional[int]] = mapped_column(Integer)
+    face: Mapped[Optional[int]] = mapped_column(Integer)
+    lawyer: Mapped[Optional[int]] = mapped_column(Integer)
+
+
+class CourtGeneralJurCategoricalTable(Base):
+    __tablename__ = 'court_general_category'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    type: Mapped[str] = mapped_column(String(128))
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class CourtGeneralJurFullTable(Base): # todo: доделать эту таблицу, она большая
+    __tablename__ = 'court_general_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+
+class DepositsPreviewTable(Base):
+    __tablename__ = 'deposits_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    pledge_count: Mapped[int] = mapped_column(Integer)
+    pledge_type: Mapped[str] = mapped_column(String(64))
+    response_id: Mapped[int] = mapped_column(Integer)
+
+
+class DepositsFullTable(Base): # todo: доделать эту таблицу, она большая
+    __tablename__ = 'deposits_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    pledge_count: Mapped[int] = mapped_column(Integer)
+    pledge_type: Mapped[str] = mapped_column(String(64))
+    response_id: Mapped[int] = mapped_column(Integer)
+
+
+class DisqualifiedPersonPreviewTable(Base):
+    __tablename__ = 'disqualified_person_preview'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class DisqualifiedPersonFullTable(Base):
+    __tablename__ = 'disqualified_person_full'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    response_id: Mapped[int] = mapped_column(Integer)
+    reestr_key: Mapped[str] = mapped_column(String(128))
+    birth_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    fio: Mapped[str] = mapped_column(String(128))
+    article: Mapped[str] = mapped_column(String(128))
+    start_date_disq: Mapped[datetime.datetime] = mapped_column(DateTime)
+    end_date_disq: Mapped[datetime.datetime] = mapped_column(DateTime)
+    bornplace: Mapped[str] = mapped_column(String(128))
+    fio_judge: Mapped[str] = mapped_column(String(128))
+    office_judge: Mapped[str] = mapped_column(String(128))
+    legal_name: Mapped[str] = mapped_column(String(128))
+    office: Mapped[str] = mapped_column(String(128))
+    department: Mapped[str] = mapped_column(String(128))
+
+
+class FSSPPreviewTable(Base):
+    __tablename__ = 'fssp_preview'
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    response_id: Mapped[int] = mapped_column(Integer)
+    type: Mapped[str] = mapped_column(String(128))
+    type_sum: Mapped[int] = mapped_column(Integer)
+    type_count: Mapped[int] = mapped_column(Integer)
+
+
+class FSSPFullTable(Base):
+    __tablename__ = 'fssp_full'
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    ip: Mapped[str] = mapped_column(String(128))
+    fio: Mapped[str] = mapped_column(String(128))
+    rosp: Mapped[str] = mapped_column(String(128))
+    type_ip: Mapped[str] = mapped_column(String(128))
+    summ: Mapped[int] = mapped_column(Integer)
+    rekv: Mapped[str] = mapped_column(String(128))
+    end_cause: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    pristav: Mapped[str] = mapped_column(String(128))
+    pristav_phones: Mapped[str] = mapped_column(String(128))
+    response_id: Mapped[int] = mapped_column(Integer)
+
+
+class MLIndexFullTable(Base):
+    __tablename__ = 'ml_index_full'
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id'))
+
+    scoring: Mapped[float] = mapped_column(Numeric)
+    errors: Mapped[str] = mapped_column(Text)
+    progress: Mapped[float] = mapped_column(Numeric)
+    popularity_full: Mapped[float] = mapped_column(Numeric)
+    popularity_short: Mapped[float] = mapped_column(Numeric)
