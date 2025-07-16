@@ -13,13 +13,13 @@ class MLIndex:
             person_uuid (str): uuid человека
 
         Returns:
-            int: Результат запроса
+            dict: Результат запроса
         """
         link = (f"http://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-scoring.json?event=scoring")
         response = await BaseAuthIRBIS.get_response(link)
 
-        full_data: Optional[dict] = dict()
+        full_data: dict = dict()
 
         if response is not None:
             full_data = response
