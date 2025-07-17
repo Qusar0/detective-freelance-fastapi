@@ -267,31 +267,28 @@ class NameSearchTask(BaseSearchTask):
         await self.save_raw_results(all_raw_data, db)
 
     async def save_raw_results(self, raw_data, db):
-        """Сохраняет результаты поиска в таблицу queries_data"""
+        """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
         try:
-            found_info = []
-            found_links = []
-
             for item in raw_data:
                 title = item.get('title', '')
                 snippet = item.get('snippet', '')
+                url = item.get('url')
 
+                info = ""
                 if title or snippet:
                     info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
-                    found_info.append(info)
 
-                if item.get('url'):
-                    found_links.append(item['url'])
+                query_data = QueriesData(
+                    query_id=self.query_id,
+                    found_info=info if info else "No information found",
+                    found_links=[url] if url else [],
+                )
 
-            query_data = QueriesData(
-                query_id=self.query_id,
-                found_info="\n".join(found_info) if found_info else "No information found",
-                found_links=found_links if found_links else [],
-            )
+                db.add(query_data)
+                logging.info(f"Processing item - Title: {title}, URL: {url}")
 
-            db.add(query_data)
             await db.commit()
-            logging.info(f"Raw data saved for query {self.query_id}")
+            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
         except Exception as e:
             logging.error(f"Failed to save raw results: {e}")
