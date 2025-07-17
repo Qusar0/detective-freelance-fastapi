@@ -687,8 +687,67 @@ class CourtGeneralJurFullTable(Base):  # todo: доделать эту табл�
         primary_key=True,
         autoincrement=True
     )
+    headers: Mapped[Optional['CourtGeneralHeaderTable']] = relationship(
+        back_populates='case', cascade="all, delete-orphan", uselist=False
+    )
+
+    faces: Mapped[List['CourtGeneralFacesTable']] = relationship(
+        back_populates='case', cascade="all, delete-orphan"
+    )
+
+    progress: Mapped[List['CourtGeneralProgressTable']] = relationship(
+        back_populates='case', cascade="all, delete-orphan"
+    )
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+
+class CourtGeneralHeaderTable(Base):
+    __tablename__ = 'court_general_header'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
+
+    case_number: Mapped[str] = mapped_column(String)
+    region: Mapped[int] = mapped_column(Integer)
+    court_name: Mapped[str] = mapped_column(String)
+    process_type: Mapped[str] = mapped_column(String(1))
+    start_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    end_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    review: Mapped[Optional[int]] = mapped_column(Integer)
+    judge: Mapped[Optional[str]] = mapped_column(String)
+
+    articles: Mapped[Optional[list[str]]] = mapped_column(JSONB)
+    papers: Mapped[Optional[list[str]]] = mapped_column(JSONB)
+    papers_pretty: Mapped[Optional[list[str]]] = mapped_column(JSONB)
+    links: Mapped[Optional[dict[str, list[str]]]] = mapped_column(JSONB)
+
+    case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='headers')
+
+class CourtGeneralFacesTable(Base):
+    __tablename__ = 'court_general_faces'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
+
+    role: Mapped[str] = mapped_column(String)
+    role_name: Mapped[str] = mapped_column(String)
+    face: Mapped[str] = mapped_column(String)
+
+    case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='faces')
+
+class CourtGeneralProgressTable(Base):
+    __tablename__ = 'court_general_progress'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
+
+    progress_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    status: Mapped[Optional[str]] = mapped_column(String)
+    note: Mapped[Optional[str]] = mapped_column(String)
+
+    case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='progress')
+
+
 
 
 class DepositsPreviewTable(Base):
@@ -725,6 +784,51 @@ class DepositsFullTable(Base):  # todo: доделать эту таблицу, 
     pledge_count: Mapped[int] = mapped_column(Integer)
     pledge_type: Mapped[str] = mapped_column(String(64))
     response_id: Mapped[int] = mapped_column(Integer)
+
+    # Relationships
+    parties: Mapped[List['DepositsPartiesTable']] = relationship(
+        back_populates='deposit',
+        cascade='all, delete-orphan'
+    )
+    pledges: Mapped[List['DepositsPledgeObjectTable']] = relationship(
+        back_populates='deposit',
+        cascade='all, delete-orphan'
+    )
+
+class DepositsPartiesTable(Base):
+    __tablename__ = 'deposits_parties'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    deposit_id: Mapped[int] = mapped_column(ForeignKey('deposits_full.id', ondelete='CASCADE'))
+
+    # Общие поля
+    name: Mapped[str] = mapped_column(String)
+    external_id: Mapped[int] = mapped_column(Integer)
+    type: Mapped[str] = mapped_column(String(16))  # 'pledger' | 'pledgee'
+    subtype: Mapped[str] = mapped_column(String(16))  # 'people' | 'org'
+
+    # Только для subtype = 'people'
+    birth_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+
+    # Только для subtype = 'org'
+    inn: Mapped[Optional[str]] = mapped_column(String(20))
+    ogrn: Mapped[Optional[str]] = mapped_column(String(20))
+
+    deposit: Mapped['DepositsFullTable'] = relationship(back_populates='parties')
+
+
+class DepositsPledgeObjectTable(Base):
+    __tablename__ = 'deposits_pledges'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    deposit_id: Mapped[int] = mapped_column(ForeignKey('deposits_full.id', ondelete='CASCADE'))
+
+    pledge_id_name: Mapped[str] = mapped_column(String(64))
+    pledge_id: Mapped[str] = mapped_column(String(128))
+    pledge_type: Mapped[str] = mapped_column(String(128))
+    external_id: Mapped[int] = mapped_column(Integer)
+
+    deposit: Mapped['DepositsFullTable'] = relationship(back_populates='pledges')
 
 
 class DisqualifiedPersonPreviewTable(Base):
@@ -860,7 +964,7 @@ class PartInOrgPreviewTable(Base):
         back_populates='part_in_org_preview')
 
 
-class PartInOrgFullTable(Base):  # todo: доделать эту таблицу, она большая
+class PartInOrgFullTable(Base):  # todo: доделать эту таблицу, она большая (тут надо посмотреть и делать поля односложных json/еще 4 таблицы)
     __tablename__ = 'part_in_org_full'
     id: Mapped[int] = mapped_column(
         Integer,
