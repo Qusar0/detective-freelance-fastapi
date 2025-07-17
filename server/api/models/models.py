@@ -717,8 +717,8 @@ class CourtGeneralHeaderTable(Base):
     judge: Mapped[Optional[str]] = mapped_column(String)
 
     articles: Mapped[Optional[list[str]]] = mapped_column(JSONB)
-    papers: Mapped[Optional[list[str]]] = mapped_column(JSONB)
-    papers_pretty: Mapped[Optional[list[str]]] = mapped_column(JSONB)
+    papers: Mapped[Optional[list[str]]] = mapped_column(String)
+    papers_pretty: Mapped[Optional[list[str]]] = mapped_column(String)
     links: Mapped[Optional[dict[str, list[str]]]] = mapped_column(JSONB)
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='headers')
@@ -732,6 +732,8 @@ class CourtGeneralFacesTable(Base):
     role: Mapped[str] = mapped_column(String)
     role_name: Mapped[str] = mapped_column(String)
     face: Mapped[str] = mapped_column(String)
+    papers: Mapped[Optional[list[str]]] = mapped_column(String)
+    papers_pretty: Mapped[Optional[list[str]]] = mapped_column(String)
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='faces')
 
@@ -744,6 +746,7 @@ class CourtGeneralProgressTable(Base):
     progress_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
     status: Mapped[Optional[str]] = mapped_column(String)
     note: Mapped[Optional[str]] = mapped_column(String)
+
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='progress')
 
@@ -977,6 +980,71 @@ class PartInOrgFullTable(Base):  # todo: доделать эту таблицу,
     count: Mapped[float] = mapped_column(Numeric)
     part_type: Mapped[str] = mapped_column(String(128))
 
+        # Relationships
+    org: Mapped[Optional['PartInOrgOrgTable']] = relationship(
+        back_populates='part',
+        cascade='all, delete-orphan',
+        uselist=False
+    )
+
+    individual: Mapped[Optional['PartInOrgIndividualTable']] = relationship(
+        back_populates='part',
+        cascade='all, delete-orphan',
+        uselist=False
+    )
+
+class PartInOrgOrgTable(Base):
+    __tablename__ = 'part_in_org_org'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    part_id: Mapped[int] = mapped_column(
+        ForeignKey('part_in_org_full.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(String)
+    inn: Mapped[str] = mapped_column(String(20))
+    ogrn: Mapped[Optional[str]] = mapped_column(String(20))
+    adress: Mapped[str] = mapped_column(String(200))
+
+    okved: Mapped[Optional[dict]] = mapped_column(JSONB)
+
+    part: Mapped['PartInOrgFullTable'] = relationship(back_populates='org')
+
+class PartInOrgIndividualTable(Base):
+    __tablename__ = 'part_in_org_individual'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    part_id: Mapped[int] = mapped_column(
+        ForeignKey('part_in_org_full.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(String)
+    inn: Mapped[str] = mapped_column(String(20))
+
+    part: Mapped['PartInOrgFullTable'] = relationship(back_populates='individual')
+
+    roles: Mapped[List['PartInOrgRoleTable']] = relationship(
+        back_populates='individual',
+        cascade='all, delete-orphan'
+    )
+
+class PartInOrgRoleTable(Base):
+    __tablename__ = 'part_in_org_roles'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    individual_id: Mapped[int] = mapped_column(
+        ForeignKey('part_in_org_individual.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(String)
+    active: Mapped[bool] = mapped_column(Boolean)
+
+    individual: Mapped['PartInOrgIndividualTable'] = relationship(back_populates='roles')
+
+
 
 class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу, она большая
     __tablename__ = 'tax_arrears_full'
@@ -987,6 +1055,39 @@ class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу
     )
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+
+    provider: Mapped[str] = mapped_column(String(128))
+
+    money_name: Mapped[str] = mapped_column(String(8))  # Например: RUB
+    money_code: Mapped[int] = mapped_column(Integer)    # Например: 643
+    money_value: Mapped[float] = mapped_column(Numeric(15, 2))
+
+    # Relationship
+    fields: Mapped[List['TaxArrearsFieldTable']] = relationship(
+        back_populates='arrear',
+        cascade='all, delete-orphan'
+    )
+
+class TaxArrearsFieldTable(Base):
+    __tablename__ = 'tax_arrears_fields'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    arrear_id: Mapped[int] = mapped_column(
+        ForeignKey('tax_arrears_full.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    type: Mapped[str] = mapped_column(String(32))  # "info" или "payment"
+
+    field_id: Mapped[str] = mapped_column(String(64))
+    field_name: Mapped[str] = mapped_column(String(256))
+    field_type: Mapped[str] = mapped_column(String(32))
+    value: Mapped[str] = mapped_column(Text)
+
+    # Обратная связь
+    arrear: Mapped['TaxArrearsFullTable'] = relationship(back_populates='fields')
+
 
 
 class TerrorListFullTable(Base):
