@@ -450,6 +450,11 @@ class PersonsUUID(Base):
         autoincrement=True,
     )
 
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
     person_uuid: Mapped[str] = mapped_column(String(64))
 
     arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(
@@ -474,8 +479,6 @@ class PersonsUUID(Base):
         'DepositsPreviewTable', back_populates='uid_relation')
     # arbit_court_preview: Mapped[List['DepositsFullTable']] = relationship(
     #     'DepositsFullTable', back_populates='uid_relation')
-    disqualified_preview: Mapped[List['DisqualifiedPersonPreviewTable']] = relationship(
-        'DisqualifiedPersonPreviewTable', back_populates='uid_relation')
     disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(
         'DisqualifiedPersonFullTable', back_populates='uid_relation')
     fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(

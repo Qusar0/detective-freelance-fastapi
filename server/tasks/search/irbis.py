@@ -5,6 +5,7 @@ from celery import shared_task
 
 from server.api.IRBIS_parser.arbitration_court import ArbitrationCourt
 from server.api.IRBIS_parser.bankruptcy import Bankruptcy
+from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 from server.api.IRBIS_parser.corruption import Corruption
 from server.api.IRBIS_parser.court_of_general_jurisdiction import CourtGeneralJurisdiction
 from server.api.IRBIS_parser.deposits import Deposits
@@ -14,20 +15,18 @@ from server.api.IRBIS_parser.ml_index import MLIndex
 from server.api.IRBIS_parser.participation_in_organization import ParticipationOrganization
 from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.IRBIS_parser.terror_list import TerrorList
-from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
+from server.api.models.models import (
+    ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
+    BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
+    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, DepositsPreviewTable, DisqualifiedPersonFullTable,
+    FSSPPreviewTable, FSSPFullTable, MLIndexFullTable, PartInOrgPreviewTable,
+    TerrorListFullTable, PersonsUUID
+)
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.celery_config import (
     get_event_loop,
 )
 from server.tasks.logger import SearchLogger
-
-from server.api.models.models import (
-    ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
-    BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
-    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, DepositsPreviewTable, DisqualifiedPersonPreviewTable,
-    DisqualifiedPersonFullTable, FSSPPreviewTable, FSSPFullTable, MLIndexFullTable, PartInOrgPreviewTable,
-    TerrorListFullTable
-)
 
 
 @dataclass
@@ -67,7 +66,7 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _process_search(self, db):
         person_uuid = await self.person.get_person_uuid()
-        arbitr_preview_name, arbitr_preview_inn, arbitr_full = await self._arbitration_court_data(person_uuid)
+        arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
         bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
         corruption_preview, corruption_full = await self._corruption_data(person_uuid)
         court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
@@ -79,10 +78,36 @@ class IrbisSearchTask(BaseSearchTask):
         tax_areas_full = await self._tax_areas_data(person_uuid)
         terror_list_full = await self._terror_list_data(person_uuid)
 
+        person = PersonsUUID(
+            query_id=self.query_id,
+            person_uuid=person_uuid,
+            arbit_court_preview=arbitr_preview,
+            arbit_court_full=arbitr_full,
+            bankruptcy_preview=bankruptcy_preview,
+            bankruptcy_full=bankruptcy_full,
+            corruption_preview=corruption_preview,
+            corruption_full=corruption_full,
+            court_gen_preview=court_gen_preview,
+            court_gen_categorial=court_gen_category,
+
+            deposits_preview=deposits_preview,
+            disqualified_full=disqualified_full,
+            fssp_preview=fssp_preview,
+            fssp_full=fssp_full,
+            mlindex_full=mlindex_full,
+            part_in_org_preview=part_in_org_preview,
+
+            terror_list_preview=terror_list_full
+        )
+
+        db.add(person)
+        await db.commit()
+
     async def _update_balances(self, db):
         pass
 
-    async def _arbitration_court_data(self, person_uuid: str):
+    @staticmethod
+    async def _arbitration_court_data(person_uuid: str):
         data_preview_name, data_preview_inn = await ArbitrationCourt.get_data_preview(person_uuid)
         full_data = await ArbitrationCourt.get_full_data(person_uuid, 1, 50, 'all')
 
@@ -105,9 +130,10 @@ class IrbisSearchTask(BaseSearchTask):
             )
             arbitr_full.append(obj)
 
-        return arbitr_preview_name, arbitr_preview_inn, arbitr_full
+        return [arbitr_preview_name, arbitr_preview_inn], arbitr_full
 
-    async def _bankruptcy_data(self, person_uuid: str):
+    @staticmethod
+    async def _bankruptcy_data(person_uuid: str):
         data_preview_name, data_preview_inn = await Bankruptcy.get_data_preview(person_uuid)
         full_data_fio = await Bankruptcy.get_full_data(person_uuid, 1, 50, 'name')
         full_data_inn = await Bankruptcy.get_full_data(person_uuid, 1, 50, 'inn')
@@ -152,7 +178,8 @@ class IrbisSearchTask(BaseSearchTask):
 
         return bankruptcy_preview, bankruptcy_full
 
-    async def _corruption_data(self, person_uuid: str):
+    @staticmethod
+    async def _corruption_data(person_uuid: str):
         data_preview = await Corruption.get_data_preview(person_uuid)
         full_data = await Corruption.get_full_data(person_uuid, 1, 50)
         corruption_preview = CorruptionPreviewTable(count=data_preview)
@@ -171,7 +198,8 @@ class IrbisSearchTask(BaseSearchTask):
             corruption_full.append(obj)
         return corruption_preview, corruption_full
 
-    async def _court_of_gen_jur_data(self, person_uuid: str):
+    @staticmethod
+    async def _court_of_gen_jur_data(person_uuid: str):
         full_fio_data_preview, short_fio_data_preview = await CourtGeneralJurisdiction.get_data_preview(
             person_uuid, "", "all"
         )
@@ -223,7 +251,8 @@ class IrbisSearchTask(BaseSearchTask):
         court_gen_full = []
         return court_gen_preview, court_gen_category, court_gen_full
 
-    async def _deposits_data(self, person_uuid: str):
+    @staticmethod
+    async def _deposits_data(person_uuid: str):
         data_preview = await Deposits.get_data_preview(person_uuid)
         full_data = await Deposits.get_full_data(person_uuid, 1, 50)
 
@@ -239,8 +268,8 @@ class IrbisSearchTask(BaseSearchTask):
         deposits_full = []
         return deposits_preview, deposits_full
 
-    async def _disqualified_pers_data(self, person_uuid: str):
-        data_preview = await DisqualifiedPersons.get_data_preview(person_uuid)
+    @staticmethod
+    async def _disqualified_pers_data(person_uuid: str):
         full_data = await DisqualifiedPersons.get_full_data(person_uuid, 1, 50)
 
         disqualified_full = []
@@ -263,7 +292,8 @@ class IrbisSearchTask(BaseSearchTask):
             disqualified_full.append(obj)
         return disqualified_full
 
-    async def _fssp_data(self, person_uuid: str):
+    @staticmethod
+    async def _fssp_data(person_uuid: str):
         data_preview = await FSSP.get_data_preview(person_uuid)
         data_full = await FSSP.get_full_data(person_uuid, 1, 50)
 
@@ -294,7 +324,8 @@ class IrbisSearchTask(BaseSearchTask):
             fssp_full.append(obj)
         return fssp_preview, fssp_full
 
-    async def _ml_index_data(self, person_uuid: str):
+    @staticmethod
+    async def _ml_index_data(person_uuid: str):
         full_data = await MLIndex.get_full_data(person_uuid)
         mlindex_full = MLIndexFullTable(
             scoring=full_data.get("scoring", 0),
@@ -305,7 +336,8 @@ class IrbisSearchTask(BaseSearchTask):
         )
         return mlindex_full
 
-    async def _part_in_org_data(self, person_uuid: str):
+    @staticmethod
+    async def _part_in_org_data(person_uuid: str):
         data_preview_all, data_preview_selected = await ParticipationOrganization.get_data_preview(person_uuid)
         full_data = await ParticipationOrganization.get_full_data(
             person_uuid,
@@ -331,14 +363,15 @@ class IrbisSearchTask(BaseSearchTask):
             part_in_org_preview.append(obj)
         return part_in_org_preview, part_in_org_full
 
-    async def _tax_areas_data(self, person_uuid: str):
+    @staticmethod
+    async def _tax_areas_data(person_uuid: str):
         full_data = await TaxArrears.get_full_data(person_uuid)
 
         tax_areas_full = []
         return tax_areas_full
 
-    async def _terror_list_data(self, person_uuid: str):
-        data_preview = await TerrorList.get_data_preview(person_uuid)
+    @staticmethod
+    async def _terror_list_data(person_uuid: str):
         full_data = await TerrorList.get_full_data(person_uuid, 1, 50)
         terror_list_full = []
         for item in full_data:
