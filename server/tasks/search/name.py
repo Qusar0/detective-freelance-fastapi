@@ -286,7 +286,6 @@ class NameSearchTask(BaseSearchTask):
 
                 db.add(query_data)
                 logging.info(f"Processing item - Title: {title}, URL: {url}")
-
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
