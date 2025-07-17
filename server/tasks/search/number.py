@@ -78,7 +78,7 @@ class NumberSearchTask(BaseSearchTask):
             for item in raw_data:
                 title = item.get('raw_title', '') or item.get('title', '')
                 snippet = item.get('raw_snippet', '') or item.get('snippet', '')
-                url = item.get('url')
+                url = item.get('url', '')
 
                 info = ""
                 if title or snippet:
@@ -87,7 +87,7 @@ class NumberSearchTask(BaseSearchTask):
                 query_data = QueriesData(
                     query_id=self.query_id,
                     found_info=info if info else "No information found",
-                    found_links=[url] if url else [],
+                    found_links=url if url else "No links found",
                 )
 
                 db.add(query_data)

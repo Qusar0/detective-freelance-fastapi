@@ -458,7 +458,7 @@ class QueriesData(Base):
         nullable=False,
     )
     found_info: Mapped[Optional[str]] = mapped_column(Text)
-    found_links: Mapped[Optional[List[str]]] = mapped_column(JSONB)
+    found_links: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

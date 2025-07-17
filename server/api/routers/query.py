@@ -556,26 +556,16 @@ async def get_query_data(
             .where(QueriesData.query_id == query_id)
             .order_by(QueriesData.created_at.desc())
         )
-        query_data = data_result.scalars().first()
+        query_data = data_result.scalars().all()
 
         if not query_data:
             raise HTTPException(status_code=404, detail="Данные запроса не найдены")
 
         results = []
 
-        if isinstance(query_data.found_info, str):
-            infos = [info.strip() for info in query_data.found_info.split('\n') if info.strip()]
-            links = query_data.found_links or []
-
-            for i, info in enumerate(infos):
-                result = {"info": info}
-                if i < len(links):
-                    result["url"] = links[i]
-                results.append(result)
-
-        elif query_data.found_links:
-            results = [{"url": link} for link in query_data.found_links]
-
+        for item in query_data:
+            result = {"info": item.found_info.strip(), "url": item.found_links}
+            results.append(result)
         return results
 
     except HTTPException:
