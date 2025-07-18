@@ -457,44 +457,29 @@ class PersonsUUID(Base):
 
     person_uuid: Mapped[str] = mapped_column(String(64))
 
-    arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(
-        'ArbitrationCourtPreviewTable', back_populates='uid_relation')
-    arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(
-        'ArbitrationCourtPreviewTable', back_populates='uid_relation')
-    bankruptcy_preview: Mapped[List['BankruptcyPreviewTable']] = relationship(
-        'BankruptcyPreviewTable', back_populates='uid_relation')
-    bankruptcy_full: Mapped[List['BankruptcyFullTable']] = relationship(
-        'BankruptcyFullTable', back_populates='uid_relation')
-    corruption_preview: Mapped[List['CorruptionPreviewTable']] = relationship(
-        'CorruptionPreviewTable', back_populates='uid_relation')
-    corruption_full: Mapped[List['CorruptionFullTable']] = relationship(
-        'CorruptionFullTable', back_populates='uid_relation')
-    court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(
-        'CourtGeneralJurPreviewTable', back_populates='uid_relation')
-    court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(
-        'CourtGeneralJurCategoricalTable', back_populates='uid_relation')
+    arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(back_populates='uid_relation')
+    arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='uid_relation')
+    bankruptcy_preview: Mapped['BankruptcyPreviewTable'] = relationship(back_populates='uid_relation')
+    bankruptcy_full: Mapped[List['BankruptcyFullTable']] = relationship(back_populates='uid_relation')
+    corruption_preview: Mapped['CorruptionPreviewTable'] = relationship(back_populates='uid_relation')
+    corruption_full: Mapped[List['CorruptionFullTable']] = relationship(back_populates='uid_relation')
+    court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(back_populates='uid_relation')
+    court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(back_populates='uid_relation')
     # arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(
     #     'ArbitrationCourtPreviewTable', back_populates='uid_relation')
-    deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(
-        'DepositsPreviewTable', back_populates='uid_relation')
+    deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(back_populates='uid_relation')
     # arbit_court_preview: Mapped[List['DepositsFullTable']] = relationship(
     #     'DepositsFullTable', back_populates='uid_relation')
-    disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(
-        'DisqualifiedPersonFullTable', back_populates='uid_relation')
-    fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(
-        'FSSPPreviewTable', back_populates='uid_relation')
-    fssp_full: Mapped[List['FSSPFullTable']] = relationship(
-        'FSSPFullTable', back_populates='uid_relation')
-    mlindex_full: Mapped[List['MLIndexFullTable']] = relationship(
-        'MLIndexFullTable', back_populates='uid_relation')
-    part_in_org_preview: Mapped[List['PartInOrgPreviewTable']] = relationship(
-        'PartInOrgPreviewTable', back_populates='uid_relation')
+    disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(back_populates='uid_relation')
+    fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(back_populates='uid_relation')
+    fssp_full: Mapped[List['FSSPFullTable']] = relationship(back_populates='uid_relation')
+    mlindex_full: Mapped['MLIndexFullTable'] = relationship(back_populates='uid_relation')
+    part_in_org_preview: Mapped[List['PartInOrgPreviewTable']] = relationship(back_populates='uid_relation')
     # mlindex_full: Mapped[List['MLIndexFullTable']] = relationship(
     #     'MLIndexFullTable', back_populates='uid_relation')
     # mlindex_full: Mapped[List['MLIndexFullTable']] = relationship(
     #     'MLIndexFullTable', back_populates='uid_relation')
-    terror_list_preview: Mapped[List['TerrorListFullTable']] = relationship(
-        'TerrorListFullTable', back_populates='uid_relation')
+    terror_list_preview: Mapped[List['TerrorListFullTable']] = relationship(back_populates='uid_relation')
 
 
 class ArbitrationCourtPreviewTable(Base):
@@ -530,7 +515,7 @@ class ArbitrationCourtFullTable(Base):
 
     court_name_val: Mapped[str] = mapped_column(String(64))
     role: Mapped[str] = mapped_column(String(1))
-    case_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    case_date: Mapped[str] = mapped_column(String(64))
     case_id: Mapped[str] = mapped_column(String(64))
     inn: Mapped[Optional[int]] = mapped_column(Integer)
     name: Mapped[str] = mapped_column(String(64))
@@ -576,7 +561,7 @@ class BankruptcyFullTable(Base):
     first_name: Mapped[str] = mapped_column(String(64))
     second_name: Mapped[str] = mapped_column(String(64))
     last_name: Mapped[str] = mapped_column(String(64))
-    birth_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    birth_date: Mapped[str] = mapped_column(String(64))
     born_place: Mapped[str] = mapped_column(String(256))
     inn: Mapped[str] = mapped_column(String(64))
     ogrn: Mapped[str] = mapped_column(String(64))
@@ -627,8 +612,8 @@ class CorruptionFullTable(Base):
     organization: Mapped[str] = mapped_column(String(256))
     position: Mapped[str] = mapped_column(String(256))
     normative_act: Mapped[str] = mapped_column(String(256))
-    application_date: Mapped[datetime.datetime] = mapped_column(DateTime)
-    publish_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    application_date: Mapped[str] = mapped_column(String(64))
+    publish_date: Mapped[str] = mapped_column(String(64))
     excluded_reason: Mapped[str] = mapped_column(String(256))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
@@ -701,6 +686,7 @@ class CourtGeneralJurFullTable(Base):  # todo: доделать эту табл�
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
+
 class CourtGeneralHeaderTable(Base):
     __tablename__ = 'court_general_header'
 
@@ -711,8 +697,8 @@ class CourtGeneralHeaderTable(Base):
     region: Mapped[int] = mapped_column(Integer)
     court_name: Mapped[str] = mapped_column(String)
     process_type: Mapped[str] = mapped_column(String(1))
-    start_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
-    end_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    start_date: Mapped[str] = mapped_column(String(64))
+    end_date: Mapped[str] = mapped_column(String(64))
     review: Mapped[Optional[int]] = mapped_column(Integer)
     judge: Mapped[Optional[str]] = mapped_column(String)
 
@@ -722,6 +708,7 @@ class CourtGeneralHeaderTable(Base):
     links: Mapped[Optional[dict[str, list[str]]]] = mapped_column(JSONB)
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='headers')
+
 
 class CourtGeneralFacesTable(Base):
     __tablename__ = 'court_general_faces'
@@ -737,20 +724,18 @@ class CourtGeneralFacesTable(Base):
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='faces')
 
+
 class CourtGeneralProgressTable(Base):
     __tablename__ = 'court_general_progress'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
 
-    progress_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    progress_date: Mapped[str] = mapped_column(String(64))
     status: Mapped[Optional[str]] = mapped_column(String)
     note: Mapped[Optional[str]] = mapped_column(String)
 
-
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='progress')
-
-
 
 
 class DepositsPreviewTable(Base):
@@ -798,6 +783,7 @@ class DepositsFullTable(Base):  # todo: доделать эту таблицу, 
         cascade='all, delete-orphan'
     )
 
+
 class DepositsPartiesTable(Base):
     __tablename__ = 'deposits_parties'
 
@@ -811,7 +797,7 @@ class DepositsPartiesTable(Base):
     subtype: Mapped[str] = mapped_column(String(16))  # 'people' | 'org'
 
     # Только для subtype = 'people'
-    birth_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    birth_date: Mapped[str] = mapped_column(String(64))
 
     # Только для subtype = 'org'
     inn: Mapped[Optional[str]] = mapped_column(String(20))
@@ -865,11 +851,11 @@ class DisqualifiedPersonFullTable(Base):
 
     response_id: Mapped[int] = mapped_column(Integer)
     reestr_key: Mapped[str] = mapped_column(String(128))
-    birth_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+    birth_date: Mapped[str] = mapped_column(String(64))
     fio: Mapped[str] = mapped_column(String(128))
     article: Mapped[str] = mapped_column(String(128))
-    start_date_disq: Mapped[datetime.datetime] = mapped_column(DateTime)
-    end_date_disq: Mapped[datetime.datetime] = mapped_column(DateTime)
+    start_date_disq: Mapped[str] = mapped_column(String(64))
+    end_date_disq: Mapped[str] = mapped_column(String(64))
     bornplace: Mapped[str] = mapped_column(String(128))
     fio_judge: Mapped[str] = mapped_column(String(128))
     office_judge: Mapped[str] = mapped_column(String(128))
@@ -918,7 +904,7 @@ class FSSPFullTable(Base):
     type_ip: Mapped[str] = mapped_column(String(128))
     summ: Mapped[float] = mapped_column(Numeric)
     rekv: Mapped[str] = mapped_column(String(128))
-    end_cause: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    end_cause: Mapped[str] = mapped_column(String(64))
     pristav: Mapped[str] = mapped_column(String(128))
     pristav_phones: Mapped[str] = mapped_column(String(128))
     response_id: Mapped[int] = mapped_column(Integer)
@@ -980,7 +966,7 @@ class PartInOrgFullTable(Base):  # todo: доделать эту таблицу,
     count: Mapped[float] = mapped_column(Numeric)
     part_type: Mapped[str] = mapped_column(String(128))
 
-        # Relationships
+    # Relationships
     org: Mapped[Optional['PartInOrgOrgTable']] = relationship(
         back_populates='part',
         cascade='all, delete-orphan',
@@ -992,6 +978,7 @@ class PartInOrgFullTable(Base):  # todo: доделать эту таблицу,
         cascade='all, delete-orphan',
         uselist=False
     )
+
 
 class PartInOrgOrgTable(Base):
     __tablename__ = 'part_in_org_org'
@@ -1010,6 +997,7 @@ class PartInOrgOrgTable(Base):
     okved: Mapped[Optional[dict]] = mapped_column(JSONB)
 
     part: Mapped['PartInOrgFullTable'] = relationship(back_populates='org')
+
 
 class PartInOrgIndividualTable(Base):
     __tablename__ = 'part_in_org_individual'
@@ -1030,6 +1018,7 @@ class PartInOrgIndividualTable(Base):
         cascade='all, delete-orphan'
     )
 
+
 class PartInOrgRoleTable(Base):
     __tablename__ = 'part_in_org_roles'
 
@@ -1043,7 +1032,6 @@ class PartInOrgRoleTable(Base):
     active: Mapped[bool] = mapped_column(Boolean)
 
     individual: Mapped['PartInOrgIndividualTable'] = relationship(back_populates='roles')
-
 
 
 class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу, она большая
@@ -1068,6 +1056,7 @@ class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу
         cascade='all, delete-orphan'
     )
 
+
 class TaxArrearsFieldTable(Base):
     __tablename__ = 'tax_arrears_fields'
 
@@ -1089,7 +1078,6 @@ class TaxArrearsFieldTable(Base):
     arrear: Mapped['TaxArrearsFullTable'] = relationship(back_populates='fields')
 
 
-
 class TerrorListFullTable(Base):
     __tablename__ = 'terror_list_full'
     id: Mapped[int] = mapped_column(
@@ -1102,7 +1090,7 @@ class TerrorListFullTable(Base):
 
     response_id: Mapped[str] = mapped_column(String(128))
     fio: Mapped[str] = mapped_column(String(128))
-    birth_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    birth_date: Mapped[str] = mapped_column(String(64))
     birth_place: Mapped[str] = mapped_column(String(128))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
