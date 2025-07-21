@@ -18,9 +18,13 @@ from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.models import (
     ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
     BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
-    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, DepositsPreviewTable, DisqualifiedPersonFullTable,
-    FSSPPreviewTable, FSSPFullTable, MLIndexFullTable, PartInOrgPreviewTable,
-    TerrorListFullTable, PersonsUUID
+    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, CourtGeneralHeaderTable, CourtGeneralFacesTable, CourtGeneralProgressTable, CourtGeneralJurFullTable,
+    DepositsPreviewTable, DepositsFullTable, DepositsPartiesTable, DepositsPledgeObjectTable,
+    DisqualifiedPersonFullTable,
+    FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
+    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrgTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    TerrorListFullTable, PersonsUUID,
+    TaxArrearsFullTable, TaxArrearsFieldTable
 )
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.celery_config import (
@@ -89,13 +93,18 @@ class IrbisSearchTask(BaseSearchTask):
             corruption_full=corruption_full,
             court_gen_preview=court_gen_preview,
             court_gen_categorial=court_gen_category,
+            court_gen_full = court_gen_full,
 
             deposits_preview=deposits_preview,
+            deposits_full = deposits_full,
             disqualified_full=disqualified_full,
             fssp_preview=fssp_preview,
             fssp_full=fssp_full,
             mlindex_full=mlindex_full,
             part_in_org_preview=part_in_org_preview,
+            part_in_org_full=part_in_org_full,
+
+            tax_arrears_full=tax_areas_full,
 
             terror_list_preview=terror_list_full
         )
@@ -249,6 +258,55 @@ class IrbisSearchTask(BaseSearchTask):
             strategy='all'
         )
         court_gen_full = []
+        for case_data in full_data:
+            header_data = case_data.get("header", {})
+
+            header = CourtGeneralHeaderTable(
+                case_number=header_data.get("case_number"),
+                region=header_data.get("region"),
+                court_name=header_data.get("court_name"),
+                process_type=header_data.get("process_type"),
+                start_date=header_data.get("start_date"),
+                end_date=header_data.get("end_date")  or "to date",
+                review=header_data.get("review"),
+                judge=header_data.get("judge"),
+                articles=header_data.get("articles", []),
+                papers=", ".join(map(str, header_data.get("papers", []))),
+                papers_pretty=", ".join(map(str, header_data.get("papers_pretty", []))),
+                links=header_data.get("links", {}),
+            )
+
+            faces_data = case_data.get("faces", [])
+            faces = [
+                CourtGeneralFacesTable(
+                    role=face.get("role"),
+                    role_name=face.get("role_name"),
+                    face=face.get("face"),
+                    papers=", ".join(map(str, face.get("papers", []))),
+                    papers_pretty=", ".join(map(str, face.get("papers_pretty", [])))
+                )
+                for face in faces_data
+            ]
+
+            progress_data = case_data.get("progress", [])
+            progress = [
+                CourtGeneralProgressTable(
+                    progress_date=pr.get("progress_date"),
+                    status=pr.get("status"),
+                    note=pr.get("note")
+                )
+                for pr in progress_data
+            ]
+
+            case = CourtGeneralJurFullTable(
+                person_uuid=person_uuid,
+                headers=header,
+                faces=faces,
+                progress=progress
+            )
+
+
+            court_gen_full.append(case)
         return court_gen_preview, court_gen_category, court_gen_full
 
     @staticmethod
@@ -266,6 +324,40 @@ class IrbisSearchTask(BaseSearchTask):
             deposits_preview.append(obj)
 
         deposits_full = []
+        for deposit_info in full_data:
+
+            parties = [
+                DepositsPartiesTable(
+                    name=party.get("name", ""),
+                    external_id=party.get("external_id", 0),
+                    type=party.get("type", ""),
+                    subtype=party.get("subtype", ""),
+                    birth_date=party.get("birth_date", ""),
+                    inn=party.get("inn"),
+                    ogrn=party.get("ogrn")
+                )
+                for party in deposit_info.get("parties", [])
+            ]
+
+            pledges = [
+                DepositsPledgeObjectTable(
+                    pledge_id_name=pledge.get("pledge_id_name", ""),
+                    pledge_id=pledge.get("pledge_id", ""),
+                    pledge_type=pledge.get("pledge_type", ""),
+                    external_id=pledge.get("external_id", 0)
+                )
+                for pledge in deposit_info.get("pledges", [])
+            ]
+
+            obj = DepositsFullTable(
+                person_uuid=person_uuid,
+                pledge_count=deposit_info.get("pledge_count", 0),
+                pledge_type=deposit_info.get("pledge_type", ""),
+                response_id=deposit_info.get("response_id", 0),
+                parties=parties,
+                pledges=pledges
+            )
+            deposits_full.append(obj)
         return deposits_preview, deposits_full
 
     @staticmethod
@@ -361,6 +453,52 @@ class IrbisSearchTask(BaseSearchTask):
                 part_type=item.get("type", None)
             )
             part_in_org_preview.append(obj)
+
+        part_in_org_full = []
+        for entry in full_data:
+
+            org_data = entry.get("org_data")
+            org_obj = None
+            if org_data:
+                org_obj = PartInOrgOrgTable(
+                    name=org_data.get("name", ""),
+                    inn=org_data.get("inn", ""),
+                    ogrn=org_data.get("ogrn"),
+                    adress=org_data.get("adress", ""),
+                    okved=org_data.get("okved")
+                )
+
+
+            individual_data = entry.get("individual_data")
+            individual_obj = None
+            if individual_data:
+
+                roles_data = individual_data.get("roles", [])
+                roles_objs = [
+                    PartInOrgRoleTable(
+                        name=role.get("name", ""),
+                        active=role.get("active", False)
+                    )
+                    for role in roles_data
+                ]
+
+                individual_obj = PartInOrgIndividualTable(
+                    name=individual_data.get("name", ""),
+                    inn=individual_data.get("inn", ""),
+                    roles=roles_objs
+                )
+
+
+            obj = PartInOrgFullTable(
+                person_uuid=person_uuid,
+                filter_type=entry.get("filter_type", ""),
+                count=entry.get("count", 0),
+                part_type=entry.get("part_type", ""),
+                org=org_obj,
+                individual=individual_obj
+            )
+
+            part_in_org_full.append(obj)
         return part_in_org_preview, part_in_org_full
 
     @staticmethod
@@ -368,6 +506,51 @@ class IrbisSearchTask(BaseSearchTask):
         full_data = await TaxArrears.get_full_data(person_uuid)
 
         tax_areas_full = []
+        for arrear_data in full_data:
+
+            provider = arrear_data.get("provider", "")
+            money = arrear_data.get("money", {})
+            currency = money.get("currency", {})
+
+            money_name = currency.get("name", "")
+            money_code = currency.get("code", 0)
+            money_value = money.get("value", 0.0)
+
+            arrear_obj = TaxArrearsFullTable(
+                person_uuid=person_uuid,
+                provider=provider,
+                money_name=money_name,
+                money_code=money_code,
+                money_value=money_value,
+            )
+
+
+            info_fields = arrear_data.get("infoFields", [])
+            for field in info_fields:
+                field_obj = TaxArrearsFieldTable(
+                    type="info",
+                    field_id=field.get("id", ""),
+                    field_name=field.get("name", ""),
+                    field_type=field.get("fieldType", ""),
+                    value=field.get("value", ""),
+                    arrear=arrear_obj
+                )
+                arrear_obj.fields.append(field_obj)
+
+
+            payment_fields = arrear_data.get("paymentFields", [])
+            for field in payment_fields:
+                field_obj = TaxArrearsFieldTable(
+                    type="payment",
+                    field_id=field.get("id", ""),
+                    field_name=field.get("name", ""),
+                    field_type=field.get("fieldType", ""),
+                    value=field.get("value", ""),
+                    arrear=arrear_obj
+                )
+                arrear_obj.fields.append(field_obj)
+
+            tax_areas_full.append(arrear_obj)
         return tax_areas_full
 
     @staticmethod

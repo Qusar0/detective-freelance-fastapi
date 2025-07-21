@@ -465,9 +465,11 @@ class PersonsUUID(Base):
     corruption_full: Mapped[List['CorruptionFullTable']] = relationship(back_populates='uid_relation')
     court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(back_populates='uid_relation')
     court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(back_populates='uid_relation')
+    court_gen_full: Mapped[List['CourtGeneralJurFullTable']] = relationship(back_populates='uid_relation')
     # arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(
     #     'ArbitrationCourtPreviewTable', back_populates='uid_relation')
     deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(back_populates='uid_relation')
+    deposits_full: Mapped[List['DepositsFullTable']] = relationship(back_populates='uid_relation')
     # arbit_court_preview: Mapped[List['DepositsFullTable']] = relationship(
     #     'DepositsFullTable', back_populates='uid_relation')
     disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(back_populates='uid_relation')
@@ -475,6 +477,8 @@ class PersonsUUID(Base):
     fssp_full: Mapped[List['FSSPFullTable']] = relationship(back_populates='uid_relation')
     mlindex_full: Mapped['MLIndexFullTable'] = relationship(back_populates='uid_relation')
     part_in_org_preview: Mapped[List['PartInOrgPreviewTable']] = relationship(back_populates='uid_relation')
+    part_in_org_full: Mapped[List['PartInOrgFullTable']] = relationship(back_populates='uid_relation')
+    tax_arrears_full: Mapped[List['TaxArrearsFullTable']] = relationship(back_populates='uid_relation')
     # mlindex_full: Mapped[List['MLIndexFullTable']] = relationship(
     #     'MLIndexFullTable', back_populates='uid_relation')
     # mlindex_full: Mapped[List['MLIndexFullTable']] = relationship(
@@ -684,6 +688,11 @@ class CourtGeneralJurFullTable(Base):  # todo: доделать эту табл�
         back_populates='case', cascade="all, delete-orphan"
     )
 
+    uid_relation: Mapped['PersonsUUID'] = relationship(
+        'PersonsUUID',
+        back_populates='court_gen_full')
+
+
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
 
@@ -782,7 +791,9 @@ class DepositsFullTable(Base):  # todo: доделать эту таблицу, 
         back_populates='deposit',
         cascade='all, delete-orphan'
     )
-
+    uid_relation: Mapped['PersonsUUID'] = relationship(
+        'PersonsUUID',
+        back_populates='deposits_full')
 
 class DepositsPartiesTable(Base):
     __tablename__ = 'deposits_parties'
@@ -978,7 +989,9 @@ class PartInOrgFullTable(Base):  # todo: доделать эту таблицу,
         cascade='all, delete-orphan',
         uselist=False
     )
-
+    uid_relation: Mapped['PersonsUUID'] = relationship(
+        'PersonsUUID',
+        back_populates='part_in_org_full')
 
 class PartInOrgOrgTable(Base):
     __tablename__ = 'part_in_org_org'
@@ -1055,6 +1068,9 @@ class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу
         back_populates='arrear',
         cascade='all, delete-orphan'
     )
+    uid_relation: Mapped['PersonsUUID'] = relationship(
+        'PersonsUUID',
+        back_populates='tax_arrears_full')
 
 
 class TaxArrearsFieldTable(Base):
