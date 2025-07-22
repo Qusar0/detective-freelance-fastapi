@@ -68,7 +68,7 @@ class Events(Base):
     )
     event_type: Mapped[Optional[str]] = mapped_column(String(50))
     event_status: Mapped[Optional[str]] = mapped_column(String(50))
-    query_id: Mapped[Optional[int]] = mapped_column(
+    query_id: Mapped[int] = mapped_column(
         ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
@@ -291,6 +291,11 @@ class UserQueries(Base):
         back_populates='query',
         cascade='all, delete-orphan',
     )
+    query_data: Mapped['QueriesData'] = relationship(
+        'QueriesData',
+        back_populates='query',
+        cascade='all, delete-orphan',
+    )
 
     events: Mapped['Events'] = relationship('Events', back_populates='query')
 
@@ -438,3 +443,31 @@ class ProhibitedPhoneSites(Base):
 
     def __str__(self):
         return f"Запрещенный сайт для телефонов ({self.site_link})"
+
+
+class QueriesData(Base):
+    __tablename__ = 'queries_data'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    found_info: Mapped[Optional[str]] = mapped_column(Text)
+    found_links: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    query: Mapped['UserQueries'] = relationship(
+        'UserQueries',
+        back_populates='query_data',
+    )
+
+    def __str__(self):
+        return f"Результаты запроса ({self.query_id})"
