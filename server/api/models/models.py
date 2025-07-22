@@ -68,7 +68,7 @@ class Events(Base):
     )
     event_type: Mapped[Optional[str]] = mapped_column(String(50))
     event_status: Mapped[Optional[str]] = mapped_column(String(50))
-    query_id: Mapped[Optional[int]] = mapped_column(
+    query_id: Mapped[int] = mapped_column(
         ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
