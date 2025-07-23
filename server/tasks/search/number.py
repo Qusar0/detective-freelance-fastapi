@@ -6,7 +6,7 @@ from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
-from server.api.scripts.get_contact_script import GetContactService
+from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -17,8 +17,12 @@ from server.tasks.forms.sites import form_google_query, form_yandex_query_num
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
-from server.tasks.services import read_needless_sites, update_stats, write_urls
-from server.tasks.xmlriver import handle_xmlriver_response
+from server.tasks.services import (
+    read_needless_sites,
+    update_stats,
+    write_urls,
+)
+from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
 
 
 class NumberSearchTask(BaseSearchTask):
@@ -29,24 +33,20 @@ class NumberSearchTask(BaseSearchTask):
         self.logger = SearchLogger(self.query_id, 'search_num.log')
 
     async def _process_search(self, db):
-        self.requests_getcontact_left = await ServicesBalanceDAO.get_service_balance(db, 'GetContact')
         items, filters = {}, {}
         lampyre_html, acc_search_html = '', ''
         parsed_data = {}
 
         if 'mentions' in self.methods_type:
             try:
-                items, filters = await self.xmlriver_num_do_request(db)
+                result = await self.xmlriver_num_do_request(db)
+                await self.save_raw_results(result['raw_data'], db)
+
+                items, filters = result['processed_data']
+
             except Exception as e:
                 self.money_to_return += 5
-                print(e)
-
-        if 'tags' in self.methods_type:
-            try:
-                self.requests_getcontact_left, parsed_data = await GetContactService.get_tags_and_data(self.phone_num)
-            except Exception as e:
-                self.money_to_return += 25
-                print(e)
+                logging.error(f"Ошибка в получении упоминаний: {e}")
 
         tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
 
@@ -71,9 +71,36 @@ class NumberSearchTask(BaseSearchTask):
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
-        await ServicesBalanceDAO.renew_getcontact_balance(self.requests_getcontact_left, db)
+
+    async def save_raw_results(self, raw_data, db):
+        """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
+        try:
+            for item in raw_data:
+                title = item.get('raw_title', '') or item.get('title', '')
+                snippet = item.get('raw_snippet', '') or item.get('snippet', '')
+                url = item.get('url', '')
+
+                info = ""
+                if title or snippet:
+                    info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
+
+                query_data = QueriesData(
+                    query_id=self.query_id,
+                    found_info=info if info else "No information found",
+                    found_links=url if url else "No links found",
+                )
+
+                db.add(query_data)
+            await db.commit()
+            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+
+        except Exception as e:
+            logging.error(f"Failed to save raw results: {e}")
+            await db.rollback()
+            raise
 
     async def xmlriver_num_do_request(self, db):
+        all_raw_data = []
         all_found_data = []
         urls = []
         proh_sites = await read_needless_sites(db)
@@ -86,6 +113,8 @@ class NumberSearchTask(BaseSearchTask):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
+                    raw_data = parse_xml_response(response)
+                    all_raw_data.extend(raw_data)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp not in ('500', '110', '111'):
@@ -112,6 +141,8 @@ class NumberSearchTask(BaseSearchTask):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
+                    raw_data = parse_xml_response(response)
+                    all_raw_data.extend(raw_data)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp == '15':
@@ -138,9 +169,11 @@ class NumberSearchTask(BaseSearchTask):
             if handling_resp == '15':
                 break
 
-        items, filters = form_number_response_html(all_found_data, self.phone_num)
         await write_urls(urls, "number")
-        return items, filters
+        return {
+            'raw_data': all_raw_data,
+            'processed_data': form_number_response_html(all_found_data, self.phone_num)
+        }
 
 
 @shared_task(bind=True, acks_late=True)

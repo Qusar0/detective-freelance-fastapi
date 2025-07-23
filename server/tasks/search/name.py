@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple, List
 from threading import Thread
 
@@ -8,6 +9,7 @@ from server.api.dao.text_data import TextDataDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.prohibited_sites import ProhibitedSitesDAO
+from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -218,28 +220,79 @@ class NameSearchTask(BaseSearchTask):
         urls,
         db,
     ):
+        # Создаем очередь для сбора результатов из потоков
+        from queue import Queue
+        results_queue = Queue()
+
+        def worker(input_data, queue):
+            try:
+                url = input_data[0]
+                keyword = input_data[1]
+                keyword_type = input_data[2]
+                name_case = input_data[3]
+
+                raw_data = do_request_to_xmlriver(
+                    url,
+                    all_found_info,
+                    prohibited_sites_list,
+                    keyword,
+                    name_case,
+                    keyword_type,
+                    urls,
+                    self.request_stats,
+                    self.stats_lock,
+                    self.logger
+                )
+                queue.put(raw_data)
+            except Exception as e:
+                self.logger.log_error(f"Error in worker thread: {str(e)}")
+                queue.put([])
+
+        # Запускаем все потоки
         for input_data in request_input_pack:
-            url = input_data[0]
-            keyword = input_data[1]
-            keyword_type = input_data[2]
-            name_case = input_data[3]
-            threads.append(
-                Thread(
-                    target=do_request_to_xmlriver,
-                    args=(
-                        url,
-                        all_found_info,
-                        prohibited_sites_list,
-                        keyword,
-                        name_case,
-                        keyword_type,
-                        urls,
-                        self.request_stats,
-                        self.stats_lock,
-                        self.logger
-                    ),
-                ),
-            )
+            t = Thread(target=worker, args=(input_data, results_queue))
+            threads.append(t)
+            t.start()
+
+        # Ждем завершения всех потоков
+        for t in threads:
+            t.join()
+
+        # Собираем все результаты
+        all_raw_data = []
+        while not results_queue.empty():
+            all_raw_data.extend(results_queue.get())
+
+        # Сохраняем результаты
+        await self.save_raw_results(all_raw_data, db)
+
+    async def save_raw_results(self, raw_data, db):
+        """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
+        try:
+            for item in raw_data:
+                title = item.get('title', '')
+                snippet = item.get('snippet', '')
+                url = item.get('url', '')
+
+                info = ""
+                if title or snippet:
+                    info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
+
+                query_data = QueriesData(
+                    query_id=self.query_id,
+                    found_info=info if info else "No information found",
+                    found_links=url if url else "No links found",
+                )
+
+                db.add(query_data)
+                logging.info(f"Processing item - Title: {title}, URL: {url}")
+            await db.commit()
+            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+
+        except Exception as e:
+            logging.error(f"Failed to save raw results: {e}")
+            await db.rollback()
+            raise
 
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')
