@@ -21,7 +21,7 @@ from server.api.schemas.query import (
     FindByCompanyModel,
     CalculatePriceRequest,
     PriceResponse,
-    DownloadQueryRequest,
+    DownloadQueryRequest, FindByIRBISModel,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
@@ -32,6 +32,7 @@ from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
 from server.tasks.search.email import start_search_by_email
+from server.tasks.search.irbis import IrbisSearchParameters, start_search_by_irbis
 from server.tasks.search.name import start_search_by_name
 from server.tasks.search.number import start_search_by_num
 
@@ -428,6 +429,68 @@ async def find_by_company(
         )
 
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
+        return None
+    except Exception as e:
+        logging.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=422, detail="Invalid input")
+
+
+@router.post("/find_by_irbis")
+@BalanceNotifier.notify_balance
+async def find_by_irbis(
+    request_data: FindByIRBISModel,
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+
+        channel = await generate_sse_message_type(user_id=user_id, db=db)
+
+        price = 10
+        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
+
+        query_title = " ".join([request_data.first_name.strip(), request_data.second_name.strip()])
+        user_query = UserQueries(
+            user_id=user_id,
+            query_unix_date=query_created_at,
+            query_created_at=datetime.now(),
+            query_title=query_title,
+            query_status="pending",
+            query_category="irbis"
+        )
+
+        db.add(user_query)
+        await db.commit()
+
+        search_filters = IrbisSearchParameters(
+            query_id=user_query.query_id,
+            price=price,
+            first_name=request_data.first_name,
+            last_name=request_data.last_name,
+            regions=request_data.regions,
+            second_name=request_data.second_name,
+            birth_date=request_data.birth_date,
+            passport_series=request_data.passport_series,
+            passport_number=request_data.passport_number,
+            inn=request_data.inn
+        )
+
+        await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
+
+        await BalanceHistoryDAO.save_payment_to_history(
+            price,
+            user_query.query_id,
+            db,
+        )
+        await QueriesBalanceDAO.save_query_balance(
+            user_query.query_id,
+            price,
+            db,
+        )
+
+        start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
         return None
     except Exception as e:
         logging.error(f"Failed to process the query: {e}")
