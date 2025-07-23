@@ -15,7 +15,7 @@ from server.api.IRBIS_parser.ml_index import MLIndex
 from server.api.IRBIS_parser.participation_in_organization import ParticipationOrganization
 from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.IRBIS_parser.terror_list import TerrorList
-from server.api.models.models import (
+from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
     BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, CourtGeneralHeaderTable, CourtGeneralFacesTable, CourtGeneralProgressTable, CourtGeneralJurFullTable,
