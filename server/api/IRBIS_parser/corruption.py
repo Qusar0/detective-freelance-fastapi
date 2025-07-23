@@ -6,7 +6,7 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 class Corruption:
 
     @staticmethod
-    async def get_data_preview( person_uuid: str):
+    async def get_data_preview(person_uuid: str):
         """
         Получение превью данных о причастии к коррупционной деятельности физического лица.
 

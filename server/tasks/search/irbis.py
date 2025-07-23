@@ -18,7 +18,8 @@ from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
     BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
-    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, CourtGeneralHeaderTable, CourtGeneralFacesTable, CourtGeneralProgressTable, CourtGeneralJurFullTable,
+    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, CourtGeneralHeaderTable, CourtGeneralFacesTable,
+    CourtGeneralProgressTable, CourtGeneralJurFullTable,
     DepositsPreviewTable, DepositsFullTable, DepositsPartiesTable, DepositsPledgeObjectTable,
     DisqualifiedPersonFullTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
@@ -93,19 +94,16 @@ class IrbisSearchTask(BaseSearchTask):
             corruption_full=corruption_full,
             court_gen_preview=court_gen_preview,
             court_gen_categorial=court_gen_category,
-            court_gen_full = court_gen_full,
-
+            court_gen_full=court_gen_full,
             deposits_preview=deposits_preview,
-            deposits_full = deposits_full,
+            deposits_full=deposits_full,
             disqualified_full=disqualified_full,
             fssp_preview=fssp_preview,
             fssp_full=fssp_full,
             mlindex_full=mlindex_full,
             part_in_org_preview=part_in_org_preview,
             part_in_org_full=part_in_org_full,
-
             tax_arrears_full=tax_areas_full,
-
             terror_list_preview=terror_list_full
         )
 
@@ -267,7 +265,7 @@ class IrbisSearchTask(BaseSearchTask):
                 court_name=header_data.get("court_name"),
                 process_type=header_data.get("process_type"),
                 start_date=header_data.get("start_date"),
-                end_date=header_data.get("end_date")  or "to date",
+                end_date=header_data.get("end_date") or "to date",
                 review=header_data.get("review"),
                 judge=header_data.get("judge"),
                 articles=header_data.get("articles", []),
@@ -305,7 +303,6 @@ class IrbisSearchTask(BaseSearchTask):
                 progress=progress
             )
 
-
             court_gen_full.append(case)
         return court_gen_preview, court_gen_category, court_gen_full
 
@@ -325,7 +322,6 @@ class IrbisSearchTask(BaseSearchTask):
 
         deposits_full = []
         for deposit_info in full_data:
-
             parties = [
                 DepositsPartiesTable(
                     name=party.get("name", ""),
@@ -468,11 +464,9 @@ class IrbisSearchTask(BaseSearchTask):
                     okved=org_data.get("okved")
                 )
 
-
             individual_data = entry.get("individual_data")
             individual_obj = None
             if individual_data:
-
                 roles_data = individual_data.get("roles", [])
                 roles_objs = [
                     PartInOrgRoleTable(
@@ -487,7 +481,6 @@ class IrbisSearchTask(BaseSearchTask):
                     inn=individual_data.get("inn", ""),
                     roles=roles_objs
                 )
-
 
             obj = PartInOrgFullTable(
                 person_uuid=person_uuid,
@@ -524,7 +517,6 @@ class IrbisSearchTask(BaseSearchTask):
                 money_value=money_value,
             )
 
-
             info_fields = arrear_data.get("infoFields", [])
             for field in info_fields:
                 field_obj = TaxArrearsFieldTable(
@@ -536,7 +528,6 @@ class IrbisSearchTask(BaseSearchTask):
                     arrear=arrear_obj
                 )
                 arrear_obj.fields.append(field_obj)
-
 
             payment_fields = arrear_data.get("paymentFields", [])
             for field in payment_fields:

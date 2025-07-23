@@ -1,5 +1,3 @@
-from typing import Optional
-
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 

@@ -233,7 +233,7 @@ class CourtGeneralJurCategoricalTable(Base):
         back_populates='court_gen_categorial')
 
 
-class CourtGeneralJurFullTable(Base):  # todo: доделать эту таблицу, она большая
+class CourtGeneralJurFullTable(Base):
     __tablename__ = 'court_general_full'
 
     id: Mapped[int] = mapped_column(
@@ -256,7 +256,6 @@ class CourtGeneralJurFullTable(Base):  # todo: доделать эту табл�
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
         back_populates='court_gen_full')
-
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
@@ -332,7 +331,7 @@ class DepositsPreviewTable(Base):
         back_populates='deposits_preview')
 
 
-class DepositsFullTable(Base):  # todo: доделать эту таблицу, она большая
+class DepositsFullTable(Base):
     __tablename__ = 'deposits_full'
 
     id: Mapped[int] = mapped_column(
@@ -359,6 +358,7 @@ class DepositsFullTable(Base):  # todo: доделать эту таблицу, 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
         back_populates='deposits_full')
+
 
 class DepositsPartiesTable(Base):
     __tablename__ = 'deposits_parties'
@@ -529,7 +529,7 @@ class PartInOrgPreviewTable(Base):
         back_populates='part_in_org_preview')
 
 
-class PartInOrgFullTable(Base):  # todo: доделать эту таблицу, она большая (тут надо посмотреть и делать поля односложных json/еще 4 таблицы)
+class PartInOrgFullTable(Base):
     __tablename__ = 'part_in_org_full'
     id: Mapped[int] = mapped_column(
         Integer,
@@ -557,6 +557,7 @@ class PartInOrgFullTable(Base):  # todo: доделать эту таблицу,
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
         back_populates='part_in_org_full')
+
 
 class PartInOrgOrgTable(Base):
     __tablename__ = 'part_in_org_org'
@@ -612,7 +613,7 @@ class PartInOrgRoleTable(Base):
     individual: Mapped['PartInOrgIndividualTable'] = relationship(back_populates='roles')
 
 
-class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу, она большая
+class TaxArrearsFullTable(Base):
     __tablename__ = 'tax_arrears_full'
     id: Mapped[int] = mapped_column(
         Integer,
@@ -625,7 +626,7 @@ class TaxArrearsFullTable(Base):  # todo: доделать эту таблицу
     provider: Mapped[str] = mapped_column(String(128))
 
     money_name: Mapped[str] = mapped_column(String(8))  # Например: RUB
-    money_code: Mapped[int] = mapped_column(Integer)    # Например: 643
+    money_code: Mapped[int] = mapped_column(Integer)  # Например: 643
     money_value: Mapped[float] = mapped_column(Numeric(15, 2))
 
     # Relationship
