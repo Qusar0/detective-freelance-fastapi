@@ -33,8 +33,6 @@ def upgrade() -> None:
     op.alter_column('events', 'query_id',
                existing_type=sa.INTEGER(),
                nullable=False)
-    op.add_column('users', sa.Column('default_language_id', sa.Integer(), nullable=True))
-    op.create_foreign_key(None, 'users', 'languages', ['default_language_id'], ['id'])
     # ### end Alembic commands ###
 
 

@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from server.api.models.models import Base
+from api.models.models import Base
 
 
 class PersonsUUID(Base):
@@ -409,9 +409,9 @@ class DisqualifiedPersonPreviewTable(Base):
 
     count: Mapped[int] = mapped_column(Integer)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
-        back_populates='disqualified_preview')
+    #uid_relation: Mapped['PersonsUUID'] = relationship(
+    #    'PersonsUUID',
+    #    back_populates='disqualified_preview')
 
 
 class DisqualifiedPersonFullTable(Base):

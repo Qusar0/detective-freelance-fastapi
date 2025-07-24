@@ -112,6 +112,23 @@ services:
       - redis
       - web
 
+  celery_irbis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery  -A server.tasks.celery_app worker --concurrency 50 -P eventlet -Q irbis_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
   celery_delete:
     build:
       context: .

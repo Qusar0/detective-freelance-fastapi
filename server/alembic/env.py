@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from api.models.models import *
+from api.models.irbis_models import *
 from alembic import context
 from api.conf.config import settings
 
