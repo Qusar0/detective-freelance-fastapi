@@ -562,7 +562,7 @@ class IrbisSearchTask(BaseSearchTask):
         return terror_list_full
 
 
-@shared_task(bind=True, acks_late=True)
+@shared_task(bind=True, acks_late=True, queue='irbis_tasks')
 def start_search_by_irbis(self, search_filters: dict):
     loop = get_event_loop()
     task = IrbisSearchTask(search_filters)
