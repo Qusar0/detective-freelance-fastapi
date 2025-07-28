@@ -32,7 +32,7 @@ from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
 from server.tasks.search.email import start_search_by_email
-from server.tasks.search.irbis import IrbisSearchParameters, start_search_by_irbis
+from server.tasks.search.irbis import start_search_by_irbis
 from server.tasks.search.name import start_search_by_name
 from server.tasks.search.number import start_search_by_num
 

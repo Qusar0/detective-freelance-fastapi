@@ -409,7 +409,7 @@ class DisqualifiedPersonPreviewTable(Base):
 
     count: Mapped[int] = mapped_column(Integer)
 
-    #uid_relation: Mapped['PersonsUUID'] = relationship(
+    # uid_relation: Mapped['PersonsUUID'] = relationship(
     #    'PersonsUUID',
     #    back_populates='disqualified_preview')
 
