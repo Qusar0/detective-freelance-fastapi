@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from api.models.models import Base
+from server.api.models.models import Base
 
 
 class PersonsUUID(Base):
