@@ -464,7 +464,20 @@ async def find_by_irbis(
         db.add(user_query)
         await db.commit()
 
-        search_filters = IrbisSearchParameters(
+        search_filters = {
+            "query_id": user_query.query_id,
+            "price": price,
+            "first_name": request_data.first_name,
+            "last_name": request_data.last_name,
+            "regions": request_data.regions,
+            "second_name": request_data.second_name,
+            "birth_date": request_data.birth_date,
+            "passport_series": request_data.passport_series,
+            "passport_number": request_data.passport_number,
+            "inn": request_data.inn
+        }
+
+        '''search_filters = IrbisSearchParameters(
             query_id=user_query.query_id,
             price=price,
             first_name=request_data.first_name,
@@ -475,7 +488,7 @@ async def find_by_irbis(
             passport_series=request_data.passport_series,
             passport_number=request_data.passport_number,
             inn=request_data.inn
-        )
+        )'''
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
@@ -489,7 +502,6 @@ async def find_by_irbis(
             price,
             db,
         )
-
         start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
         return None
     except Exception as e:

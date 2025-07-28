@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from api.models.models import Base
+from server.api.models.models import Base
 
 
 class PersonsUUID(Base):
@@ -28,7 +28,7 @@ class PersonsUUID(Base):
         nullable=False,
     )
 
-    person_uuid: Mapped[str] = mapped_column(String(64))
+    person_uuid: Mapped[str] = mapped_column(String(128))
 
     arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(back_populates='uid_relation')
     arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='uid_relation')
@@ -82,15 +82,15 @@ class ArbitrationCourtFullTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    court_name_val: Mapped[str] = mapped_column(String(64))
+    court_name_val: Mapped[str] = mapped_column(String(128))
     role: Mapped[str] = mapped_column(String(1))
-    case_date: Mapped[str] = mapped_column(String(64))
-    case_id: Mapped[str] = mapped_column(String(64))
-    inn: Mapped[Optional[int]] = mapped_column(Integer)
-    name: Mapped[str] = mapped_column(String(64))
-    case_type: Mapped[str] = mapped_column(String(1))
-    response_id: Mapped[str] = mapped_column(String(64))
-    address_val: Mapped[str] = mapped_column(String(64))
+    case_date: Mapped[str] = mapped_column(String(128))
+    case_id: Mapped[str] = mapped_column(String(128))
+    inn: Mapped[Optional[str]] = mapped_column(String(128))
+    name: Mapped[str] = mapped_column(String(128))
+    case_type: Mapped[Optional[str]] = mapped_column(String(1))
+    response_id: Mapped[str] = mapped_column(String(128))
+    address_val: Mapped[str] = mapped_column(String(128))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
@@ -127,18 +127,18 @@ class BankruptcyFullTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    first_name: Mapped[str] = mapped_column(String(64))
-    second_name: Mapped[str] = mapped_column(String(64))
-    last_name: Mapped[str] = mapped_column(String(64))
-    birth_date: Mapped[str] = mapped_column(String(64))
+    first_name: Mapped[str] = mapped_column(String(128))
+    second_name: Mapped[str] = mapped_column(String(128))
+    last_name: Mapped[str] = mapped_column(String(128))
+    birth_date: Mapped[str] = mapped_column(String(128))
     born_place: Mapped[str] = mapped_column(String(256))
-    inn: Mapped[str] = mapped_column(String(64))
-    ogrn: Mapped[str] = mapped_column(String(64))
-    snils: Mapped[str] = mapped_column(String(64))
-    old_name: Mapped[Optional[str]] = mapped_column(String(64))
-    category_name: Mapped[str] = mapped_column(String(64))
+    inn: Mapped[str] = mapped_column(String(128))
+    ogrn: Mapped[str] = mapped_column(String(128))
+    snils: Mapped[str] = mapped_column(String(128))
+    old_name: Mapped[Optional[str]] = mapped_column(String(128))
+    category_name: Mapped[str] = mapped_column(String(128))
     location: Mapped[str] = mapped_column(String(256))
-    region_name: Mapped[str] = mapped_column(String(64))
+    region_name: Mapped[str] = mapped_column(String(128))
     information: Mapped[str] = mapped_column(String(256))
     link: Mapped[str] = mapped_column(String(256))
 
@@ -181,8 +181,8 @@ class CorruptionFullTable(Base):
     organization: Mapped[str] = mapped_column(String(256))
     position: Mapped[str] = mapped_column(String(256))
     normative_act: Mapped[str] = mapped_column(String(256))
-    application_date: Mapped[str] = mapped_column(String(64))
-    publish_date: Mapped[str] = mapped_column(String(64))
+    application_date: Mapped[str] = mapped_column(String(128))
+    publish_date: Mapped[str] = mapped_column(String(128))
     excluded_reason: Mapped[str] = mapped_column(String(256))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
@@ -201,7 +201,7 @@ class CourtGeneralJurPreviewTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    search_type: Mapped[str] = mapped_column(String(64))
+    search_type: Mapped[str] = mapped_column(String(128))
     court_type: Mapped[str] = mapped_column(String(1))
     plan: Mapped[Optional[int]] = mapped_column(Integer)
     deff: Mapped[Optional[int]] = mapped_column(Integer)
@@ -225,7 +225,7 @@ class CourtGeneralJurCategoricalTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    type: Mapped[str] = mapped_column(String(128))
+    type: Mapped[str] = mapped_column(String(512))
     count: Mapped[int] = mapped_column(Integer)
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
@@ -270,8 +270,8 @@ class CourtGeneralHeaderTable(Base):
     region: Mapped[int] = mapped_column(Integer)
     court_name: Mapped[str] = mapped_column(String)
     process_type: Mapped[str] = mapped_column(String(1))
-    start_date: Mapped[str] = mapped_column(String(64))
-    end_date: Mapped[str] = mapped_column(String(64))
+    start_date: Mapped[str] = mapped_column(String(128))
+    end_date: Mapped[str] = mapped_column(String(128))
     review: Mapped[Optional[int]] = mapped_column(Integer)
     judge: Mapped[Optional[str]] = mapped_column(String)
 
@@ -304,7 +304,7 @@ class CourtGeneralProgressTable(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
 
-    progress_date: Mapped[str] = mapped_column(String(64))
+    progress_date: Mapped[str] = mapped_column(String(128))
     status: Mapped[Optional[str]] = mapped_column(String)
     note: Mapped[Optional[str]] = mapped_column(String)
 
@@ -323,7 +323,7 @@ class DepositsPreviewTable(Base):
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
     pledge_count: Mapped[int] = mapped_column(Integer)
-    pledge_type: Mapped[str] = mapped_column(String(64))
+    pledge_type: Mapped[str] = mapped_column(String(128))
     response_id: Mapped[int] = mapped_column(Integer)
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
@@ -343,7 +343,7 @@ class DepositsFullTable(Base):
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
     pledge_count: Mapped[int] = mapped_column(Integer)
-    pledge_type: Mapped[str] = mapped_column(String(64))
+    pledge_type: Mapped[str] = mapped_column(String(128))
     response_id: Mapped[int] = mapped_column(Integer)
 
     # Relationships
@@ -373,7 +373,7 @@ class DepositsPartiesTable(Base):
     subtype: Mapped[str] = mapped_column(String(16))  # 'people' | 'org'
 
     # Только для subtype = 'people'
-    birth_date: Mapped[str] = mapped_column(String(64))
+    birth_date: Mapped[str] = mapped_column(String(128))
 
     # Только для subtype = 'org'
     inn: Mapped[Optional[str]] = mapped_column(String(20))
@@ -388,9 +388,9 @@ class DepositsPledgeObjectTable(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     deposit_id: Mapped[int] = mapped_column(ForeignKey('deposits_full.id', ondelete='CASCADE'))
 
-    pledge_id_name: Mapped[str] = mapped_column(String(64))
-    pledge_id: Mapped[str] = mapped_column(String(128))
-    pledge_type: Mapped[str] = mapped_column(String(128))
+    pledge_id_name: Mapped[str] = mapped_column(String(128))
+    pledge_id: Mapped[str] = mapped_column(String(512))
+    pledge_type: Mapped[str] = mapped_column(String(512))
     external_id: Mapped[int] = mapped_column(Integer)
 
     deposit: Mapped['DepositsFullTable'] = relationship(back_populates='pledges')
@@ -426,18 +426,18 @@ class DisqualifiedPersonFullTable(Base):
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
     response_id: Mapped[int] = mapped_column(Integer)
-    reestr_key: Mapped[str] = mapped_column(String(128))
-    birth_date: Mapped[str] = mapped_column(String(64))
-    fio: Mapped[str] = mapped_column(String(128))
-    article: Mapped[str] = mapped_column(String(128))
-    start_date_disq: Mapped[str] = mapped_column(String(64))
-    end_date_disq: Mapped[str] = mapped_column(String(64))
-    bornplace: Mapped[str] = mapped_column(String(128))
-    fio_judge: Mapped[str] = mapped_column(String(128))
-    office_judge: Mapped[str] = mapped_column(String(128))
-    legal_name: Mapped[str] = mapped_column(String(128))
-    office: Mapped[str] = mapped_column(String(128))
-    department: Mapped[str] = mapped_column(String(128))
+    reestr_key: Mapped[str] = mapped_column(String(512))
+    birth_date: Mapped[str] = mapped_column(String(128))
+    fio: Mapped[str] = mapped_column(String(512))
+    article: Mapped[str] = mapped_column(String(512))
+    start_date_disq: Mapped[str] = mapped_column(String(128))
+    end_date_disq: Mapped[str] = mapped_column(String(128))
+    bornplace: Mapped[str] = mapped_column(String(512))
+    fio_judge: Mapped[str] = mapped_column(String(512))
+    office_judge: Mapped[str] = mapped_column(String(512))
+    legal_name: Mapped[str] = mapped_column(String(512))
+    office: Mapped[str] = mapped_column(String(512))
+    department: Mapped[str] = mapped_column(String(512))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
@@ -455,7 +455,7 @@ class FSSPPreviewTable(Base):
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
     response_id: Mapped[int] = mapped_column(Integer)
-    type: Mapped[str] = mapped_column(String(128))
+    type: Mapped[str] = mapped_column(String(512))
     type_sum: Mapped[float] = mapped_column(Numeric)
     type_count: Mapped[int] = mapped_column(Integer)
 
@@ -474,16 +474,16 @@ class FSSPFullTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    ip: Mapped[str] = mapped_column(String(128))
-    fio: Mapped[str] = mapped_column(String(128))
-    rosp: Mapped[str] = mapped_column(String(128))
-    type_ip: Mapped[str] = mapped_column(String(128))
+    ip: Mapped[str] = mapped_column(String(512))
+    fio: Mapped[str] = mapped_column(String(512))
+    rosp: Mapped[str] = mapped_column(String(512))
+    type_ip: Mapped[str] = mapped_column(String(512))
     summ: Mapped[float] = mapped_column(Numeric)
-    rekv: Mapped[str] = mapped_column(String(128))
-    end_cause: Mapped[str] = mapped_column(String(64))
-    pristav: Mapped[str] = mapped_column(String(128))
-    pristav_phones: Mapped[str] = mapped_column(String(128))
-    response_id: Mapped[int] = mapped_column(Integer)
+    rekv: Mapped[str] = mapped_column(String(512))
+    end_cause: Mapped[str] = mapped_column(String(128))
+    pristav: Mapped[str] = mapped_column(String(512))
+    pristav_phones: Mapped[Optional[str]] = mapped_column(String(512))
+    response_id: Mapped[Optional[int]] = mapped_column(Integer)
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
@@ -520,9 +520,9 @@ class PartInOrgPreviewTable(Base):
     )
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
-    filter_type: Mapped[str] = mapped_column(String(128))
+    filter_type: Mapped[str] = mapped_column(String(512))
     count: Mapped[float] = mapped_column(Numeric)
-    part_type: Mapped[str] = mapped_column(String(128))
+    part_type: Mapped[str] = mapped_column(String(512))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',
@@ -538,9 +538,9 @@ class PartInOrgFullTable(Base):
     )
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
-    filter_type: Mapped[str] = mapped_column(String(128))
+    filter_type: Mapped[str] = mapped_column(String(512))
     count: Mapped[float] = mapped_column(Numeric)
-    part_type: Mapped[str] = mapped_column(String(128))
+    part_type: Mapped[str] = mapped_column(String(512))
 
     # Relationships
     org: Mapped[Optional['PartInOrgOrgTable']] = relationship(
@@ -623,10 +623,10 @@ class TaxArrearsFullTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    provider: Mapped[str] = mapped_column(String(128))
+    provider: Mapped[str] = mapped_column(String(512))
 
     money_name: Mapped[str] = mapped_column(String(8))  # Например: RUB
-    money_code: Mapped[int] = mapped_column(Integer)  # Например: 643
+    money_code: Mapped[int] = mapped_column(Integer)  # Например: 1283
     money_value: Mapped[float] = mapped_column(Numeric(15, 2))
 
     # Relationship
@@ -651,7 +651,7 @@ class TaxArrearsFieldTable(Base):
 
     type: Mapped[str] = mapped_column(String(32))  # "info" или "payment"
 
-    field_id: Mapped[str] = mapped_column(String(64))
+    field_id: Mapped[str] = mapped_column(String(128))
     field_name: Mapped[str] = mapped_column(String(256))
     field_type: Mapped[str] = mapped_column(String(32))
     value: Mapped[str] = mapped_column(Text)
@@ -670,10 +670,10 @@ class TerrorListFullTable(Base):
 
     person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
 
-    response_id: Mapped[str] = mapped_column(String(128))
-    fio: Mapped[str] = mapped_column(String(128))
-    birth_date: Mapped[str] = mapped_column(String(64))
-    birth_place: Mapped[str] = mapped_column(String(128))
+    response_id: Mapped[str] = mapped_column(String(512))
+    fio: Mapped[str] = mapped_column(String(512))
+    birth_date: Mapped[str] = mapped_column(String(128))
+    birth_place: Mapped[str] = mapped_column(String(512))
 
     uid_relation: Mapped['PersonsUUID'] = relationship(
         'PersonsUUID',

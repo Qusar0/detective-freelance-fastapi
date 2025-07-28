@@ -54,61 +54,64 @@ class IrbisSearchParameters:
 
 
 class IrbisSearchTask(BaseSearchTask):
-    def __init__(self, search_filters: IrbisSearchParameters):
-        super().__init__(search_filters.query_id, search_filters.price)
+    def __init__(self, search_filters: dict):
+        super().__init__(search_filters["query_id"], search_filters["price"])
         self.person = BaseAuthIRBIS(
-            first_name=search_filters.first_name,
-            last_name=search_filters.last_name,
-            regions=search_filters.regions,
-            second_name=search_filters.second_name,
-            birth_date=search_filters.birth_date,
-            passport_series=search_filters.passport_series,
-            passport_number=search_filters.passport_number,
-            inn=search_filters.inn
+            first_name=search_filters["first_name"],
+            last_name=search_filters["last_name"],
+            regions=search_filters["regions"],
+            second_name=search_filters["second_name"],
+            birth_date=search_filters["birth_date"],
+            passport_series=search_filters["passport_series"],
+            passport_number=search_filters["passport_number"],
+            inn=search_filters["inn"]
         )
 
         self.logger = SearchLogger(self.query_id, 'search_irbis.log')
 
     async def _process_search(self, db):
-        person_uuid = await self.person.get_person_uuid()
-        arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
-        bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
-        corruption_preview, corruption_full = await self._corruption_data(person_uuid)
-        court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
-        deposits_preview, deposits_full = await self._deposits_data(person_uuid)
-        disqualified_full = await self._disqualified_pers_data(person_uuid)
-        fssp_preview, fssp_full = await self._fssp_data(person_uuid)
-        mlindex_full = await self._ml_index_data(person_uuid)
-        part_in_org_preview, part_in_org_full = await self._part_in_org_data(person_uuid)
-        tax_areas_full = await self._tax_areas_data(person_uuid)
-        terror_list_full = await self._terror_list_data(person_uuid)
+        try:
+            person_uuid = await self.person.get_person_uuid()
+            arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
+            bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
+            corruption_preview, corruption_full = await self._corruption_data(person_uuid)
+            court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
+            deposits_preview, deposits_full = await self._deposits_data(person_uuid)
+            disqualified_full = await self._disqualified_pers_data(person_uuid)
+            fssp_preview, fssp_full = await self._fssp_data(person_uuid)
+            mlindex_full = await self._ml_index_data(person_uuid)
+            part_in_org_preview, part_in_org_full = await self._part_in_org_data(person_uuid)
+            tax_areas_full = await self._tax_areas_data(person_uuid)
+            terror_list_full = await self._terror_list_data(person_uuid)
 
-        person = PersonsUUID(
-            query_id=self.query_id,
-            person_uuid=person_uuid,
-            arbit_court_preview=arbitr_preview,
-            arbit_court_full=arbitr_full,
-            bankruptcy_preview=bankruptcy_preview,
-            bankruptcy_full=bankruptcy_full,
-            corruption_preview=corruption_preview,
-            corruption_full=corruption_full,
-            court_gen_preview=court_gen_preview,
-            court_gen_categorial=court_gen_category,
-            court_gen_full=court_gen_full,
-            deposits_preview=deposits_preview,
-            deposits_full=deposits_full,
-            disqualified_full=disqualified_full,
-            fssp_preview=fssp_preview,
-            fssp_full=fssp_full,
-            mlindex_full=mlindex_full,
-            part_in_org_preview=part_in_org_preview,
-            part_in_org_full=part_in_org_full,
-            tax_arrears_full=tax_areas_full,
-            terror_list_preview=terror_list_full
-        )
+            person = PersonsUUID(
+                query_id=self.query_id,
+                person_uuid=person_uuid,
+                arbit_court_preview=arbitr_preview,
+                arbit_court_full=arbitr_full,
+                bankruptcy_preview=bankruptcy_preview,
+                bankruptcy_full=bankruptcy_full,
+                corruption_preview=corruption_preview,
+                corruption_full=corruption_full,
+                court_gen_preview=court_gen_preview,
+                court_gen_categorial=court_gen_category,
+                court_gen_full=court_gen_full,
+                deposits_preview=deposits_preview,
+                deposits_full=deposits_full,
+                disqualified_full=disqualified_full,
+                fssp_preview=fssp_preview,
+                fssp_full=fssp_full,
+                mlindex_full=mlindex_full,
+                part_in_org_preview=part_in_org_preview,
+                part_in_org_full=part_in_org_full,
+                tax_arrears_full=tax_areas_full,
+                terror_list_preview=terror_list_full
+            )
 
-        db.add(person)
-        await db.commit()
+            db.add(person)
+            await db.commit()
+        except Exception as e:
+            self.logger.log_error(f"Создание записи провалилось. Ошибка: {e}")
 
     async def _update_balances(self, db):
         pass
@@ -240,10 +243,10 @@ class IrbisSearchTask(BaseSearchTask):
         )
 
         court_gen_category = []
-        for item in category_data:
+        for key, value in category_data.items():
             obj = CourtGeneralJurCategoricalTable(
-                type=item.get("type", None),
-                count=item.get("count", None),
+                type=key,
+                count=value,
             )
             court_gen_category.append(obj)
 
@@ -560,7 +563,7 @@ class IrbisSearchTask(BaseSearchTask):
 
 
 @shared_task(bind=True, acks_late=True)
-def start_search_by_irbis(self, search_filters: IrbisSearchParameters):
+def start_search_by_irbis(self, search_filters: dict):
     loop = get_event_loop()
     task = IrbisSearchTask(search_filters)
     loop.run_until_complete(task.execute())
