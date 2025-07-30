@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from typing import Optional
-
 from celery import shared_task
 
 from server.api.IRBIS_parser.arbitration_court import ArbitrationCourt
