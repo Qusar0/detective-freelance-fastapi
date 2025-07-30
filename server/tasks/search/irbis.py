@@ -34,25 +34,6 @@ from server.tasks.celery_config import (
 from server.tasks.logger import SearchLogger
 
 
-@dataclass
-class IrbisSearchParameters:
-    query_id: int
-    price: float
-
-    first_name: str
-    last_name: str
-    regions: list[int]
-    second_name: Optional[str] = None
-    birth_date: Optional[str] = None
-    passport_series: Optional[str] = None
-    passport_number: Optional[str] = None
-    inn: Optional[str] = None
-
-    def __post_init__(self):
-        if len(self.regions) > 2:
-            raise ValueError
-
-
 class IrbisSearchTask(BaseSearchTask):
     def __init__(self, search_filters: dict):
         super().__init__(search_filters["query_id"], search_filters["price"])
