@@ -4,15 +4,10 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class TerrorList:
-    def __init__(self):
-        self.count: Optional[int] = 0
-
-        self.full_data: Optional[list] = []
-
-    async def get_data_preview(self, person_uuid: str):
+    @staticmethod
+    async def get_data_preview(person_uuid: str):
         """
-        Получение превью данных о нахождении физического лица в списке террористов и экстремистов. Использовать
-        повторно функцию для обновления данных. Если нужны предыдущие, необходимо обратиться к полям count
+        Получение превью данных о нахождении физического лица в списке террористов и экстремистов.
 
         Args:
             person_uuid (str): uuid человека
@@ -24,15 +19,17 @@ class TerrorList:
                 f"{person_uuid}/people-terrorist.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
+        count: Optional[int] = 0
+
         if response is not None:
-            self.count = response
+            count = response
 
-        return self.count
+        return count
 
-    async def get_full_data(self, person_uuid: str, page: int, rows: int):  # noqa: WPS615
+    @staticmethod
+    async def get_full_data(person_uuid: str, page: int, rows: int):  # noqa: WPS615
         """
         Получение данных о нахождении физического лица в списке террористов и экстремистов.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
 
         Args:
             person_uuid (str): uuid человека
@@ -47,7 +44,9 @@ class TerrorList:
                 f"page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        if response is not None:
-            self.full_data = response["result"]
+        full_data: Optional[list] = []
 
-        return self.full_data
+        if response is not None:
+            full_data = response["result"]
+
+        return full_data

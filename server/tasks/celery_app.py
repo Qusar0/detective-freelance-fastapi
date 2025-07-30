@@ -25,6 +25,7 @@ def create_celery() -> Celery:
         'server.tasks.search.name',
         'server.tasks.search.number',
         'server.tasks.search.telegram',
+        'server.tasks.search.irbis'
     ])
 
     return celery_app

@@ -4,15 +4,8 @@ from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
 class CourtGeneralJurisdiction:
-    def __init__(self):
-        self.full_fio_data_preview: Optional[dict] = dict()
-        self.short_fio_data_preview: Optional[dict] = dict()
-
-        self.category: Optional[dict] = dict()
-
-        self.full_data: Optional[list] = []
-
-    async def get_data_preview(self, person_uuid: str, filter_text: str, strategy: str):
+    @staticmethod
+    async def get_data_preview(person_uuid: str, filter_text: str, strategy: str):
         """
             Получение превью данных о судебных делах физического лица.
 
@@ -29,16 +22,19 @@ class CourtGeneralJurisdiction:
                 f"&filter_text={filter_text}&strategy={strategy}")
         response = await BaseAuthIRBIS.get_response(link)
 
+        full_fio_data_preview: Optional[dict] = dict()
+        short_fio_data_preview: Optional[dict] = dict()
+
         if response is not None:
-            self.full_fio_data_preview = response["full"]
-            self.short_fio_data_preview = response["short"]
+            full_fio_data_preview = response["full"]
+            short_fio_data_preview = response["short"]
 
-        return self.full_fio_data_preview, self.short_fio_data_preview
+        return full_fio_data_preview, short_fio_data_preview
 
-    async def get_category_result(self, person_uuid: str, filter0: str, filter_text: str, strategy: str):
+    @staticmethod
+    async def get_category_result(person_uuid: str, filter0: str, filter_text: str, strategy: str):
         """
         Получение данных о категориях судебных дел физического лица.
-        Если нужны предыдущие, необходимо обратиться к полю category
 
         Args:
             person_uuid (str): uuid человека
@@ -54,26 +50,27 @@ class CourtGeneralJurisdiction:
                 f"filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
         response = await BaseAuthIRBIS.get_response(link)
 
+        category: Optional[dict] = dict()
+
         result_response = dict()
         if response is not None:
             for data_response in response:
                 result_response[data_response["type"]] = data_response["count"]
 
-        self.category = result_response
-        return self.category
+        category = result_response
+        return category
 
+    @staticmethod
     async def get_full_data(  # noqa: WPS615, WPS211
-        self,
-        person_uuid: str,
-        page: int,
-        rows: int,
-        strategy: str,
-        filter0: str,
-        filter_text: str,
+            person_uuid: str,
+            page: int,
+            rows: int,
+            strategy: str,
+            filter0: str,
+            filter_text: str,
     ):
         """
-        Получение данных об участии физического лица в арбитражных судах. Использовать повторно функцию для обновления данных.
-        Если нужны предыдущие, необходимо обратиться к полям full_data
+        Получение данных об участии физического лица в арбитражных судах.
 
         Args:
             person_uuid (str): uuid человека
@@ -92,7 +89,9 @@ class CourtGeneralJurisdiction:
                 f"&filter0={filter0}&filter_text={filter_text}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        if response is not None:
-            self.full_data = response["result"]
+        full_data: Optional[list] = []
 
-        return self.full_data
+        if response is not None:
+            full_data = response["result"]
+
+        return full_data

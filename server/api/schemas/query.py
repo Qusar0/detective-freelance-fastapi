@@ -84,3 +84,14 @@ class PriceResponse(BaseModel):
 
 class DownloadQueryRequest(BaseModel):
     query_id: int
+
+
+class FindByIRBISModel(BaseModel):
+    first_name: str
+    last_name: str
+    regions: list[int]
+    second_name: Optional[str]
+    birth_date: Optional[str]
+    passport_series: Optional[str]
+    passport_number: Optional[str]
+    inn: Optional[str]
