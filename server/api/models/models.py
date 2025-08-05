@@ -457,8 +457,10 @@ class QueriesData(Base):
         ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
-    found_info: Mapped[Optional[str]] = mapped_column(Text)
-    found_links: Mapped[Optional[str]] = mapped_column(Text)
+    title: Mapped[Optional[str]] = mapped_column(Text)
+    info: Mapped[Optional[str]] = mapped_column(Text)
+    link: Mapped[Optional[str]] = mapped_column(Text)
+    publication_date: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

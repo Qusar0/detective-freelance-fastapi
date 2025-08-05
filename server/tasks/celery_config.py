@@ -19,7 +19,7 @@ SEARCH_ENGINES = {
     ),
 }
 
-FoundInfo = recordtype("FoundInfo", "title snippet url uri weight kwd word_type kwds_list fullname soc_type doc_type")
+FoundInfo = recordtype("FoundInfo", "title snippet url publication_date uri weight kwd word_type kwds_list fullname soc_type doc_type")
 NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
 
 

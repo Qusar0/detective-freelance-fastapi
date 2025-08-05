@@ -21,7 +21,9 @@ from server.api.schemas.query import (
     FindByCompanyModel,
     CalculatePriceRequest,
     PriceResponse,
-    DownloadQueryRequest, FindByIRBISModel,
+    DownloadQueryRequest,
+    FindByIRBISModel,
+    QueryDataResult,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
@@ -590,7 +592,7 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.get("/query_data", response_model=List[Dict[str, Any]])
+@router.get("/query_data", response_model=List[QueryDataResult])
 async def get_query_data(
     query_id: int = Query(..., description="ID запроса"),
     Authorize: AuthJWT = Depends(),
@@ -626,7 +628,12 @@ async def get_query_data(
         results = []
 
         for item in query_data:
-            result = {"info": item.found_info.strip(), "url": item.found_links}
+            result = QueryDataResult(
+                title=item.title,
+                info=item.info,
+                url=item.link,
+                publication_date=item.publication_date,
+            )
             results.append(result)
         return results
 

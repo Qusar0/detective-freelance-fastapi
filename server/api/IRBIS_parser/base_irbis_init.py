@@ -51,7 +51,7 @@ class BaseAuthIRBIS:
         result_link = "&".join(result_link_list)
         return result_link
 
-    async def get_person_uuid(self):
+    async def get_person_uuid(self) -> Optional[str]:
         link = self.generate_link()
 
         async with aiohttp.ClientSession() as session:

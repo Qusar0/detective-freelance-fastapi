@@ -95,3 +95,11 @@ class FindByIRBISModel(BaseModel):
     passport_series: Optional[str]
     passport_number: Optional[str]
     inn: Optional[str]
+
+
+class QueryDataResult(BaseModel):
+    """Модель для одного результата запроса"""
+    title: Optional[str]
+    info: Optional[str]
+    url: Optional[str]
+    publication_date: Optional[str]

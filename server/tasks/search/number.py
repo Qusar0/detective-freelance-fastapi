@@ -76,18 +76,17 @@ class NumberSearchTask(BaseSearchTask):
         """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
         try:
             for item in raw_data:
-                title = item.get('raw_title', '') or item.get('title', '')
-                snippet = item.get('raw_snippet', '') or item.get('snippet', '')
-                url = item.get('url', '')
-
-                info = ""
-                if title or snippet:
-                    info = f"{title}: {snippet}" if title and snippet else f"{title}{snippet}"
+                title = item.get('raw_title') or item.get('title')
+                snippet = item.get('raw_snippet') or item.get('snippet')
+                url = item.get('url')
+                publication_date = item.get('pubDate')
 
                 query_data = QueriesData(
                     query_id=self.query_id,
-                    found_info=info if info else "No information found",
-                    found_links=url if url else "No links found",
+                    title=title,
+                    info=snippet,
+                    link=url,
+                    publication_date=publication_date,
                 )
 
                 db.add(query_data)

@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import List, Dict, Any
 
 from celery import shared_task
 import httpx
@@ -7,6 +7,7 @@ import httpx
 from server.api.scripts.lampyre_email import LampyreMail
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -17,9 +18,8 @@ from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_yandex_query_email
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
-
 from server.tasks.services import read_needless_sites, update_stats, write_urls
-from server.tasks.xmlriver import handle_xmlriver_response
+from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
 
 
 class EmailSearchTask(BaseSearchTask):
@@ -36,10 +36,12 @@ class EmailSearchTask(BaseSearchTask):
 
         if 'mentions' in self.methods_type:
             try:
-                mentions_html, filters = await self.xmlriver_email_do_request(db)
+                result = await self.xmlriver_email_do_request(db)
+                await self.save_raw_results(result['raw_data'], db)
+                mentions_html, filters = result['processed_data']
             except Exception as e:
                 self.money_to_return += 5
-                print(e)
+                self.logger.log_error(f"Ошибка в получении упоминаний: {e}")
 
         if 'acc checker' in self.methods_type:
             try:
@@ -47,7 +49,7 @@ class EmailSearchTask(BaseSearchTask):
                 acc_checker = lampyre_email.main(self.email, ['acc checker'])
             except Exception as e:
                 self.money_to_return += 130
-                print(e)
+                self.logger.log_error(f"Ошибка в проверке аккаунтов: {e}")
 
         html = response_email_template(
             self.email,
@@ -67,7 +69,33 @@ class EmailSearchTask(BaseSearchTask):
         await ServicesBalanceDAO.renew_xml_balance(db)
         await ServicesBalanceDAO.renew_lampyre_balance(db)
 
+    async def save_raw_results(self, raw_data: List[Dict[str, Any]], db):
+        """Сохраняет сырые результаты поиска в базу данных"""
+        try:
+            for item in raw_data:
+                title = item.get('raw_title') or item.get('title')
+                snippet = item.get('raw_snippet') or item.get('snippet')
+                url = item.get('url')
+                publication_date = item.get('pubDate')
+
+                query_data = QueriesData(
+                    query_id=self.query_id,
+                    title=title,
+                    info=snippet,
+                    link=url,
+                    publication_date=publication_date,
+                )
+                db.add(query_data)
+
+            await db.commit()
+            self.logger.log_info(f"Saved {len(raw_data)} raw results for query {self.query_id}")
+        except Exception as e:
+            await db.rollback()
+            self.logger.log_error(f"Failed to save raw results: {e}")
+            raise
+
     async def xmlriver_email_do_request(self, db):
+        all_raw_data = []
         all_found_data = []
         urls = []
         proh_sites = await read_needless_sites(db)
@@ -81,6 +109,8 @@ class EmailSearchTask(BaseSearchTask):
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url=url)
+                    raw_data = parse_xml_response(response)
+                    all_raw_data.extend(raw_data)
                     handling_resp = handle_xmlriver_response(url, response, all_found_data, [], self.email)
 
                     if handling_resp not in ('500', '110', '111'):
@@ -108,6 +138,8 @@ class EmailSearchTask(BaseSearchTask):
                 try:
                     async with httpx.AsyncClient() as client:
                         response = await client.get(url=url)
+                        raw_data = parse_xml_response(response)
+                        all_raw_data.extend(raw_data)
                         handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.email)
 
                         if handling_resp == '15':
@@ -134,9 +166,11 @@ class EmailSearchTask(BaseSearchTask):
             if handling_resp == '15':
                 break
 
-        items, filters = form_number_response_html(all_found_data, self.email)
         await write_urls(urls, "email")
-        return items, filters
+        return {
+            'raw_data': all_raw_data,
+            'processed_data': form_number_response_html(all_found_data, self.email)
+        }
 
 
 @shared_task(bind=True, acks_late=True)

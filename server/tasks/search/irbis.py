@@ -49,45 +49,47 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _process_search(self, db):
         try:
-            person_uuid = await self.person.get_person_uuid()
-            arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
-            bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
-            corruption_preview, corruption_full = await self._corruption_data(person_uuid)
-            court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
-            deposits_preview, deposits_full = await self._deposits_data(person_uuid)
-            disqualified_full = await self._disqualified_pers_data(person_uuid)
-            fssp_preview, fssp_full = await self._fssp_data(person_uuid)
-            mlindex_full = await self._ml_index_data(person_uuid)
-            part_in_org_preview, part_in_org_full = await self._part_in_org_data(person_uuid)
-            tax_areas_full = await self._tax_areas_data(person_uuid)
-            terror_list_full = await self._terror_list_data(person_uuid)
+            # person_uuid = await self.person.get_person_uuid()
+            person_uuid = 'f1b008d9-5ed1-49f2-8be0-997817a9e48a'
+            if person_uuid:
+                arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
+                bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
+                corruption_preview, corruption_full = await self._corruption_data(person_uuid)
+                court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
+                deposits_preview, deposits_full = await self._deposits_data(person_uuid)
+                disqualified_full = await self._disqualified_pers_data(person_uuid)
+                fssp_preview, fssp_full = await self._fssp_data(person_uuid)
+                mlindex_full = await self._ml_index_data(person_uuid)
+                part_in_org_preview, part_in_org_full = await self._part_in_org_data(person_uuid)
+                tax_areas_full = await self._tax_areas_data(person_uuid)
+                terror_list_full = await self._terror_list_data(person_uuid)
 
-            person = PersonsUUID(
-                query_id=self.query_id,
-                person_uuid=person_uuid,
-                arbit_court_preview=arbitr_preview,
-                arbit_court_full=arbitr_full,
-                bankruptcy_preview=bankruptcy_preview,
-                bankruptcy_full=bankruptcy_full,
-                corruption_preview=corruption_preview,
-                corruption_full=corruption_full,
-                court_gen_preview=court_gen_preview,
-                court_gen_categorial=court_gen_category,
-                court_gen_full=court_gen_full,
-                deposits_preview=deposits_preview,
-                deposits_full=deposits_full,
-                disqualified_full=disqualified_full,
-                fssp_preview=fssp_preview,
-                fssp_full=fssp_full,
-                mlindex_full=mlindex_full,
-                part_in_org_preview=part_in_org_preview,
-                part_in_org_full=part_in_org_full,
-                tax_arrears_full=tax_areas_full,
-                terror_list_preview=terror_list_full
-            )
+                person = PersonsUUID(
+                    query_id=self.query_id,
+                    person_uuid=person_uuid,
+                    arbit_court_preview=arbitr_preview,
+                    arbit_court_full=arbitr_full,
+                    bankruptcy_preview=bankruptcy_preview,
+                    bankruptcy_full=bankruptcy_full,
+                    corruption_preview=corruption_preview,
+                    corruption_full=corruption_full,
+                    court_gen_preview=court_gen_preview,
+                    court_gen_categorial=court_gen_category,
+                    court_gen_full=court_gen_full,
+                    deposits_preview=deposits_preview,
+                    deposits_full=deposits_full,
+                    disqualified_full=disqualified_full,
+                    fssp_preview=fssp_preview,
+                    fssp_full=fssp_full,
+                    mlindex_full=mlindex_full,
+                    part_in_org_preview=part_in_org_preview,
+                    part_in_org_full=part_in_org_full,
+                    tax_arrears_full=tax_areas_full,
+                    terror_list_preview=terror_list_full
+                )
 
-            db.add(person)
-            await db.commit()
+                db.add(person)
+                await db.commit()
         except Exception as e:
             self.logger.log_error(f"Создание записи провалилось. Ошибка: {e}")
 

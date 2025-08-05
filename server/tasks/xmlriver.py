@@ -6,6 +6,7 @@ import time
 from typing import List
 from urllib.parse import urlparse
 import requests
+import threading
 
 from server.tasks.celery_config import SEARCH_ENGINES, FoundInfo, NumberInfo
 from server.tasks.forms.sites import form_page_query
@@ -165,6 +166,8 @@ def handle_xmlriver_response(
         doc_type = ""
 
         parsed_url = urlparse(site_uri)
+        publication_date = data[index]["doc"].get("pubDate")
+
         path = parsed_url.path
         file_extension = os.path.splitext(path)[1].lower()
 
@@ -195,7 +198,12 @@ def handle_xmlriver_response(
                         FoundInfo(
                             info_title.replace("`", "'").replace("\\", "\\\\"),
                             info_snippet.replace("`", "'").replace("\\", "\\\\"),
-                            site_url, site_uri, 1, keyword, keyword_type,
+                            site_url,
+                            publication_date,
+                            site_uri,
+                            1,
+                            keyword,
+                            keyword_type,
                             [keyword],
                             'true',
                             soc_type,
@@ -311,7 +319,8 @@ def parse_xml_response(response):
                 'title': doc.get('title', ''),
                 'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),
                 'url': doc.get('url', ''),
-                'domain': urlparse(doc.get('url', '')).netloc
+                'domain': urlparse(doc.get('url', '')).netloc,
+                'pubDate': doc.get('pubDate'),
             })
 
         return results
@@ -319,3 +328,32 @@ def parse_xml_response(response):
     except Exception as e:
         logging.error(f"XML parsing error: {e}")
         return []
+
+def search_worker(
+    input_data,
+    results_container,
+    all_found_info,
+    urls, 
+    request_stats,
+    stats_lock,
+    logger,
+):
+    """Функция для выполнения поисковых запросов в потоке"""
+    try:
+        url, keyword, keyword_type, name_case = input_data
+        raw_data = do_request_to_xmlriver(
+            url,
+            all_found_info,
+            [],
+            keyword,
+            name_case,
+            keyword_type,
+            urls,
+            request_stats,
+            stats_lock,
+            logger
+        )
+        with threading.Lock():
+            results_container.extend(raw_data)
+    except Exception as e:
+        logger.log_error(f"Error in worker thread: {str(e)}")
