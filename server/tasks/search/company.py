@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from threading import Thread
+import threading
 from queue import Queue
 import logging
 
@@ -24,8 +24,8 @@ from server.tasks.forms.responses import form_response_html
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 
-from server.tasks.services import manage_threads, write_urls
-from server.tasks.xmlriver import do_request_to_xmlriver
+from server.tasks.services import write_urls, manage_threads
+from server.tasks.xmlriver import search_worker
 
 
 class CompanySearchTask(BaseSearchTask):
@@ -42,14 +42,12 @@ class CompanySearchTask(BaseSearchTask):
         self.logger = SearchLogger(self.query_id, 'search_company.log')
 
     async def _process_search(self, db):
-        threads: List[Thread] = []
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
         urls = []
         titles = []
 
         try:
-            prohibited_sites_list = await ProhibitedSitesDAO.add_sites_from_db([], db)
             keywords: dict = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
 
@@ -105,51 +103,13 @@ class CompanySearchTask(BaseSearchTask):
                                             url,
                                         )
 
-            # Создаем очередь для сбора результатов
-            results_queue = Queue()
+            await self._process_search_requests(
+                request_input_pack,
+                all_found_info,
+                urls,
+                db,
+            )
 
-            def worker(input_data, queue):
-                try:
-                    url = input_data[0]
-                    keyword = input_data[1]
-                    keyword_type = input_data[2]
-
-                    raw_data = do_request_to_xmlriver(
-                        url,
-                        all_found_info,
-                        prohibited_sites_list,
-                        keyword,
-                        None,
-                        keyword_type,
-                        urls,
-                        self.request_stats,
-                        self.stats_lock,
-                        self.logger,
-                    )
-                    queue.put(raw_data)
-                except Exception as e:
-                    self.logger.log_error(f"Error in worker thread: {str(e)}")
-                    queue.put([])
-
-            # Запускаем потоки
-            for input_data in request_input_pack:
-                t = Thread(target=worker, args=(input_data, results_queue))
-                threads.append(t)
-                t.start()
-
-            # Ждем завершения всех потоков
-            for t in threads:
-                t.join()
-
-            # Собираем все результаты
-            all_raw_data = []
-            while not results_queue.empty():
-                all_raw_data.extend(results_queue.get())
-
-            # Сохраняем сырые данные
-            await self.save_raw_results(all_raw_data, db)
-
-            manage_threads(threads)
             self.save_stats_to_file('search_company.log')
             company_titles = form_extra_titles(self.company_names[1], self.location['original'])
             titles.extend(
@@ -185,21 +145,51 @@ class CompanySearchTask(BaseSearchTask):
             self.money_to_return = self.price
             raise e
 
+    async def _process_search_requests(
+        self,
+        request_input_pack,
+        all_found_info,
+        urls,
+        db,
+    ):
+        shared_results = []
+        thread_list = []
+
+        for input_data in request_input_pack:
+            t = threading.Thread(
+                target=search_worker,
+                args=(
+                    input_data,
+                    shared_results,
+                    all_found_info,
+                    urls,
+                    self.request_stats,
+                    self.stats_lock,
+                    self.logger
+                )
+            )
+            thread_list.append(t)
+
+        manage_threads(thread_list)
+        await self.save_raw_results(shared_results, db)
+
     async def save_raw_results(self, raw_data, db):
         """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
         try:
             logging.info(f"Raw data to save: {raw_data}")
 
             for item in raw_data:
-                title = item.get('title', '')
-                snippet = item.get('snippet', '')
-                url = item.get('url', '')
+                title = item.get('title')
+                snippet = item.get('snippet')
+                url = item.get('url')
+                publication_date = item.get('publication_date')
 
                 query_data = QueriesData(
                     query_id=self.query_id,
                     title=title,
                     info=snippet,
                     link=url,
+                    publication_date=publication_date,
                 )
 
                 db.add(query_data)
@@ -216,7 +206,7 @@ class CompanySearchTask(BaseSearchTask):
         await ServicesBalanceDAO.renew_xml_balance(db)
 
 
-@shared_task(bind=True, acks_late=True)
+@shared_task(bind=True, acks_late=True, queue='company_tasks')
 def start_search_by_company(self, search_filters):
     loop = get_event_loop()
     task = CompanySearchTask(search_filters)

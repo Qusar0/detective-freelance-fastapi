@@ -173,7 +173,7 @@ class EmailSearchTask(BaseSearchTask):
         }
 
 
-@shared_task(bind=True, acks_late=True)
+@shared_task(bind=True, acks_late=True, queue='email_tasks')
 def start_search_by_email(self, email, methods_type, query_id, price):
     loop = get_event_loop()
     task = EmailSearchTask(email, methods_type, query_id, price)

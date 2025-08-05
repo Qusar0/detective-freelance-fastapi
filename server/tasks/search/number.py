@@ -175,7 +175,7 @@ class NumberSearchTask(BaseSearchTask):
         }
 
 
-@shared_task(bind=True, acks_late=True)
+@shared_task(bind=True, acks_late=True, queue='num_tasks')
 def start_search_by_num(self, phone_num, methods_type, query_id, price):
     loop = get_event_loop()
     task = NumberSearchTask(phone_num, methods_type, query_id, price)

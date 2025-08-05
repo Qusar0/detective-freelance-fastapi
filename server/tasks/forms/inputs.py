@@ -28,7 +28,7 @@ def form_input_pack_company(
         url += f"+{location}"
 
     url += f"{plus_words}{minus_words}&lr={lang}"
-    input_pack.append((url, keyword, keyword_type))
+    input_pack.append((url, keyword, keyword_type, None))
 
 
 def form_input_pack(
