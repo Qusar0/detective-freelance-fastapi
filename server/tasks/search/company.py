@@ -1,11 +1,8 @@
 from typing import Tuple, List
 import threading
-from queue import Queue
 import logging
-
 from celery import shared_task
 
-from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.services_balance import ServicesBalanceDAO
@@ -13,17 +10,13 @@ from server.api.dao.text_data import TextDataDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
-from server.tasks.celery_config import (
-    SEARCH_ENGINES,
-    FoundInfo,
-    get_event_loop,
-)
+from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
+from server.api.schemas.query import FoundInfo
 from server.tasks.forms.forms import form_extra_titles, form_titles
 from server.tasks.forms.inputs import form_input_pack_company
 from server.tasks.forms.responses import form_response_html
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
-
 from server.tasks.services import write_urls, manage_threads
 from server.tasks.xmlriver import search_worker
 

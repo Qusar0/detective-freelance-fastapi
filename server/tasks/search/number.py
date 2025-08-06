@@ -114,7 +114,7 @@ class NumberSearchTask(BaseSearchTask):
                     response = requests.get(url=url)
                     raw_data = parse_xml_response(response)
                     all_raw_data.extend(raw_data)
-                    handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
+                    handling_resp = handle_xmlriver_response(response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
@@ -142,7 +142,7 @@ class NumberSearchTask(BaseSearchTask):
                     response = requests.get(url=url)
                     raw_data = parse_xml_response(response)
                     all_raw_data.extend(raw_data)
-                    handling_resp = handle_xmlriver_response(url, response, all_found_data, proh_sites, self.phone_num)
+                    handling_resp = handle_xmlriver_response(response, all_found_data, proh_sites, self.phone_num)
 
                     if handling_resp == '15':
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)

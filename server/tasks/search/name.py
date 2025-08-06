@@ -1,28 +1,22 @@
 import logging
 from typing import Tuple, List
 import threading
-
 from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.keywords import KeywordsDAO
-from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_template
 from server.api.services.file_storage import FileStorageService
-from server.tasks.celery_config import (
-    SEARCH_ENGINES,
-    FoundInfo,
-    get_event_loop,
-)
+from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
+from server.api.schemas.query import FoundInfo
 from server.tasks.forms.forms import form_name_cases, form_search_key, form_titles
 from server.tasks.forms.inputs import form_input_pack
 from server.tasks.forms.responses import form_response_html
 from server.tasks.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
-
 from server.tasks.services import manage_threads, write_urls
 from server.tasks.xmlriver import search_worker
 
@@ -60,7 +54,7 @@ class NameSearchTask(BaseSearchTask):
                 if self.search_patronymic[lang]:
                     full_name.append(self.search_patronymic[lang])
 
-                name_cases = await form_name_cases(full_name)
+                name_cases = await form_name_cases(full_name, lang)
                 len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
                 len_keywords_from_db = len(keywords_from_db[lang])
 

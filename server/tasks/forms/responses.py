@@ -1,4 +1,4 @@
-from server.tasks.celery_config import FoundInfo, NumberInfo
+from server.api.schemas.query import FoundInfo, NumberInfo
 from server.tasks.forms.forms import filter_by_weight, form_js_data
 from server.tasks.forms.vars import form_var_filters, form_var_items
 

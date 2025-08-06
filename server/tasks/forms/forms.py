@@ -3,7 +3,7 @@ import httpx
 from typing import List
 from phonenumbers import parse, NumberParseException
 
-from server.tasks.celery_config import FoundInfo
+from server.api.schemas.query import FoundInfo
 from server.api.conf.config import settings
 
 
@@ -128,6 +128,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
     if language not in supported_languages:
         logging.info(f"Язык {language} не поддерживается Морфером. Возвращаем исходные данные.")
         return [full_name]
+
     language_endpoints = {
         'ru': '/russian',
         'uk': '/ukrainian',
@@ -138,6 +139,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
         'uk': ['Р', 'Д', 'З', 'О', 'М', 'K'],
         'kk': ['A', 'І', 'Б', 'Т', 'Ш', 'Ж', 'К']
     }
+
     url = f"https://ws3.morpher.ru{language_endpoints[language]}/declension"
     token = settings.morpher_token
     headers = {

@@ -1,7 +1,6 @@
 import asyncio
-from recordtype import recordtype
-
 from server.api.conf.config import settings
+
 
 SEARCH_ENGINES = {
     'google': (
@@ -18,9 +17,6 @@ SEARCH_ENGINES = {
         f'&query='
     ),
 }
-
-FoundInfo = recordtype("FoundInfo", "title snippet url publication_date uri weight kwd word_type kwds_list fullname soc_type doc_type")
-NumberInfo = recordtype("NumberInfo", "title snippet url uri weight kwd")
 
 
 def get_event_loop():

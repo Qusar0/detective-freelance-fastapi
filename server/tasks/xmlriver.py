@@ -3,15 +3,17 @@ import xmltodict
 import os
 import re
 import time
-from typing import List
+from typing import List, Union, Optional, Dict
 from urllib.parse import urlparse
 import requests
 import threading
+import httpx
 
-from server.tasks.celery_config import SEARCH_ENGINES, FoundInfo, NumberInfo
+from server.tasks.celery_config import SEARCH_ENGINES
 from server.tasks.forms.sites import form_page_query
 from server.tasks.logger import SearchLogger
 from server.tasks.services import update_stats
+from server.api.schemas.query import FoundInfo, NumberInfo
 
 
 def do_request_to_xmlriver(
@@ -37,7 +39,6 @@ def do_request_to_xmlriver(
                 current_raw = parse_xml_response(response)
                 raw_data.extend(current_raw)
                 handling_resp = handle_xmlriver_response(
-                    url,
                     response,
                     all_found_data,
                     prohibited_sites,
@@ -74,7 +75,6 @@ def do_request_to_xmlriver(
                     raw_data.extend(current_raw)
 
                     handling_resp = handle_xmlriver_response(
-                        url,
                         response,
                         all_found_data,
                         prohibited_sites,
@@ -106,23 +106,39 @@ def do_request_to_xmlriver(
     return raw_data
 
 
-def handle_xmlriver_response(
-    url,
-    response,
-    all_found_data: List,
-    prohibited_sites: List,
+def handle_xmlriver_response(  # noqa: WPS211
+    response: httpx.Response,
+    all_found_data: List[Union[FoundInfo, NumberInfo]],
+    prohibited_sites: List[str],
     keyword: str,
-    name_case=None,
-    keyword_type=None,
-):
-    soc_urls = {
+    name_case: Optional[List[str]] = None,
+    keyword_type: Optional[str] = None,
+) -> Union[str, None]:
+    """Обрабатывает ответ от XMLriver API и добавляет найденные результаты в all_found_data.
+
+    Args:
+        response: Ответ от сервера XMLriver
+        all_found_data: Список для сохранения найденных результатов
+        prohibited_sites: Список запрещенных сайтов
+        keyword: Ключевое слово для поиска
+        name_case: Варианты написания имени
+        keyword_type: Тип ключевого слова
+
+    Returns:
+        str: Код ошибки, если произошла ошибка
+        None: Если обработка прошла успешно
+
+    Raises:
+        ValueError: При некорректном ответе от API
+    """
+    SOCIAL_URLS = {
         'vk.com': 'Вконтакте',
         'ok.ru': 'Одноклассники',
         'www.facebook.com': 'Facebook',
         'www.instagram.com': 'Instagram',
         't.me': 'Telegram',
     }
-    doc_urls = {
+    DOCUMENT_TYPES = {
         '.doc': 'Word',
         '.docx': 'Word',
         '.odf': 'Word',
@@ -137,132 +153,103 @@ def handle_xmlriver_response(
         '.pptx': 'PowerPoint',
     }
 
-    decoded_resp = response.content.decode('utf-8')
-    json_var = xmltodict.parse(decoded_resp)
-    try:
-        data = json_var["yandexsearch"]["response"]["results"]["grouping"]["group"]
-    except KeyError:
-        error = xml_errors_handler(json_var)
-        return error
-    try:
-        if json_var['yandexsearch']['response']['fixtype'] == 'quotes':
+    try:  # noqa: WPS229
+        json_data = xmltodict.parse(response.content.decode('utf-8'))
+        response_data = json_data["yandexsearch"]["response"]
+
+        if "error" in response_data:
+            error_code = xml_errors_handler(json_data)
+            return error_code
+
+        if response_data.get('fixtype') == 'quotes':
             return '15'
-    except Exception:
-        pass
 
-    if isinstance(data, dict):
-        data = [data]
+        groups = response_data["results"]["grouping"]["group"]
+        groups = [groups] if isinstance(groups, dict) else groups
+    except (KeyError, xmltodict.ParsingInterrupted) as e:
+        raise ValueError(f"Некорректный ответ от XMLriver: {str(e)}")
 
-    for index in range(len(data) - 1):
-        info_title = data[index]["doc"]["title"]
-        try:
-            info_snippet = data[index]["doc"]["fullsnippet"]
-        except Exception:
-            info_snippet = data[index]["doc"]["passages"]["passage"]
+    for group in groups:
+        doc = group["doc"]
+        title = doc["title"]
+        snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
+        url = doc["url"]
+        pub_date = doc.get("pubDate")
 
-        site_uri = data[index]["doc"]["url"]
-        site_url = urlparse(site_uri).netloc
-        soc_type = ""
-        doc_type = ""
+        parsed_url = urlparse(url)
+        site_url = parsed_url.netloc
+        file_ext = os.path.splitext(parsed_url.path)[1].lower()
 
-        parsed_url = urlparse(site_uri)
-        publication_date = data[index]["doc"].get("pubDate")
+        resource_type = SOCIAL_URLS.get(site_url) or DOCUMENT_TYPES.get(file_ext) or ""
 
-        path = parsed_url.path
-        file_extension = os.path.splitext(path)[1].lower()
+        # Проверяем на запрещенные сайты
+        if any(site.lower() in site_url.lower() for site in prohibited_sites):
+            continue
 
-        for key, value in soc_urls.items():
-            if site_url == key:
-                soc_type = value
-
-        for key, value in doc_urls.items():
-            if key == file_extension:
-                doc_type = value
-
-        if info_snippet is None:
-            info_snippet = ''
-
+        processed_snippet = snippet.replace("`", "'").replace('\\', r'\\')
         if name_case is not None:
-            colored_snippet = color_keywords(name_case, info_snippet, keyword)
+            processed_snippet = color_keywords(name_case, processed_snippet, keyword)
 
-        banned_site_status = False
-        for site in prohibited_sites:
-            if site.lower() in site_url.lower() or site_uri.lower() in site.lower():
-                banned_site_status = True
-                break
+        has_patronymic = name_case and len(name_case) > 2
+        patronymic_in_snippet = has_patronymic and name_case[2].lower() in snippet.lower()
+        fullname_type = 'true' if patronymic_in_snippet else 'false'
 
-        if not banned_site_status:
-            try:
-                if name_case is None and keyword_type != '':
-                    all_found_data.append(
-                        FoundInfo(
-                            info_title.replace("`", "'").replace("\\", "\\\\"),
-                            info_snippet.replace("`", "'").replace("\\", "\\\\"),
-                            site_url,
-                            publication_date,
-                            site_uri,
-                            1,
-                            keyword,
-                            keyword_type,
-                            [keyword],
-                            'true',
-                            soc_type,
-                            doc_type,
-                        ),
-                    )
-                elif name_case is None and not keyword_type:
-                    all_found_data.append(
-                        NumberInfo(
-                            info_title.replace("`", "'"),
-                            info_snippet.replace("`", "'").replace("\\", "\\\\"),
-                            site_url,
-                            site_uri,
-                            1,
-                            keyword,
-                        ),
+        try:
+            if name_case is None:
+                if keyword_type:
+                    found_info = FoundInfo(
+                        title=title.replace("`", "'"),
+                        snippet=processed_snippet,
+                        url=site_url,
+                        publication_date=pub_date,
+                        uri=url,
+                        weight=1,
+                        kwd=keyword,
+                        word_type=keyword_type,
+                        kwds_list=[keyword],
+                        fullname='true',
+                        soc_type=resource_type,
+                        doc_type='',
                     )
                 else:
-                    try:
-                        if name_case[2].lower() in info_snippet.lower():
-                            fullname_type = "true"
-                        else:
-                            fullname_type = "false"
-                    except IndexError:
-                        fullname_type = "false"
-
-                    all_found_data.append(
-                        FoundInfo(
-                            info_title.replace("`", "'").replace("\\", "\\\\"),
-                            colored_snippet.replace("`", "'").replace("\\", "\\\\"),
-                            site_url,
-                            site_uri,
-                            1,
-                            keyword,
-                            keyword_type,
-                            [keyword],
-                            fullname_type,
-                            soc_type,
-                            doc_type,
-                        ),
+                    found_info = NumberInfo(
+                        title=title.replace("`", "'"),
+                        snippet=processed_snippet,
+                        url=site_url,
+                        uri=url,
+                        weight=1,
+                        kwd=keyword,
                     )
-            except AttributeError:
-                print(
-                    "Ошибка при создании recordtype",
-                    info_title,
-                    info_snippet,
+            else:
+                found_info = FoundInfo(
+                    title=title.replace("`", "'"),
+                    snippet=processed_snippet,
+                    url=site_url,
+                    publication_date=pub_date,
+                    uri=url,
+                    weight=1,
+                    kwd=keyword,
+                    word_type=keyword_type,
+                    kwds_list=[keyword],
+                    fullname=fullname_type,
+                    soc_type=resource_type,
+                    doc_type='',
                 )
+
+            all_found_data.append(found_info)
+        except Exception as e:
+            logging.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
+
+    return None
 
 
 def xml_errors_handler(xml_response):
+    """Обрабатывает ошибку XMLRiver."""
     try:
         error_data = xml_response["yandexsearch"]["response"]["error"]
         error_code = error_data["@code"]
         error_text = error_data["#text"]
-        print(error_text)
-        print(error_code)
-
     except KeyError:
-        print(xml_response)
         raise ("XMLriver на обновлении.")
 
     if error_code == '101' and error_text == 'Сервис сбора данных на обновлении. Попробуйте чуть позже.':
@@ -271,9 +258,11 @@ def xml_errors_handler(xml_response):
     return error_code
 
 
-def color_keywords(name_case: List[str], snippet: str, keyword: str) -> str:
+def color_keywords(name_case: List[str], snippet: str, search_keyword: str) -> str:
+    """Подсвечивает ключевые слова в тексте HTML-тегами."""
     if snippet is None:
-        return
+        return ''
+
     name = name_case[0]
     surname = name_case[1]
 
@@ -282,63 +271,76 @@ def color_keywords(name_case: List[str], snippet: str, keyword: str) -> str:
     else:
         patronymic = name_case[2]
 
-    keywords_list = [name, surname, patronymic, keyword]
+    keywords_list = [name, surname, patronymic, search_keyword]
 
     words = snippet.split()
 
-    for i in range(len(words)):
-        for keyword in keywords_list:
-            if words[i].lower().strip(".,!?") == keyword.lower():
-                words[i] = f'<span class="key-word">{words[i]}</span>'
+    for word in words:
+        for kw in keywords_list:
+            if word.lower().strip(".,!?") == kw.lower():
+                word = f'<span class="key-word">{word}</span>'
 
     marked_snippet = " ".join(words)
-    colored_snippet = re.sub(keyword, f'<span class="key-word">{keyword}</span>', marked_snippet, flags=re.IGNORECASE)
+    colored_snippet = re.sub(
+        search_keyword,
+        f'<span class="key-word">{search_keyword}</span>',
+        marked_snippet,
+        flags=re.IGNORECASE,
+    )
 
     return colored_snippet
 
 
-def parse_xml_response(response):
-    """Парсит XML ответ и возвращает сырые данные без форматирования"""
+def parse_xml_response(response: httpx.Response) -> List[Dict[str, str]]:
+    """Парсит XML ответ."""
     try:
         decoded_resp = response.content.decode('utf-8')
-        data = xmltodict.parse(decoded_resp)
-
-        results = []
-        groups = data \
-            .get('yandexsearch', {}) \
-            .get('response', {}) \
-            .get('results', {}) \
-            .get('grouping', {}) \
-            .get('group', [])
-        if isinstance(groups, dict):
-            groups = [groups]
-
-        for group in groups:
-            doc = group.get('doc', {})
-            results.append({
-                'title': doc.get('title', ''),
-                'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),
-                'url': doc.get('url', ''),
-                'domain': urlparse(doc.get('url', '')).netloc,
-                'pubDate': doc.get('pubDate'),
-            })
-
-        return results
-
-    except Exception as e:
-        logging.error(f"XML parsing error: {e}")
+        response_data = xmltodict.parse(decoded_resp)
+    except (UnicodeDecodeError, xmltodict.ParsingInterrupted) as e:
+        logging.error(f"XML decoding error: {e}")
         return []
 
-def search_worker(
+    try:
+        yandexsearch = response_data.get('yandexsearch', {})
+        response_xml = yandexsearch.get('response', {})
+        results_xml = response_xml.get('results', {})
+        grouping = results_xml.get('grouping', {})
+        groups = grouping.get('group', [])
+    except AttributeError as e:
+        logging.error(f"XML structure error: {e}")
+        return []
+
+    parse_results = []
+    groups_list = [groups] if isinstance(groups, dict) else groups
+
+    for group in groups_list:
+        try:
+            doc = group.get('doc', {})
+            url = doc.get('url', '')
+
+            parse_results.append({
+                'title': doc.get('title', ''),
+                'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),
+                'url': url,
+                'domain': urlparse(url).netloc,
+                'pubDate': doc.get('pubDate'),
+            })
+        except Exception as e:
+            logging.error(f"Ошибка парсинга XML: {e}")
+
+    return parse_results
+
+
+def search_worker(  # noqa: WPS211
     input_data,
     results_container,
     all_found_info,
-    urls, 
+    urls,
     request_stats,
     stats_lock,
     logger,
 ):
-    """Функция для выполнения поисковых запросов в потоке"""
+    """Функция для выполнения поисковых запросов в потоке."""
     try:
         url, keyword, keyword_type, name_case = input_data
         raw_data = do_request_to_xmlriver(
@@ -356,4 +358,4 @@ def search_worker(
         with threading.Lock():
             results_container.extend(raw_data)
     except Exception as e:
-        logger.log_error(f"Error in worker thread: {str(e)}")
+        logging.error(f"Ошибка в рабочем потоке: {str(e)}")

@@ -103,3 +103,29 @@ class QueryDataResult(BaseModel):
     info: Optional[str]
     url: Optional[str]
     publication_date: Optional[str]
+
+
+class FoundInfo(BaseModel):
+    """Модель для хранения информации о найденных результатах"""
+    title: str
+    snippet: str
+    url: str
+    publication_date: Optional[str]
+    uri: str
+    weight: int = 1
+    kwd: str
+    word_type: Optional[str] = None
+    kwds_list: List[str] = Field(default_factory=list)
+    fullname: str = "false"
+    soc_type: str = ""
+    doc_type: str = ""
+
+
+class NumberInfo(BaseModel):
+    """Модель для хранения информации о найденных номерах"""
+    title: str
+    snippet: str
+    url: str
+    uri: str
+    weight: int = 1
+    kwd: str
