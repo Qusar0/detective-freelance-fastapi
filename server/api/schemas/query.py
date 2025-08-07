@@ -97,12 +97,22 @@ class FindByIRBISModel(BaseModel):
     inn: Optional[str]
 
 
+class ShortQueryDataResult(BaseModel):
+    """Модель для одного результата запроса"""
+    title: Optional[str]
+    info: Optional[str]
+    url: Optional[str]
+    publication_date: Optional[str] = None
+
+
 class QueryDataResult(BaseModel):
     """Модель для одного результата запроса"""
     title: Optional[str]
     info: Optional[str]
     url: Optional[str]
-    publication_date: Optional[str]
+    publication_date: Optional[str] = None
+    keyword_type: str
+    resource_type: Optional[str] = None
 
 
 class FoundInfo(BaseModel):
@@ -117,7 +127,7 @@ class FoundInfo(BaseModel):
     word_type: Optional[str] = None
     kwds_list: List[str] = Field(default_factory=list)
     fullname: str = "false"
-    soc_type: str = ""
+    soc_type: Optional[str] = None
     doc_type: str = ""
 
 

@@ -86,9 +86,7 @@ class EmailSearchTask(BaseSearchTask):
                     publication_date=publication_date,
                 )
                 db.add(query_data)
-
             await db.commit()
-            self.logger.log_info(f"Saved {len(raw_data)} raw results for query {self.query_id}")
         except Exception as e:
             await db.rollback()
             self.logger.log_error(f"Failed to save raw results: {e}")
@@ -109,9 +107,13 @@ class EmailSearchTask(BaseSearchTask):
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url=url)
-                    raw_data = parse_xml_response(response)
-                    all_raw_data.extend(raw_data)
-                    handling_resp = handle_xmlriver_response(response, all_found_data, [], self.email)
+                    handling_resp = handle_xmlriver_response(
+                        response,
+                        all_found_data,
+                        [],
+                        self.email,
+                        all_raw_data,
+                    )
 
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
@@ -138,9 +140,13 @@ class EmailSearchTask(BaseSearchTask):
                 try:
                     async with httpx.AsyncClient() as client:
                         response = await client.get(url=url)
-                        raw_data = parse_xml_response(response)
-                        all_raw_data.extend(raw_data)
-                        handling_resp = handle_xmlriver_response(response, all_found_data, proh_sites, self.email)
+                        handling_resp = handle_xmlriver_response(
+                            response,
+                            all_found_data,
+                            proh_sites,
+                            self.email,
+                            all_raw_data,
+                        )
 
                         if handling_resp == '15':
                             update_stats(self.request_stats, self.stats_lock, attempt, success=True)

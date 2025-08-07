@@ -461,6 +461,8 @@ class QueriesData(Base):
     info: Mapped[Optional[str]] = mapped_column(Text)
     link: Mapped[Optional[str]] = mapped_column(Text)
     publication_date: Mapped[Optional[str]] = mapped_column(Text)
+    keyword_type: Mapped[Optional[str]] = mapped_column(Text)
+    resource_type: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

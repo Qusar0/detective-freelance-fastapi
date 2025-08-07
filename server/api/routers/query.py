@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete, update
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Union, List
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
@@ -24,6 +24,7 @@ from server.api.schemas.query import (
     DownloadQueryRequest,
     FindByIRBISModel,
     QueryDataResult,
+    ShortQueryDataResult,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
@@ -592,15 +593,13 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.get("/query_data", response_model=List[QueryDataResult])
+@router.get("/query_data", response_model=List[Union[QueryDataResult, ShortQueryDataResult]])
 async def get_query_data(
     query_id: int = Query(..., description="ID запроса"),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Получает данные о выполненном запросе в формате:
-    """
+    """Получает данные о выполненном запросе."""
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
@@ -612,7 +611,8 @@ async def get_query_data(
                 UserQueries.user_id == user_id
             )
         )
-        if not query_exists.scalar():
+        query = query_exists.scalar()
+        if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         data_result = await db.execute(
@@ -628,17 +628,25 @@ async def get_query_data(
         results = []
 
         for item in query_data:
-            result = QueryDataResult(
-                title=item.title,
-                info=item.info,
-                url=item.link,
-                publication_date=item.publication_date,
-            )
+            if query.query_category in {'name', 'company'}:
+                result = QueryDataResult(
+                    title=item.title,
+                    info=item.info,
+                    url=item.link,
+                    publication_date=item.publication_date,
+                    keyword_type = item.keyword_type,
+                    resource_type = item.resource_type,
+                )
+            elif query.query_category in {'number', 'email'}:
+                result = ShortQueryDataResult(
+                    title=item.title,
+                    info=item.info,
+                    url=item.link,
+                    publication_date=item.publication_date,
+                )
             results.append(result)
         return results
 
-    except HTTPException:
-        raise
     except Exception as e:
         logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(

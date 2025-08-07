@@ -3,7 +3,7 @@ import xmltodict
 import os
 import re
 import time
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Any
 from urllib.parse import urlparse
 import requests
 import threading
@@ -32,95 +32,69 @@ def do_request_to_xmlriver(
     retry_delay = 2
     raw_data = []
 
-    if SEARCH_ENGINES['google'] in url:
+    def process_request(target_url):
         for attempt in range(1, max_attempts + 1):
             try:
-                response = requests.get(url)
-                current_raw = parse_xml_response(response)
-                raw_data.extend(current_raw)
+                response = requests.get(target_url)
                 handling_resp = handle_xmlriver_response(
                     response,
                     all_found_data,
                     prohibited_sites,
                     keyword,
+                    raw_data,
                     name_case,
                     keyword_type,
                 )
-                if handling_resp not in ('500', '110', '111'):
-                    urls.append(url)
-                    update_stats(request_stats, stats_lock, attempt, success=True)
-                    break
-                else:
-                    logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
-                    if attempt < max_attempts:
-                        time.sleep(retry_delay)
-            except Exception as e:
-                logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
-                if attempt < max_attempts:
-                    time.sleep(retry_delay)
-        else:
-            logger.log_error(f"Запрос полностью провален: {url}")
-            update_stats(request_stats, stats_lock, attempt, success=False)
 
+                if handling_resp == '15':
+                    return False
+                
+                if handling_resp not in ('500', '110', '111'):
+                    urls.append(target_url)
+                    update_stats(request_stats, stats_lock, attempt, success=True)
+                    return True
+                
+                logger.log_error(f"{handling_resp} | URL: {target_url} | Попытка: {attempt}")
+            except Exception as e:
+                logger.log_error(f"Исключение: {str(e)} | URL: {target_url} | Попытка: {attempt}")
+            
+            if attempt < max_attempts:
+                time.sleep(retry_delay)
+        
+        update_stats(request_stats, stats_lock, max_attempts, success=False)
+        logger.log_error(f"Запрос полностью провален: {target_url}")
+        return False
+
+    if SEARCH_ENGINES['google'] in url:
+        process_request(url)
+    
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
-        handling_resp = None
-
-        while handling_resp not in ('15'):
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    new_url = form_page_query(url, page_num)
-                    response = requests.get(new_url)
-                    current_raw = parse_xml_response(response)
-                    raw_data.extend(current_raw)
-
-                    handling_resp = handle_xmlriver_response(
-                        response,
-                        all_found_data,
-                        prohibited_sites,
-                        keyword,
-                        name_case,
-                        keyword_type,
-                    )
-                    if handling_resp not in ('500', '110', '111'):
-                        urls.append(new_url)
-                        update_stats(request_stats, stats_lock, attempt, success=True)
-                        page_num += 1
-                        break
-                    else:
-                        logging.error(
-                            f"Yandex request failed. \
-                            URL: {new_url}, \
-                            Status: {response.status_code}, \
-                            Attempt: {attempt}"
-                        )
-                        if attempt < max_attempts:
-                            time.sleep(retry_delay)
-                except Exception as e:
-                    logging.error(f"Yandex request exception. URL: {new_url}, Error: {str(e)}, Attempt: {attempt}")
-                    if attempt < max_attempts:
-                        time.sleep(retry_delay)
-            else:
-                update_stats(request_stats, stats_lock, attempt, success=False)
+        success = True
+        while success:
+            new_url = form_page_query(url, page_num)
+            success = process_request(new_url)
+            page_num += 1
 
     return raw_data
-
 
 def handle_xmlriver_response(  # noqa: WPS211
     response: httpx.Response,
     all_found_data: List[Union[FoundInfo, NumberInfo]],
     prohibited_sites: List[str],
     keyword: str,
+    raw_data: List[Dict[str, Any]],
     name_case: Optional[List[str]] = None,
     keyword_type: Optional[str] = None,
 ) -> Union[str, None]:
-    """Обрабатывает ответ от XMLriver API и добавляет найденные результаты в all_found_data.
+    """Обрабатывает ответ от XMLriver API, проверяя уникальность URL.
 
     Args:
         response: Ответ от сервера XMLriver
         all_found_data: Список для сохранения найденных результатов
         prohibited_sites: Список запрещенных сайтов
         keyword: Ключевое слово для поиска
+        raw_data: Сырые данные результатов (без дубликатов URL)
         name_case: Варианты написания имени
         keyword_type: Тип ключевого слова
 
@@ -169,24 +143,30 @@ def handle_xmlriver_response(  # noqa: WPS211
     except (KeyError, xmltodict.ParsingInterrupted) as e:
         raise ValueError(f"Некорректный ответ от XMLriver: {str(e)}")
 
+    existing_urls = {item['url'] for item in raw_data}
     for group in groups:
         doc = group["doc"]
+        url = doc["url"]
+        
+        if url in existing_urls:
+            continue
+            
         title = doc["title"]
         snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
-        url = doc["url"]
         pub_date = doc.get("pubDate")
 
         parsed_url = urlparse(url)
         site_url = parsed_url.netloc
         file_ext = os.path.splitext(parsed_url.path)[1].lower()
 
-        resource_type = SOCIAL_URLS.get(site_url) or DOCUMENT_TYPES.get(file_ext) or ""
+        resource_type = SOCIAL_URLS.get(site_url) or DOCUMENT_TYPES.get(file_ext) or None
 
         # Проверяем на запрещенные сайты
         if any(site.lower() in site_url.lower() for site in prohibited_sites):
             continue
-
-        processed_snippet = snippet.replace("`", "'").replace('\\', r'\\')
+        
+        if snippet:
+            processed_snippet = snippet.replace("`", "'").replace('\\', r'\\')
         if name_case is not None:
             processed_snippet = color_keywords(name_case, processed_snippet, keyword)
 
@@ -236,11 +216,20 @@ def handle_xmlriver_response(  # noqa: WPS211
                     doc_type='',
                 )
 
+            raw_data.append({
+                'title': title,
+                'snippet': snippet,
+                'url': url,
+                'domain': site_url,
+                'pubDate': pub_date,
+                'keyword_type': keyword_type,
+                'resource_type': resource_type,
+            })
             all_found_data.append(found_info)
+            existing_urls.add(url)
         except Exception as e:
             logging.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
 
-    return None
 
 
 def xml_errors_handler(xml_response):
@@ -291,8 +280,12 @@ def color_keywords(name_case: List[str], snippet: str, search_keyword: str) -> s
     return colored_snippet
 
 
-def parse_xml_response(response: httpx.Response) -> List[Dict[str, str]]:
-    """Парсит XML ответ."""
+def parse_xml_response(
+    response: httpx.Response,
+    keyword_type: Optional[str] = None,
+    resource_type: Optional[str] = None,
+) -> List[Dict[str, str]]:
+    """Парсит XML ответ и возвращает результаты без дубликатов URL."""
     try:
         decoded_resp = response.content.decode('utf-8')
         response_data = xmltodict.parse(decoded_resp)
@@ -310,25 +303,30 @@ def parse_xml_response(response: httpx.Response) -> List[Dict[str, str]]:
         logging.error(f"XML structure error: {e}")
         return []
 
-    parse_results = []
+    unique_results = {}
     groups_list = [groups] if isinstance(groups, dict) else groups
 
     for group in groups_list:
         try:
             doc = group.get('doc', {})
             url = doc.get('url', '')
-
-            parse_results.append({
+            
+            if url in unique_results:
+                continue
+                
+            unique_results[url] = {
                 'title': doc.get('title', ''),
                 'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),
                 'url': url,
                 'domain': urlparse(url).netloc,
                 'pubDate': doc.get('pubDate'),
-            })
+                'keyword_type': keyword_type,
+                'resource_type': resource_type,
+            }
         except Exception as e:
             logging.error(f"Ошибка парсинга XML: {e}")
 
-    return parse_results
+    return list(unique_results.values())
 
 
 def search_worker(  # noqa: WPS211
@@ -356,6 +354,8 @@ def search_worker(  # noqa: WPS211
             logger
         )
         with threading.Lock():
-            results_container.extend(raw_data)
+            existing_urls = {item['url'] for item in results_container}
+            new_items = [item for item in raw_data if item['url'] not in existing_urls]
+            results_container.extend(new_items)
     except Exception as e:
         logging.error(f"Ошибка в рабочем потоке: {str(e)}")

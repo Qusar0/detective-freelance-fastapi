@@ -41,7 +41,7 @@ class NameSearchTask(BaseSearchTask):
         urls = []
 
         try:
-            keywords: dict = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
+            keywords = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
             titles = []
 
@@ -55,13 +55,9 @@ class NameSearchTask(BaseSearchTask):
                     full_name.append(self.search_patronymic[lang])
 
                 name_cases = await form_name_cases(full_name, lang)
-                len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
-                len_keywords_from_db = len(keywords_from_db[lang])
 
                 await self._form_search_requests(
                     name_cases,
-                    len_keywords_from_user,
-                    len_keywords_from_db,
                     keywords_from_db[lang],
                     request_input_pack,
                     lang,
@@ -108,16 +104,15 @@ class NameSearchTask(BaseSearchTask):
     async def _form_search_requests(
         self,
         name_cases,
-        len_keywords_from_user,
-        len_keywords_from_db,
         keywords_from_db,
         request_input_pack,
         lang,
     ):
+        len_keywords_from_user = len(self.keywords_from_user[lang]['keywords'])
         for name_case in name_cases:
             search_keys = form_search_key(name_case, len_keywords_from_user)
             for search_key in search_keys:
-                if len_keywords_from_user == 0 and len_keywords_from_db == 0:
+                if len_keywords_from_user == 0 and len(keywords_from_db) == 0:
                     self._add_standard_search(
                         request_input_pack,
                         search_key,
@@ -220,7 +215,7 @@ class NameSearchTask(BaseSearchTask):
                     urls,
                     self.request_stats,
                     self.stats_lock,
-                    self.logger
+                    self.logger,
                 )
             )
             thread_list.append(t)
@@ -235,7 +230,9 @@ class NameSearchTask(BaseSearchTask):
                 title = item.get('title')
                 snippet = item.get('snippet')
                 url = item.get('url')
-                publication_date = item.get('publication_date')
+                publication_date = item.get('pubDate')
+                keyword_type = item.get('keyword_type')
+                resource_type = item.get('resource_type')
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -243,6 +240,8 @@ class NameSearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
+                    keyword_type=keyword_type,
+                    resource_type=resource_type,
                 )
 
                 db.add(query_data)

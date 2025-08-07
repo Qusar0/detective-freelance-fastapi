@@ -88,7 +88,6 @@ class NumberSearchTask(BaseSearchTask):
                     link=url,
                     publication_date=publication_date,
                 )
-
                 db.add(query_data)
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
@@ -105,16 +104,20 @@ class NumberSearchTask(BaseSearchTask):
         proh_sites = await read_needless_sites(db)
         max_attempts = 5
         retry_delay = 2
+        handling_resp = None
 
-        # Обработка Google запросов
         google_urls = form_google_query(self.phone_num)
         for url in google_urls:
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
-                    raw_data = parse_xml_response(response)
-                    all_raw_data.extend(raw_data)
-                    handling_resp = handle_xmlriver_response(response, all_found_data, proh_sites, self.phone_num)
+                    handling_resp = handle_xmlriver_response(
+                        response,
+                        all_found_data,
+                        proh_sites,
+                        self.phone_num,
+                        all_raw_data,
+                    )
 
                     if handling_resp not in ('500', '110', '111'):
                         urls.append(url)
@@ -132,7 +135,6 @@ class NumberSearchTask(BaseSearchTask):
                 self.logger.log_error(f"Google запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 
-        # Обработка Yandex запросов
         counter = 0
         while True:
             url = form_yandex_query_num(self.phone_num, page_num=counter)
@@ -140,9 +142,13 @@ class NumberSearchTask(BaseSearchTask):
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = requests.get(url=url)
-                    raw_data = parse_xml_response(response)
-                    all_raw_data.extend(raw_data)
-                    handling_resp = handle_xmlriver_response(response, all_found_data, proh_sites, self.phone_num)
+                    handling_resp = handle_xmlriver_response(
+                        response,
+                        all_found_data,
+                        proh_sites,
+                        self.phone_num,
+                        all_raw_data,
+                    )
 
                     if handling_resp == '15':
                         update_stats(self.request_stats, self.stats_lock, attempt, success=True)

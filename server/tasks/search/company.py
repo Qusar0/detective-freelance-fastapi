@@ -176,6 +176,8 @@ class CompanySearchTask(BaseSearchTask):
                 snippet = item.get('snippet')
                 url = item.get('url')
                 publication_date = item.get('publication_date')
+                keyword_type = item.get('keyword_type')
+                resource_type = item.get('resource_type')
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -183,6 +185,8 @@ class CompanySearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
+                    keyword_type=keyword_type,
+                    resource_type=resource_type,
                 )
 
                 db.add(query_data)

@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List
+from typing import List, Optional
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import Keywords
@@ -17,10 +17,11 @@ class KeywordsDAO(BaseDAO):
         cls,
         db: AsyncSession,
         default_keywords_type: str,
-        languages: List[str] = None,
+        languages: Optional[List[str]] = None,
     ):
         if not languages:
             languages = ['ru']
+
         splitted_kws = default_keywords_type.split(", ")
         named_keywords = {}
         counter = 0
