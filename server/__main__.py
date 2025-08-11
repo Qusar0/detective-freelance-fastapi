@@ -31,6 +31,9 @@ def get_file_storage() -> FileStorageService:
     return FileStorageService()
 
 
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
+
 app = FastAPI()
 app.dependency_overrides[FileStorageService] = get_file_storage
 

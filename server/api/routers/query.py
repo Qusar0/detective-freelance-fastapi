@@ -4,14 +4,27 @@ from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, update
+from sqlalchemy import delete, update, func
 from datetime import datetime, timezone
-from typing import Union, List
+from typing import Union, List, Optional
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
-from server.api.models.models import QueriesData, UserQueries, Events, TextData, QueriesBalance, Language
+from server.api.models.models import (
+    QueriesData,
+    UserQueries,
+    Events,
+    TextData,
+    QueriesBalance,
+    Language,
+    QueryTranslationLanguages,
+    QuerySearchCategoryType,
+    QuerySearchCategory,
+    AdditionalQueryWord,
+    AdditionalQueryWordType,
+    KeywordType,
+)
 from server.api.schemas.query import (
     QueriesCountResponse,
     QueryData,
@@ -25,6 +38,7 @@ from server.api.schemas.query import (
     FindByIRBISModel,
     QueryDataResult,
     ShortQueryDataResult,
+    GenerarQueryDataResponse,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
@@ -351,7 +365,7 @@ async def find_by_email(
 
         start_search_by_email.apply_async(
             args=(search_email, methods_type, user_query.query_id, price),
-            queue='email_tasks'
+            queue='email_tasks',
         )
         return None
 
@@ -596,60 +610,179 @@ async def get_available_languages(
 @router.get("/query_data", response_model=List[Union[QueryDataResult, ShortQueryDataResult]])
 async def get_query_data(
     query_id: int = Query(..., description="ID запроса"),
+    keyword_type_category: Optional[str] = Query(None, description="Категория ключевых слов"),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о выполненном запросе."""
+    """Получает данные о выполненном запросе с фильтрацией по категориям."""
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        query_exists = await db.execute(
+        query = await db.execute(
             select(UserQueries)
             .where(
                 UserQueries.query_id == query_id,
                 UserQueries.user_id == user_id
             )
         )
-        query = query_exists.scalar()
+        query = query.scalar()
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        data_result = await db.execute(
-            select(QueriesData)
+        query_stmt = (
+            select(QueriesData, KeywordType)
+            .join(QueriesData.keyword_type)
             .where(QueriesData.query_id == query_id)
-            .order_by(QueriesData.created_at.desc())
         )
-        query_data = data_result.scalars().all()
+
+        if keyword_type_category:
+            SOCIAL_URLS = ['Вконтакте', 'Одноклассники', 'Facebook', 'Instagram', 'Telegram']
+            DOCUMENT_TYPES = ['Word', 'PDF', 'Excel', 'Txt', 'PowerPoint']
+            if keyword_type_category == 'socials':
+                query_stmt = query_stmt.where(QueriesData.resource_type.in_(SOCIAL_URLS))
+            elif keyword_type_category == 'documents':
+                query_stmt = query_stmt.where(QueriesData.resource_type.in_(DOCUMENT_TYPES))
+            else:
+                query_stmt = query_stmt.where(KeywordType.keyword_type_name == keyword_type_category)
+
+        query_stmt = query_stmt.order_by(QueriesData.created_at.desc())
+        
+        data_result = await db.execute(query_stmt)
+        query_data = data_result.all()  # Получаем кортежи (QueriesData, KeywordType)
 
         if not query_data:
             raise HTTPException(status_code=404, detail="Данные запроса не найдены")
 
         results = []
 
-        for item in query_data:
+        for data_item, keyword_type in query_data:
             if query.query_category in {'name', 'company'}:
                 result = QueryDataResult(
-                    title=item.title,
-                    info=item.info,
-                    url=item.link,
-                    publication_date=item.publication_date,
-                    keyword_type = item.keyword_type,
-                    resource_type = item.resource_type,
+                    title=data_item.title,
+                    info=data_item.info,
+                    url=data_item.link,
+                    publication_date=data_item.publication_date,
+                    keyword_type=keyword_type.keyword_type_name if keyword_type else None,
+                    resource_type=data_item.resource_type,
                 )
             elif query.query_category in {'number', 'email'}:
                 result = ShortQueryDataResult(
-                    title=item.title,
-                    info=item.info,
-                    url=item.link,
-                    publication_date=item.publication_date,
+                    title=data_item.title,
+                    info=data_item.info,
+                    url=data_item.link,
+                    publication_date=data_item.publication_date,
                 )
             results.append(result)
+        
         return results
 
     except Exception as e:
         logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Произошла ошибка при получении данных запроса"
+            detail="Произошла ошибка при получении данных запроса",
+        )
+
+@router.get("/general_query_data", response_model=GenerarQueryDataResponse)
+async def get_general_query_data(
+    query_id: int = Query(..., description="ID запроса"),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает общие данные о выполненном запросе."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+
+        query = await db.execute(
+            select(UserQueries)
+            .where(
+                UserQueries.query_id == query_id,
+                UserQueries.user_id == user_id
+            )
+        )
+        query = query.scalar()
+        if not query:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        languages_result = await db.execute(
+            select(Language.code, Language.russian_name)
+            .join(QueryTranslationLanguages.language)
+            .where(QueryTranslationLanguages.query_id == query_id)
+        )
+        languages = [{"code": code, "name": name} for code, name in languages_result.all()]
+
+        categories_result = await db.execute(
+            select(QuerySearchCategoryType.query_search_category_type_ru, QuerySearchCategoryType.query_search_category_type)
+            .join(QuerySearchCategory.search_category_type)
+            .where(QuerySearchCategory.query_id == query_id)
+        )
+        categories = [
+            {"code": en_name, "name": ru_name} 
+            for ru_name, en_name in categories_result.all()
+        ]
+
+        plus_words_result = await db.execute(
+            select(AdditionalQueryWord.query_word)
+            .join(AdditionalQueryWord.query_word_type)
+            .where(
+                AdditionalQueryWord.query_id == query_id,
+                AdditionalQueryWordType.query_word_type == "plus"
+            )
+        )
+        plus_words = [word[0] for word in plus_words_result.all()]
+
+        minus_words_result = await db.execute(
+            select(AdditionalQueryWord.query_word)
+            .join(AdditionalQueryWord.query_word_type)
+            .where(
+                AdditionalQueryWord.query_id == query_id,
+                AdditionalQueryWordType.query_word_type == "minus"
+            )
+        )
+        minus_words = [word[0] for word in minus_words_result.all()]
+
+        keyword_stats_result = await db.execute(
+            select(
+                KeywordType.keyword_type_name,
+                func.count(QueriesData.id)
+            )
+            .join(QueriesData.keyword_type)
+            .where(QueriesData.query_id == query_id)
+            .group_by(KeywordType.keyword_type_name)
+        )
+        keyword_stats = {k: v for k, v in keyword_stats_result.all()}
+
+        free_words = []
+        if "free word" in keyword_stats:
+            free_words_result = await db.execute(
+                select(QueriesData.keyword)
+                .distinct()
+                .join(QueriesData.keyword_type)
+                .where(
+                    QueriesData.query_id == query_id,
+                    KeywordType.keyword_type_name == "free word"
+                )
+            )
+            free_words = [word[0] for word in free_words_result.all() if word[0]]
+
+        return {
+            "query_id": query.query_id,
+            "query_title": query.query_title,
+            "languages": languages,
+            "categories": categories,
+            "plus_words": plus_words,
+            "minus_words": minus_words,
+            "keyword_stats": keyword_stats,
+            "free_words": free_words if free_words else None
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Произошла ошибка при получении данных запроса",
         )

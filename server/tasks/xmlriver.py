@@ -222,6 +222,7 @@ def handle_xmlriver_response(  # noqa: WPS211
                 'url': url,
                 'domain': site_url,
                 'pubDate': pub_date,
+                'keyword': keyword,
                 'keyword_type': keyword_type,
                 'resource_type': resource_type,
             })

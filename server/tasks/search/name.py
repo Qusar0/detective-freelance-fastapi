@@ -7,6 +7,8 @@ from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.keywords import KeywordsDAO
+from server.api.dao.additional_query_word import AdditionalQueryWordDAO
+from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_template
 from server.api.services.file_storage import FileStorageService
@@ -41,6 +43,8 @@ class NameSearchTask(BaseSearchTask):
         urls = []
 
         try:
+            await self._save_general_info(db)
+
             keywords = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
             titles = []
@@ -97,6 +101,32 @@ class NameSearchTask(BaseSearchTask):
             print(e)
             self.money_to_return = self.price
             raise e
+
+    async def _save_general_info(self, db):
+        if self.default_keywords_type:
+            await QuerySearchCategoryDAO.add_search_categories(
+                db,
+                self.query_id,
+                self.default_keywords_type,
+            )
+
+        if self.search_minus['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.search_minus['original'],
+                'minus',
+            )
+        if self.search_plus['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.search_plus['original'],
+                'plus',
+            )
+
+        if self.languages:
+            await LanguageDAO.save_query_languages(db, self.query_id, self.languages)
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
@@ -230,9 +260,12 @@ class NameSearchTask(BaseSearchTask):
                 title = item.get('title')
                 snippet = item.get('snippet')
                 url = item.get('url')
+                keyword = item.get('keyword')
                 publication_date = item.get('pubDate')
-                keyword_type = item.get('keyword_type')
                 resource_type = item.get('resource_type')
+
+                keyword_type = item.get('keyword_type')
+                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -240,7 +273,8 @@ class NameSearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
-                    keyword_type=keyword_type,
+                    keyword_type_id=keyword_type_id,
+                    keyword=keyword,
                     resource_type=resource_type,
                 )
 

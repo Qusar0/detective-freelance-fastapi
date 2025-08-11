@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 
 
@@ -110,8 +110,8 @@ class QueryDataResult(BaseModel):
     title: Optional[str]
     info: Optional[str]
     url: Optional[str]
-    publication_date: Optional[str] = None
     keyword_type: str
+    publication_date: Optional[str] = None
     resource_type: Optional[str] = None
 
 
@@ -139,3 +139,46 @@ class NumberInfo(BaseModel):
     uri: str
     weight: int = 1
     kwd: str
+
+
+class LanguageResponse(BaseModel):
+    code: str
+    name: str
+
+class CategoryResponse(BaseModel):
+    code: str
+    name: str
+
+class GenerarQueryDataResponse(BaseModel):
+    query_id: int
+    query_title: str
+    languages: List[LanguageResponse]
+    categories: List[CategoryResponse]
+    plus_words: List[str]
+    minus_words: List[str]
+    keyword_stats: Dict[str, int]
+    free_words: Optional[List[str]]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "query_id": 123,
+                "query_title": "Поиск новостей о компании",
+                "languages": [
+                    {"code": "ru", "name": "Русский"},
+                    {"code": "en", "name": "Английский"}
+                ],
+                "categories": [
+                    {"code": "reputation", "name": "Репутация"},
+                    {"code": "negativ", "name": "Негатив"}
+                ],
+                "plus_words": ["качество", "сервис"],
+                "minus_words": ["брак", "возврат"],
+                "keyword_stats": {
+                    "reputation": 15,
+                    "negativ": 8,
+                    "free word": 3
+                },
+                "free_words": ["инновации", "развитие", "технологии"]
+            }
+        }

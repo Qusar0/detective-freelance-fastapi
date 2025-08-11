@@ -86,6 +86,29 @@ class Events(Base):
         return f"Событие ({self.event_id})"
 
 
+class KeywordType(Base):
+    __tablename__ = 'keyword_type'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    keyword_type_name: Mapped[str] = mapped_column(String(20))
+
+    keywords: Mapped[List['Keywords']] = relationship(
+        'Keywords',
+        back_populates='keyword_type',
+        lazy='select',
+    )
+    
+    queries_data: Mapped[List['QueriesData']] = relationship(
+        'QueriesData',
+        back_populates='keyword_type',
+        lazy='select',
+    )
+
+
 class Keywords(Base):
     __tablename__ = 'keywords'
 
@@ -95,7 +118,14 @@ class Keywords(Base):
         autoincrement=True,
     )
     word: Mapped[Optional[str]] = mapped_column(String(75))
-    word_type: Mapped[Optional[str]] = mapped_column(String(20))
+    keyword_type_id: Mapped['KeywordType'] = mapped_column(
+        ForeignKey('keyword_type.id', ondelete='CASCADE'),
+    )
+
+    keyword_type: Mapped['KeywordType'] = relationship(
+        'KeywordType',
+        back_populates='keywords',
+    )
 
     def __str__(self):
         return f"Ключевое слово ({self.word})"
@@ -296,7 +326,21 @@ class UserQueries(Base):
         back_populates='query',
         cascade='all, delete-orphan',
     )
-
+    additional_query_words: Mapped[List['AdditionalQueryWord']] = relationship(
+        'AdditionalQueryWord',
+        back_populates='query',
+        cascade='all, delete-orphan',
+    )
+    query_search_categories: Mapped[List['QuerySearchCategory']] = relationship(
+        'QuerySearchCategory',
+        back_populates='query',
+        cascade='all, delete-orphan',
+    )
+    translation_languages: Mapped[List['QueryTranslationLanguages']] = relationship(
+        'QueryTranslationLanguages',
+        back_populates='query',
+        cascade='all, delete-orphan',
+    )
     events: Mapped['Events'] = relationship('Events', back_populates='query')
 
     def __str__(self):
@@ -400,10 +444,14 @@ class Language(Base):
         back_populates='language',
         cascade='all, delete-orphan'
     )
-
     users_with_default_language: Mapped[List['Users']] = relationship(
         'Users',
         back_populates='default_language'
+    )
+    query_translations: Mapped[List['QueryTranslationLanguages']] = relationship(
+        'QueryTranslationLanguages',
+        back_populates='language',
+        cascade='all, delete-orphan',
     )
 
 
@@ -461,8 +509,12 @@ class QueriesData(Base):
     info: Mapped[Optional[str]] = mapped_column(Text)
     link: Mapped[Optional[str]] = mapped_column(Text)
     publication_date: Mapped[Optional[str]] = mapped_column(Text)
-    keyword_type: Mapped[Optional[str]] = mapped_column(Text)
-    resource_type: Mapped[Optional[str]] = mapped_column(Text)
+    keyword_type_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('keyword_type.id', ondelete='SET NULL'),
+        nullable=True,
+    )
+    keyword: Mapped[Optional[str]] = mapped_column(String(30))
+    resource_type: Mapped[Optional[str]] = mapped_column(String(30))
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -472,6 +524,130 @@ class QueriesData(Base):
         'UserQueries',
         back_populates='query_data',
     )
+    
+    keyword_type: Mapped['KeywordType'] = relationship(
+        'KeywordType',
+        back_populates='queries_data',
+    )
 
     def __str__(self):
         return f"Результаты запроса ({self.query_id})"
+
+
+class AdditionalQueryWordType(Base):
+    __tablename__ = 'additional_query_word_type'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_word_type: Mapped[str] = mapped_column(String(30))
+
+    additional_query_words: Mapped[List['AdditionalQueryWord']] = relationship(
+        'AdditionalQueryWord',
+        back_populates='query_word_type',
+        lazy='select'
+    )
+
+
+class AdditionalQueryWord(Base):
+    __tablename__ = 'additional_query_word'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    query_word: Mapped[Optional[str]] = mapped_column(String(75))
+    query_word_type_id: Mapped['AdditionalQueryWordType'] = mapped_column(
+        ForeignKey('additional_query_word_type.id', ondelete='CASCADE'),
+    )
+
+    query: Mapped['UserQueries'] = relationship(
+        'UserQueries',
+        back_populates='additional_query_words',
+    )
+    query_word_type: Mapped['AdditionalQueryWordType'] = relationship(
+        'AdditionalQueryWordType',
+        back_populates='additional_query_words',
+    )
+
+
+class QuerySearchCategoryType(Base):
+    __tablename__ = 'query_search_category_type'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_search_category_type: Mapped[str] = mapped_column(String(30))
+    query_search_category_type_ru: Mapped[Optional[str]] = mapped_column(String(30))
+
+    query_search_categories: Mapped[List['QuerySearchCategory']] = relationship(
+        'QuerySearchCategory',
+        back_populates='search_category_type',
+        lazy='select'
+    )
+
+
+class QuerySearchCategory(Base):
+    __tablename__ = 'query_search_category'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    search_category_type_id: Mapped['QuerySearchCategoryType'] = mapped_column(
+        ForeignKey('query_search_category_type.id', ondelete='CASCADE'),
+    )
+
+    query: Mapped['UserQueries'] = relationship(
+        'UserQueries',
+        back_populates='query_search_categories',
+    )
+
+    search_category_type: Mapped['QuerySearchCategoryType'] = relationship(
+        'QuerySearchCategoryType',
+        back_populates='query_search_categories',
+    )
+
+
+class QueryTranslationLanguages(Base):
+    __tablename__ = 'query_translation_languages'
+    
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_id: Mapped[int] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    language_id: Mapped[int] = mapped_column(
+        ForeignKey('languages.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    query: Mapped['UserQueries'] = relationship(
+        'UserQueries',
+        back_populates='translation_languages',
+    )
+    language: Mapped['Language'] = relationship(
+        'Language',
+        back_populates='query_translations',
+    )
+
+    def __str__(self):
+        return f"Язык перевода запроса ({self.query_id} - {self.language_id})"

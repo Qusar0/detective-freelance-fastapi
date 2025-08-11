@@ -1,6 +1,10 @@
 from celery import Celery
 
 from server.api.conf.config import settings
+import logging
+
+
+logging.getLogger('sqlalchemy.engine.Engine').disabled = True
 
 
 def create_celery() -> Celery:
