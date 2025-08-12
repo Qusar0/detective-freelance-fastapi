@@ -7,6 +7,7 @@ import httpx
 from server.api.scripts.lampyre_email import LampyreMail
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.dao.keywords import KeywordsDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
@@ -77,6 +78,8 @@ class EmailSearchTask(BaseSearchTask):
                 snippet = item.get('raw_snippet') or item.get('snippet')
                 url = item.get('url')
                 publication_date = item.get('pubDate')
+                keyword_type = 'free word'
+                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -84,6 +87,7 @@ class EmailSearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
+                    keyword_type_id=keyword_type_id,
                 )
                 db.add(query_data)
             await db.commit()
@@ -100,7 +104,6 @@ class EmailSearchTask(BaseSearchTask):
         max_attempts = 5
         retry_delay = 2
 
-        # Обработка Google запроса
         url = SEARCH_ENGINES['google'] + f'"{self.email}"'
 
         for attempt in range(1, max_attempts + 1):
@@ -131,7 +134,6 @@ class EmailSearchTask(BaseSearchTask):
             self.logger.log_error(f"Google запрос полностью провален: {url}")
             update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 
-        # Обработка Yandex запросов
         counter = 0
         while True:
             url = form_yandex_query_email(self.email, page_num=counter)

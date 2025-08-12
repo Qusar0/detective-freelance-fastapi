@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Optional
+from typing import Optional, List
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import AdditionalQueryWord, AdditionalQueryWordType
@@ -30,9 +30,11 @@ class AdditionalQueryWordDAO(BaseDAO):
                 logging.error(f"Тип слова '{word_type}' не найден")
                 return False
 
-            delimiter = '+' if word_type == 'plus' else '+-'
-
-            word_list = [word for word in words.split(delimiter) if word.strip()]
+            if isinstance(words, str):
+                delimiter = '+' if word_type == 'plus' else '+-'
+                word_list = [word for word in words.split(delimiter) if word.strip()]
+            else:
+                word_list = words
 
             if not word_list:
                 logging.error("Не найдено слов для добавления")
@@ -80,3 +82,25 @@ class AdditionalQueryWordDAO(BaseDAO):
         except SQLAlchemyError as e:
             logging.error(f"Ошибка при получении дополнительных слов: {e}")
             return []
+
+    @classmethod
+    async def get_query_words_by_type(
+        cls,
+        query_id: int,
+        word_type: str,
+        db: AsyncSession
+    ) -> List[str]:
+        """Получает дополнительные слова заданного типа для запроса"""
+        try:
+            result = await db.execute(
+                select(AdditionalQueryWord.query_word)
+                .join(AdditionalQueryWord.query_word_type)
+                .where(
+                    AdditionalQueryWord.query_id == query_id,
+                    AdditionalQueryWordType.query_word_type == word_type
+                )
+            )
+            return [word[0] for word in result.all()]
+        except SQLAlchemyError as e:
+            logging.error(f"Ошибка получения категории слов '{word_type}': {e}")
+            raise

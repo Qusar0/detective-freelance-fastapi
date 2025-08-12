@@ -7,6 +7,8 @@ from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.dao.query_search_category import QuerySearchCategoryDAO
+from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
@@ -28,8 +30,8 @@ class CompanySearchTask(BaseSearchTask):
         self.location = search_filters[2]
         self.keywords_from_user = search_filters[3]
         self.default_keywords_type = search_filters[4]
-        self.plus_words = search_filters[5]
-        self.minus_words = search_filters[6]
+        self.search_plus = search_filters[5]
+        self.search_minus = search_filters[6]
         self.search_engines = search_filters[9]
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
         self.logger = SearchLogger(self.query_id, 'search_company.log')
@@ -41,6 +43,8 @@ class CompanySearchTask(BaseSearchTask):
         titles = []
 
         try:
+            await self._save_general_info(db)
+
             keywords: dict = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
 
@@ -59,8 +63,8 @@ class CompanySearchTask(BaseSearchTask):
                                     "",
                                     "free word",
                                     self.location[lang],
-                                    self.plus_words[lang],
-                                    self.minus_words[lang],
+                                    self.search_plus[lang],
+                                    self.search_minus[lang],
                                     lang,
                                     url,
                                 )
@@ -74,8 +78,8 @@ class CompanySearchTask(BaseSearchTask):
                                         kwd_from_user,
                                         "free word",
                                         self.location[lang],
-                                        self.plus_words[lang],
-                                        self.minus_words[lang],
+                                        self.search_plus[lang],
+                                        self.search_minus[lang],
                                         lang,
                                         url,
                                     )
@@ -90,8 +94,8 @@ class CompanySearchTask(BaseSearchTask):
                                             kwd_from_db,
                                             words_type,
                                             self.location[lang],
-                                            self.plus_words[lang],
-                                            self.minus_words[lang],
+                                            self.search_plus[lang],
+                                            self.search_minus[lang],
                                             lang,
                                             url,
                                         )
@@ -110,8 +114,8 @@ class CompanySearchTask(BaseSearchTask):
                     self.company_names[0],
                     self.default_keywords_type,
                     self.keywords_from_user['original'],
-                    self.minus_words['original'],
-                    self.plus_words['original'],
+                    self.search_minus['original'],
+                    self.search_plus['original'],
                     'company',
                 ),
             )
@@ -137,6 +141,40 @@ class CompanySearchTask(BaseSearchTask):
             print(e)
             self.money_to_return = self.price
             raise e
+
+    async def _save_general_info(self, db):
+        if self.default_keywords_type:
+            await QuerySearchCategoryDAO.add_search_categories(
+                db,
+                self.query_id,
+                self.default_keywords_type,
+            )
+
+        if self.search_minus['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.search_minus['original'],
+                'minus',
+            )
+        if self.search_plus['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.search_plus['original'],
+                'plus',
+            )
+
+        if self.keywords_from_user['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.keywords_from_user['original'],
+                'free word',
+            )
+
+        if self.languages:
+            await LanguageDAO.save_query_languages(db, self.query_id, self.languages)
 
     async def _process_search_requests(
         self,
@@ -175,9 +213,12 @@ class CompanySearchTask(BaseSearchTask):
                 title = item.get('title')
                 snippet = item.get('snippet')
                 url = item.get('url')
+                keyword = item.get('keyword')
                 publication_date = item.get('publication_date')
-                keyword_type = item.get('keyword_type')
                 resource_type = item.get('resource_type')
+
+                keyword_type = item.get('keyword_type')
+                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -185,7 +226,8 @@ class CompanySearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
-                    keyword_type=keyword_type,
+                    keyword_type_id=keyword_type_id,
+                    keyword=keyword,
                     resource_type=resource_type,
                 )
 

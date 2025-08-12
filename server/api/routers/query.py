@@ -4,7 +4,7 @@ from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, func
+from sqlalchemy import delete
 from datetime import datetime
 from typing import List
 from server.api.scripts.sse_manager import generate_sse_message_type
@@ -12,18 +12,11 @@ from server.api.services.price import calculate_email_price, calculate_name_pric
 from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
 from server.api.models.models import (
-    QueriesData,
     UserQueries,
     Events,
     TextData,
     QueriesBalance,
     Language,
-    QueryTranslationLanguages,
-    QuerySearchCategoryType,
-    QuerySearchCategory,
-    AdditionalQueryWord,
-    AdditionalQueryWordType,
-    KeywordType,
 )
 from server.api.schemas.query import (
     QueriesCountResponse,
@@ -39,7 +32,6 @@ from server.api.schemas.query import (
     QueryDataResponse,
     QueryDataRequest,
     GenerarQueryDataResponse,
-    ShortQueryDataResult,
     QueryDataResult,
 )
 
@@ -48,6 +40,10 @@ from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.user_balances import UserBalancesDAO
 from server.api.dao.balance_history import BalanceHistoryDAO
 from server.api.dao.queries_data import QueriesDataDAO
+from server.api.dao.query_translation_languages import QueryTranslationLanguagesDAO
+from server.api.dao.query_search_category import QuerySearchCategoryDAO
+from server.api.dao.additional_query_word import AdditionalQueryWordDAO
+from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
 from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
@@ -55,6 +51,7 @@ from server.tasks.search.email import start_search_by_email
 from server.tasks.search.irbis import start_search_by_irbis
 from server.tasks.search.name import start_search_by_name
 from server.tasks.search.number import start_search_by_num
+
 
 router = APIRouter(
     prefix="/queries",
@@ -641,21 +638,20 @@ async def get_query_data(
         results = []
         for data_item, keyword_type in query_data:
             if query.query_category in {'name', 'company'}:
-                result = QueryDataResult(
-                    title=data_item.title,
-                    info=data_item.info,
-                    url=data_item.link,
-                    publication_date=data_item.publication_date,
-                    keyword_type_name=keyword_type.keyword_type_name,
-                    resource_type=data_item.resource_type,
-                )
-            elif query.query_category in {'number', 'email'}:
-                result = ShortQueryDataResult(
-                    title=data_item.title,
-                    info=data_item.info,
-                    url=data_item.link,
-                    publication_date=data_item.publication_date,
-                )
+                keyword_type_name = keyword_type.keyword_type_name
+                resource_type = data_item.resource_type
+            else:
+                keyword_type_name = None
+                resource_type = None
+
+            result = QueryDataResult(
+                title=data_item.title,
+                info=data_item.info,
+                url=data_item.link,
+                publication_date=data_item.publication_date,
+                keyword_type_name=keyword_type_name,
+                resource_type=resource_type,
+            )
             results.append(result)
 
         total_pages = (total + request_data.size - 1) // request_data.size
@@ -687,91 +683,30 @@ async def get_general_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        query = await UserQueriesDAO.get_query_by_id(
-            user_id,
-            query_id,
-            db,
-        )
+        query = await UserQueriesDAO.get_query_by_id(user_id, query_id, db)
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        languages_result = await db.execute(
-            select(Language.code, Language.russian_name)
-            .join(QueryTranslationLanguages.language)
-            .where(QueryTranslationLanguages.query_id == query_id)
-        )
-        languages = [{"code": code, "name": name} for code, name in languages_result.all()]
-
-        categories_result = await db.execute(
-            select(
-                QuerySearchCategoryType.query_search_category_type_ru,
-                QuerySearchCategoryType.query_search_category_type,
-            )
-            .join(QuerySearchCategory.search_category_type)
-            .where(QuerySearchCategory.query_id == query_id)
-        )
-        categories = [
-            {"code": en_name, "name": ru_name}
-            for ru_name, en_name in categories_result.all()
-        ]
-
-        plus_words_result = await db.execute(
-            select(AdditionalQueryWord.query_word)
-            .join(AdditionalQueryWord.query_word_type)
-            .where(
-                AdditionalQueryWord.query_id == query_id,
-                AdditionalQueryWordType.query_word_type == "plus"
-            )
-        )
-        plus_words = [word[0] for word in plus_words_result.all()]
-
-        minus_words_result = await db.execute(
-            select(AdditionalQueryWord.query_word)
-            .join(AdditionalQueryWord.query_word_type)
-            .where(
-                AdditionalQueryWord.query_id == query_id,
-                AdditionalQueryWordType.query_word_type == "minus"
-            )
-        )
-        minus_words = [word[0] for word in minus_words_result.all()]
-
-        keyword_stats_result = await db.execute(
-            select(
-                KeywordType.keyword_type_name,
-                func.count(QueriesData.id)
-            )
-            .join(QueriesData.keyword_type)
-            .where(QueriesData.query_id == query_id)
-            .group_by(KeywordType.keyword_type_name)
-        )
-        keyword_stats = {k: v for k, v in keyword_stats_result.all()}
+        languages = await QueryTranslationLanguagesDAO.get_query_languages(query_id, db)
+        categories = await QuerySearchCategoryDAO.get_query_categories(query_id, db)
+        plus_words = await AdditionalQueryWordDAO.get_query_words_by_type(query_id, "plus", db)
+        minus_words = await AdditionalQueryWordDAO.get_query_words_by_type(query_id, "minus", db)
+        keyword_stats = await QueryKeywordStatsDAO.get_keyword_stats(query_id, db)
 
         free_words = []
         if "free word" in keyword_stats:
-            free_words_result = await db.execute(
-                select(QueriesData.keyword)
-                .distinct()
-                .join(QueriesData.keyword_type)
-                .where(
-                    QueriesData.query_id == query_id,
-                    KeywordType.keyword_type_name == "free word"
-                )
-            )
-            free_words = [word[0] for word in free_words_result.all() if word[0]]
+            free_words = await AdditionalQueryWordDAO.get_query_words_by_type(query_id, "free word", db)
 
-        return {
-            "query_id": query.query_id,
-            "query_title": query.query_title,
-            "languages": languages,
-            "categories": categories,
-            "plus_words": plus_words,
-            "minus_words": minus_words,
-            "keyword_stats": keyword_stats,
-            "free_words": free_words if free_words else None
-        }
-
-    except HTTPException:
-        raise
+        return GenerarQueryDataResponse(
+            query_id=query.query_id,
+            query_title=query.query_title,
+            languages=languages,
+            categories=categories,
+            plus_words=plus_words,
+            minus_words=minus_words,
+            keyword_stats=keyword_stats,
+            free_words=free_words,
+        )
     except Exception as e:
         logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(

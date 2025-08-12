@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict
 from datetime import datetime
 
 
@@ -113,15 +113,8 @@ class QueryDataResult(BaseModel):
     resource_type: Optional[str]
 
 
-class ShortQueryDataResult(BaseModel):
-    title: str
-    info: str
-    url: str
-    publication_date: Optional[str]
-
-
 class QueryDataResponse(BaseModel):
-    data: List[Union[QueryDataResult, ShortQueryDataResult]]
+    data: List[QueryDataResult]
     total: int
     page: int
     size: int

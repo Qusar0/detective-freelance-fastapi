@@ -1,4 +1,5 @@
 import logging
+from typing import List, Dict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -57,3 +58,24 @@ class QuerySearchCategoryDAO(BaseDAO):
         except Exception as e:
             logging.error(f"Неожиданная ошибка: {e}")
             return False
+
+    @classmethod
+    async def get_query_categories(
+        cls,
+        query_id: int,
+        db: AsyncSession
+    ) -> List[Dict[str, str]]:
+        """Получает категории поиска для запроса."""
+        try:
+            result = await db.execute(
+                select(
+                    QuerySearchCategoryType.query_search_category_type_ru,
+                    QuerySearchCategoryType.query_search_category_type,
+                )
+                .join(QuerySearchCategory.search_category_type)
+                .where(QuerySearchCategory.query_id == query_id)
+            )
+            return [{"code": en_name, "name": ru_name} for ru_name, en_name in result.all()]
+        except SQLAlchemyError as e:
+            logging.error(f"Ошибка получения категорий поиска: {e}")
+            raise
