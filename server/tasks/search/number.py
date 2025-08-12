@@ -22,7 +22,7 @@ from server.tasks.services import (
     update_stats,
     write_urls,
 )
-from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
+from server.tasks.xmlriver import handle_xmlriver_response
 
 
 class NumberSearchTask(BaseSearchTask):

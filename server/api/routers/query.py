@@ -1,12 +1,12 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, update, func
-from datetime import datetime, timezone
-from typing import Union, List, Optional
+from sqlalchemy import delete, func
+from datetime import datetime
+from typing import List
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
@@ -36,15 +36,18 @@ from server.api.schemas.query import (
     PriceResponse,
     DownloadQueryRequest,
     FindByIRBISModel,
-    QueryDataResult,
-    ShortQueryDataResult,
+    QueryDataResponse,
+    QueryDataRequest,
     GenerarQueryDataResponse,
+    ShortQueryDataResult,
+    QueryDataResult,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.user_balances import UserBalancesDAO
 from server.api.dao.balance_history import BalanceHistoryDAO
+from server.api.dao.queries_data import QueriesDataDAO
 from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
@@ -79,15 +82,11 @@ async def delete_query(
         if text_data and text_data.file_path:
             await file_storage.delete_query_data(text_data.file_path)
 
-        result = await db.execute(
-            select(UserQueries)
-            .where(
-                UserQueries.query_id == query_id,
-                UserQueries.user_id == user_id,
-            )
+        user_query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            query_id,
+            db,
         )
-        user_query = result.scalar_one_or_none()
-
         if not user_query:
             raise HTTPException(status_code=404, detail=f"Query {query_id} not found or doesn't belong to user")
 
@@ -543,34 +542,24 @@ async def download_query(
 ):
     try:
         Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
         logging.warning(f"JWT auth failed: {e}")
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
         query_id = data.query_id
-
-        query_result = await db.execute(
-            select(UserQueries).where(UserQueries.query_id == query_id)
+        query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            query_id,
+            db,
         )
-        query_record = query_result.scalar_one_or_none()
-        if query_record is None:
+        if not query:
             raise HTTPException(status_code=404, detail="This user hasn't such a query")
 
-        if query_record.query_unix_date == datetime(1980, 1, 1, tzinfo=timezone.utc):
-            await db.execute(
-                update(UserQueries)
-                .where(UserQueries.query_id == query_id)
-                .values(
-                    query_unix_date=datetime.now(
-                        timezone.utc
-                    ),
-                ),
-            )
-            await db.commit()
-
         text_result = await db.execute(
-            select(TextData.file_path).where(TextData.query_id == query_id)
+            select(TextData.file_path)
+            .where(TextData.query_id == query_id)
         )
         file_path = text_result.scalar_one_or_none()
 
@@ -607,10 +596,9 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.get("/query_data", response_model=List[Union[QueryDataResult, ShortQueryDataResult]])
+@router.post("/query_data", response_model=QueryDataResponse)
 async def get_query_data(
-    query_id: int = Query(..., description="ID запроса"),
-    keyword_type_category: Optional[str] = Query(None, description="Категория ключевых слов"),
+    request_data: QueryDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -619,43 +607,38 @@ async def get_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        query = await db.execute(
-            select(UserQueries)
-            .where(
-                UserQueries.query_id == query_id,
-                UserQueries.user_id == user_id
-            )
+        query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            request_data.query_id,
+            db,
         )
-        query = query.scalar()
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        query_stmt = (
-            select(QueriesData, KeywordType)
-            .join(QueriesData.keyword_type)
-            .where(QueriesData.query_id == query_id)
+        total = await QueriesDataDAO.get_query_data_count(
+            query_id=request_data.query_id,
+            keyword_type_category=request_data.keyword_type_category,
+            db=db
         )
 
-        if keyword_type_category:
-            SOCIAL_URLS = ['Вконтакте', 'Одноклассники', 'Facebook', 'Instagram', 'Telegram']
-            DOCUMENT_TYPES = ['Word', 'PDF', 'Excel', 'Txt', 'PowerPoint']
-            if keyword_type_category == 'socials':
-                query_stmt = query_stmt.where(QueriesData.resource_type.in_(SOCIAL_URLS))
-            elif keyword_type_category == 'documents':
-                query_stmt = query_stmt.where(QueriesData.resource_type.in_(DOCUMENT_TYPES))
-            else:
-                query_stmt = query_stmt.where(KeywordType.keyword_type_name == keyword_type_category)
+        if total == 0:
+            return QueryDataResponse(
+                data=[],
+                total=0,
+                page=request_data.page,
+                size=request_data.size,
+                total_pages=0
+            )
 
-        query_stmt = query_stmt.order_by(QueriesData.created_at.desc())
-        
-        data_result = await db.execute(query_stmt)
-        query_data = data_result.all()  # Получаем кортежи (QueriesData, KeywordType)
-
-        if not query_data:
-            raise HTTPException(status_code=404, detail="Данные запроса не найдены")
+        query_data = await QueriesDataDAO.get_paginated_query_data(
+            query_id=request_data.query_id,
+            page=request_data.page,
+            size=request_data.size,
+            keyword_type_category=request_data.keyword_type_category,
+            db=db
+        )
 
         results = []
-
         for data_item, keyword_type in query_data:
             if query.query_category in {'name', 'company'}:
                 result = QueryDataResult(
@@ -663,7 +646,7 @@ async def get_query_data(
                     info=data_item.info,
                     url=data_item.link,
                     publication_date=data_item.publication_date,
-                    keyword_type=keyword_type.keyword_type_name if keyword_type else None,
+                    keyword_type_name=keyword_type.keyword_type_name,
                     resource_type=data_item.resource_type,
                 )
             elif query.query_category in {'number', 'email'}:
@@ -674,15 +657,24 @@ async def get_query_data(
                     publication_date=data_item.publication_date,
                 )
             results.append(result)
-        
-        return results
+
+        total_pages = (total + request_data.size - 1) // request_data.size
+
+        return QueryDataResponse(
+            data=results,
+            total=total,
+            page=request_data.page,
+            size=request_data.size,
+            total_pages=total_pages
+        )
 
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
         )
+
 
 @router.get("/general_query_data", response_model=GenerarQueryDataResponse)
 async def get_general_query_data(
@@ -695,14 +687,11 @@ async def get_general_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        query = await db.execute(
-            select(UserQueries)
-            .where(
-                UserQueries.query_id == query_id,
-                UserQueries.user_id == user_id
-            )
+        query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            query_id,
+            db,
         )
-        query = query.scalar()
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
@@ -714,12 +703,15 @@ async def get_general_query_data(
         languages = [{"code": code, "name": name} for code, name in languages_result.all()]
 
         categories_result = await db.execute(
-            select(QuerySearchCategoryType.query_search_category_type_ru, QuerySearchCategoryType.query_search_category_type)
+            select(
+                QuerySearchCategoryType.query_search_category_type_ru,
+                QuerySearchCategoryType.query_search_category_type,
+            )
             .join(QuerySearchCategory.search_category_type)
             .where(QuerySearchCategory.query_id == query_id)
         )
         categories = [
-            {"code": en_name, "name": ru_name} 
+            {"code": en_name, "name": ru_name}
             for ru_name, en_name in categories_result.all()
         ]
 

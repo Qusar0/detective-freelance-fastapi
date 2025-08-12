@@ -101,7 +101,7 @@ class KeywordType(Base):
         back_populates='keyword_type',
         lazy='select',
     )
-    
+
     queries_data: Mapped[List['QueriesData']] = relationship(
         'QueriesData',
         back_populates='keyword_type',
@@ -524,7 +524,7 @@ class QueriesData(Base):
         'UserQueries',
         back_populates='query_data',
     )
-    
+
     keyword_type: Mapped['KeywordType'] = relationship(
         'KeywordType',
         back_populates='queries_data',
@@ -625,7 +625,7 @@ class QuerySearchCategory(Base):
 
 class QueryTranslationLanguages(Base):
     __tablename__ = 'query_translation_languages'
-    
+
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,

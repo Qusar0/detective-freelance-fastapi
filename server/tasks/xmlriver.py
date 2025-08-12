@@ -48,26 +48,26 @@ def do_request_to_xmlriver(
 
                 if handling_resp == '15':
                     return False
-                
+
                 if handling_resp not in ('500', '110', '111'):
                     urls.append(target_url)
                     update_stats(request_stats, stats_lock, attempt, success=True)
                     return True
-                
+
                 logger.log_error(f"{handling_resp} | URL: {target_url} | Попытка: {attempt}")
             except Exception as e:
                 logger.log_error(f"Исключение: {str(e)} | URL: {target_url} | Попытка: {attempt}")
-            
+
             if attempt < max_attempts:
                 time.sleep(retry_delay)
-        
+
         update_stats(request_stats, stats_lock, max_attempts, success=False)
         logger.log_error(f"Запрос полностью провален: {target_url}")
         return False
 
     if SEARCH_ENGINES['google'] in url:
         process_request(url)
-    
+
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
         success = True
@@ -77,6 +77,7 @@ def do_request_to_xmlriver(
             page_num += 1
 
     return raw_data
+
 
 def handle_xmlriver_response(  # noqa: WPS211
     response: httpx.Response,
@@ -147,10 +148,10 @@ def handle_xmlriver_response(  # noqa: WPS211
     for group in groups:
         doc = group["doc"]
         url = doc["url"]
-        
+
         if url in existing_urls:
             continue
-            
+
         title = doc["title"]
         snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
         pub_date = doc.get("pubDate")
@@ -164,7 +165,7 @@ def handle_xmlriver_response(  # noqa: WPS211
         # Проверяем на запрещенные сайты
         if any(site.lower() in site_url.lower() for site in prohibited_sites):
             continue
-        
+
         if snippet:
             processed_snippet = snippet.replace("`", "'").replace('\\', r'\\')
         if name_case is not None:
@@ -230,7 +231,6 @@ def handle_xmlriver_response(  # noqa: WPS211
             existing_urls.add(url)
         except Exception as e:
             logging.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
-
 
 
 def xml_errors_handler(xml_response):
@@ -311,10 +311,10 @@ def parse_xml_response(
         try:
             doc = group.get('doc', {})
             url = doc.get('url', '')
-            
+
             if url in unique_results:
                 continue
-                
+
             unique_results[url] = {
                 'title': doc.get('title', ''),
                 'snippet': doc.get('passages', {}).get('passage', doc.get('fullsnippet', '')),

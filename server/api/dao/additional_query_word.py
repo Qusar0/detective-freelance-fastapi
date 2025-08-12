@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Optional, List
+from typing import Optional
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import AdditionalQueryWord, AdditionalQueryWordType
@@ -31,9 +31,9 @@ class AdditionalQueryWordDAO(BaseDAO):
                 return False
 
             delimiter = '+' if word_type == 'plus' else '+-'
-            
+
             word_list = [word for word in words.split(delimiter) if word.strip()]
-            
+
             if not word_list:
                 logging.error("Не найдено слов для добавления")
                 return False
@@ -45,7 +45,7 @@ class AdditionalQueryWordDAO(BaseDAO):
                     query_word_type_id=word_type_id
                 )
                 db.add(new_word)
-            
+
             await db.commit()
             return True
 

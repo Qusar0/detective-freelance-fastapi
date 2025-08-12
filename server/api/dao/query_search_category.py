@@ -2,7 +2,6 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Optional
 
 from server.api.dao.base import BaseDAO
 from server.api.models.models import QuerySearchCategory, QuerySearchCategoryType
