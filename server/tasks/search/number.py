@@ -6,6 +6,7 @@ from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
+from server.api.dao.keywords import KeywordsDAO
 from server.api.models.models import QueriesData
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
@@ -22,7 +23,7 @@ from server.tasks.services import (
     update_stats,
     write_urls,
 )
-from server.tasks.xmlriver import handle_xmlriver_response, parse_xml_response
+from server.tasks.xmlriver import handle_xmlriver_response
 
 
 class NumberSearchTask(BaseSearchTask):
@@ -80,6 +81,8 @@ class NumberSearchTask(BaseSearchTask):
                 snippet = item.get('raw_snippet') or item.get('snippet')
                 url = item.get('url')
                 publication_date = item.get('pubDate')
+                keyword_type = 'free word'
+                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -87,6 +90,7 @@ class NumberSearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
+                    keyword_type_id=keyword_type_id,
                 )
                 db.add(query_data)
             await db.commit()

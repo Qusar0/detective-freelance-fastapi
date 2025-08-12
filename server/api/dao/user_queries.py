@@ -67,7 +67,7 @@ class UserQueriesDAO(BaseDAO):
             raise
 
     @classmethod
-    async def get_queries_page(cls, filter: tuple, page: int = 0, page_size: int = 20, db: AsyncSession = None):
+    async def get_queries_page(cls, filter: tuple, page: int, page_size: int, db: AsyncSession):
         stmt = (
             select(UserQueries)
             .filter_by(user_id=filter[0], query_category=filter[1])
@@ -85,3 +85,14 @@ class UserQueriesDAO(BaseDAO):
             return queries
         except (SQLAlchemyError, Exception) as e:
             logging.error(f"Ошибка при получении страницы запроса: {e}")
+
+    @classmethod
+    async def get_query_by_id(cls, user_id: int, query_id, db: AsyncSession):
+        query = await db.execute(
+            select(UserQueries)
+            .where(
+                UserQueries.query_id == query_id,
+                UserQueries.user_id == user_id
+            )
+        )
+        return query.scalar()

@@ -124,6 +124,13 @@ class NameSearchTask(BaseSearchTask):
                 self.search_plus['original'],
                 'plus',
             )
+        if self.keywords_from_user['original']:
+            await AdditionalQueryWordDAO.add_words(
+                db,
+                self.query_id,
+                self.keywords_from_user['original'],
+                'free word',
+            )
 
         if self.languages:
             await LanguageDAO.save_query_languages(db, self.query_id, self.languages)

@@ -97,22 +97,28 @@ class FindByIRBISModel(BaseModel):
     inn: Optional[str]
 
 
-class ShortQueryDataResult(BaseModel):
-    """Модель для одного результата запроса"""
-    title: Optional[str]
-    info: Optional[str]
-    url: Optional[str]
-    publication_date: Optional[str] = None
+class QueryDataRequest(BaseModel):
+    query_id: int
+    keyword_type_category: str
+    page: int = 1
+    size: int = 10
 
 
 class QueryDataResult(BaseModel):
-    """Модель для одного результата запроса"""
     title: Optional[str]
     info: Optional[str]
     url: Optional[str]
-    keyword_type: str
-    publication_date: Optional[str] = None
-    resource_type: Optional[str] = None
+    publication_date: Optional[str]
+    keyword_type_name: Optional[str]
+    resource_type: Optional[str]
+
+
+class QueryDataResponse(BaseModel):
+    data: List[QueryDataResult]
+    total: int
+    page: int
+    size: int
+    total_pages: int
 
 
 class FoundInfo(BaseModel):
@@ -145,9 +151,11 @@ class LanguageResponse(BaseModel):
     code: str
     name: str
 
+
 class CategoryResponse(BaseModel):
     code: str
     name: str
+
 
 class GenerarQueryDataResponse(BaseModel):
     query_id: int

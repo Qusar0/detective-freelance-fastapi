@@ -20,7 +20,7 @@ class KeywordsDAO(BaseDAO):
     ) -> tuple[int, dict]:
         counter = 0
         named_keywords = {}
-        
+
         for kwd_type in kwd_types:
             query = (
                 select(Keywords.word)
@@ -31,7 +31,7 @@ class KeywordsDAO(BaseDAO):
             keywords = [kwd for kwd in result.scalars()]
             counter += len(keywords)
             named_keywords[kwd_type] = keywords
-            
+
         return counter, named_keywords
 
     @classmethod
@@ -45,7 +45,7 @@ class KeywordsDAO(BaseDAO):
             languages = ['ru']
 
         splitted_kws = default_keywords_type.split(", ")
-        
+
         if '' in splitted_kws:
             return (0, {lang: {} for lang in languages})
 
@@ -81,7 +81,7 @@ class KeywordsDAO(BaseDAO):
             )
             result = await db.execute(query)
             return result.scalar_one_or_none()
-            
+
         except SQLAlchemyError as e:
             logging.error(f"Ошибка при получении ID типа ключевого слова: {e}")
             return None
