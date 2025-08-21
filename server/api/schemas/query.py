@@ -110,6 +110,7 @@ class QueryDataResult(BaseModel):
     url: Optional[str]
     publication_date: Optional[str]
     keyword_type_name: Optional[str]
+    keywords: Optional[List[str]]
     resource_type: Optional[str]
 
 

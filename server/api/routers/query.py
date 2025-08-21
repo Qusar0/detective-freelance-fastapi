@@ -644,12 +644,19 @@ async def get_query_data(
                 keyword_type_name = None
                 resource_type = None
 
+            keywords_list = [
+                kw_assoc.original_keyword.word
+                for kw_assoc in data_item.keywords
+                if kw_assoc.original_keyword
+            ]
+
             result = QueryDataResult(
                 title=data_item.title,
                 info=data_item.info,
                 url=data_item.link,
                 publication_date=data_item.publication_date,
                 keyword_type_name=keyword_type_name,
+                keywords=keywords_list,
                 resource_type=resource_type,
             )
             results.append(result)

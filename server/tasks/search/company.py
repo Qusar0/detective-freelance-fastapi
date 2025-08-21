@@ -9,7 +9,7 @@ from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
-from server.api.models.models import QueriesData
+from server.api.models.models import QueriesData, QueryDataKeywords
 from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
@@ -62,6 +62,7 @@ class CompanySearchTask(BaseSearchTask):
                                     company_name,
                                     "",
                                     "free word",
+                                    "free word",
                                     self.location[lang],
                                     self.search_plus[lang],
                                     self.search_minus[lang],
@@ -77,6 +78,7 @@ class CompanySearchTask(BaseSearchTask):
                                         company_name,
                                         kwd_from_user,
                                         "free word",
+                                        "free word",
                                         self.location[lang],
                                         self.search_plus[lang],
                                         self.search_minus[lang],
@@ -85,13 +87,15 @@ class CompanySearchTask(BaseSearchTask):
                                     )
 
                         for words_type, words in keywords_from_db[lang].items():
-                            for kwd_from_db in words:
+                            original_words = keywords_from_db['original'][words_type]
+                            for kwd_from_db, original_kwd_from_db in zip(words, original_words):
                                 for engine in self.search_engines:
                                     if url := SEARCH_ENGINES.get(engine):
                                         form_input_pack_company(
                                             request_input_pack,
                                             company_name,
                                             kwd_from_db,
+                                            original_kwd_from_db,
                                             words_type,
                                             self.location[lang],
                                             self.search_plus[lang],
@@ -183,7 +187,8 @@ class CompanySearchTask(BaseSearchTask):
         urls,
         db,
     ):
-        shared_results = []
+        shared_results = {}
+        existing_urls = set()
         thread_list = []
 
         for input_data in request_input_pack:
@@ -196,7 +201,8 @@ class CompanySearchTask(BaseSearchTask):
                     urls,
                     self.request_stats,
                     self.stats_lock,
-                    self.logger
+                    self.logger,
+                    existing_urls,
                 )
             )
             thread_list.append(t)
@@ -207,18 +213,12 @@ class CompanySearchTask(BaseSearchTask):
     async def save_raw_results(self, raw_data, db):
         """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
         try:
-            logging.info(f"Raw data to save: {raw_data}")
-
-            for item in raw_data:
+            for url, item in raw_data.items():
                 title = item.get('title')
                 snippet = item.get('snippet')
-                url = item.get('url')
-                keyword = item.get('keyword')
+                keywords = item.get('keywords')
                 publication_date = item.get('publication_date')
                 resource_type = item.get('resource_type')
-
-                keyword_type = item.get('keyword_type')
-                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -226,13 +226,19 @@ class CompanySearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
-                    keyword_type_id=keyword_type_id,
-                    keyword=keyword,
                     resource_type=resource_type,
                 )
 
                 db.add(query_data)
-                logging.info(f"Processing item - Title: {title}, URL: {url}")
+                await db.flush()
+                for keyword, original_keyword, keyword_type in keywords:
+                    original_keyword_id = await KeywordsDAO.get_keyword_id(db, original_keyword, keyword_type)
+                    query_data_keyword = QueryDataKeywords(
+                        query_data_id=query_data.id,
+                        keyword=keyword,
+                        original_keyword_id=original_keyword_id,
+                    )
+                    db.add(query_data_keyword)
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 

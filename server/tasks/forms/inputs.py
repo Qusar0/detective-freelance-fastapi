@@ -7,6 +7,7 @@ def form_input_pack_company(
     input_pack,
     company_name: str,
     keyword: str,
+    original_keyword: str,
     keyword_type: str,
     location,
     plus_words,
@@ -28,13 +29,14 @@ def form_input_pack_company(
         url += f"+{location}"
 
     url += f"{plus_words}{minus_words}&lr={lang}"
-    input_pack.append((url, keyword, keyword_type, None))
+    input_pack.append((url, keyword, original_keyword, keyword_type, None))
 
 
 def form_input_pack(
     input_pack,
     search_key: str,
     keyword: str,
+    original_keyword: str,
     keyword_type: str,
     name_case,
     plus_words,
@@ -68,6 +70,6 @@ def form_input_pack(
         elif base_url == SEARCH_ENGINES['yandex']:
             url += f"&lang={lang}"
 
-        input_pack.append((url, keyword, keyword_type, name_case))
+        input_pack.append((url, keyword, original_keyword, keyword_type, name_case))
     except Exception as e:
         print("form_input_pack function Exception {0}".format(e))
