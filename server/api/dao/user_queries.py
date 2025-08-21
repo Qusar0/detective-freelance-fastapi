@@ -67,7 +67,7 @@ class UserQueriesDAO(BaseDAO):
             raise
 
     @classmethod
-    async def get_queries_page(cls, filter: tuple, page: int, page_size: int, db: AsyncSession):
+    async def get_queries_page(cls, filter: tuple, page: int, db: AsyncSession, page_size: int = 10):
         stmt = (
             select(UserQueries)
             .filter_by(user_id=filter[0], query_category=filter[1])

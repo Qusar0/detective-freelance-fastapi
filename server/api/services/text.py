@@ -84,7 +84,7 @@ def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
     """Функция для перевода текста с разделением по точкам"""
     try:
         translated = GoogleTranslator(source=source_lang, target=target_lang).translate(text)
-        return list(set([word.strip().lower() for word in translated.split('. ') if word.strip()]))
+        return list([word.strip().lower() for word in translated.split('. ') if word.strip()])
     except Exception as e:
         print(f"Translation error for '{text}' to '{target_lang}': {e}")
         return []
@@ -95,7 +95,7 @@ def translate_words(
     target_languages: List[str],
     source_language: str = 'ru',
 ) -> Dict[str, List[str]]:
-    translations = {}
+    translations = {'original': keywords_by_category}
     if not target_languages:
         target_languages = ['ru']
 
@@ -105,6 +105,6 @@ def translate_words(
             text_to_translate = '. '.join(words)
 
             translated_words = translate_text(text_to_translate, source_language, lang)
-            translations[lang][category] = list(set(translated_words))
+            translations[lang][category] = list(translated_words)
 
     return translations

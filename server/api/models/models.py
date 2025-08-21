@@ -102,12 +102,6 @@ class KeywordType(Base):
         lazy='select',
     )
 
-    queries_data: Mapped[List['QueriesData']] = relationship(
-        'QueriesData',
-        back_populates='keyword_type',
-        lazy='select',
-    )
-
 
 class Keywords(Base):
     __tablename__ = 'keywords'
@@ -125,6 +119,11 @@ class Keywords(Base):
     keyword_type: Mapped['KeywordType'] = relationship(
         'KeywordType',
         back_populates='keywords',
+    )
+    query_data_associations: Mapped[List['QueryDataKeywords']] = relationship(
+        'QueryDataKeywords',
+        back_populates='original_keyword',
+        lazy='select',
     )
 
     def __str__(self):
@@ -509,12 +508,12 @@ class QueriesData(Base):
     info: Mapped[Optional[str]] = mapped_column(Text)
     link: Mapped[Optional[str]] = mapped_column(Text)
     publication_date: Mapped[Optional[str]] = mapped_column(Text)
-    keyword_type_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('keyword_type.id', ondelete='SET NULL'),
-        nullable=True,
-    )
-    keyword: Mapped[Optional[str]] = mapped_column(String(30))
     resource_type: Mapped[Optional[str]] = mapped_column(String(30))
+    is_fullname: Mapped[Optional[bool]] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=True
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -525,13 +524,47 @@ class QueriesData(Base):
         back_populates='query_data',
     )
 
-    keyword_type: Mapped['KeywordType'] = relationship(
-        'KeywordType',
-        back_populates='queries_data',
+    keywords: Mapped[List['QueryDataKeywords']] = relationship(
+        'QueryDataKeywords',
+        back_populates='query_data',
+        cascade='all, delete-orphan',
+        lazy='select',
     )
 
     def __str__(self):
         return f"Результаты запроса ({self.query_id})"
+
+
+class QueryDataKeywords(Base):
+    __tablename__ = 'query_data_keywords'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    query_data_id: Mapped[int] = mapped_column(
+        ForeignKey('queries_data.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    keyword: Mapped[str] = mapped_column(String(100))
+    original_keyword_id: Mapped[int] = mapped_column(
+        ForeignKey('keywords.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    query_data: Mapped['QueriesData'] = relationship(
+        'QueriesData',
+        back_populates='keywords',
+    )
+
+    original_keyword: Mapped['Keywords'] = relationship(
+        'Keywords',
+        back_populates='query_data_associations',
+    )
+
+    def __str__(self):
+        return f"Ключевое слово для результата ({self.query_data_id})"
 
 
 class AdditionalQueryWordType(Base):
