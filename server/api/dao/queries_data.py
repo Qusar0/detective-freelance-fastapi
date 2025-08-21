@@ -100,3 +100,36 @@ class QueriesDataDAO(BaseDAO):
             return base_query.where(keyword_count_subquery >= 3)
         else:
             return base_query.where(KeywordType.keyword_type_name == keyword_type_category)
+
+    @classmethod
+    async def get_fullname_count(
+        cls,
+        query_id: int,
+        keyword_type_category: str,
+        db: AsyncSession,
+    ) -> int:
+        """Получает общее количество записей для запроса с фильтрацией."""
+        try:
+            if keyword_type_category == 'main':
+                count_query = (
+                    select(func.count(QueriesData.id))
+                    .where(
+                        QueriesData.query_id == query_id,
+                        QueriesData.is_fullname == True,  # noqa: E712
+                    )
+                    .where(
+                        select(func.count(QueryDataKeywords.id))
+                        .where(QueryDataKeywords.query_data_id == QueriesData.id)
+                        .correlate(QueriesData)
+                        .scalar_subquery() >= 3
+                    )
+                )
+            else:
+                base_query = cls._build_base_query(query_id, keyword_type_category)
+                base_query = base_query.where(QueriesData.is_fullname == True)  # noqa: E712
+                count_query = select(func.count()).select_from(base_query.alias())
+            result = await db.execute(count_query)
+            return result.scalar()
+        except SQLAlchemyError as e:
+            logging.error(f"Error counting query data: {e}")
+            raise

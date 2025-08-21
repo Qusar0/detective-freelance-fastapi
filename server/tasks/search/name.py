@@ -275,6 +275,7 @@ class NameSearchTask(BaseSearchTask):
                 keywords = item.get('keywords')
                 publication_date = item.get('pubDate')
                 resource_type = item.get('resource_type')
+                is_fullname = item.get('is_fullname')
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -283,6 +284,7 @@ class NameSearchTask(BaseSearchTask):
                     link=url,
                     publication_date=publication_date,
                     resource_type=resource_type,
+                    is_fullname=is_fullname,
                 )
 
                 db.add(query_data)

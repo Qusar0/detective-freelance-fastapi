@@ -509,6 +509,11 @@ class QueriesData(Base):
     link: Mapped[Optional[str]] = mapped_column(Text)
     publication_date: Mapped[Optional[str]] = mapped_column(Text)
     resource_type: Mapped[Optional[str]] = mapped_column(String(30))
+    is_fullname: Mapped[Optional[bool]] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=True
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

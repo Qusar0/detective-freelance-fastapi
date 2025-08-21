@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict
 import logging
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,27 +80,4 @@ class QueryKeywordStatsDAO(BaseDAO):
 
         except SQLAlchemyError as e:
             logging.error(f"Ошибка получения статистики ключевых слов: {e}")
-            raise
-
-    @classmethod
-    async def get_free_words(
-        cls,
-        query_id: int,
-        db: AsyncSession
-    ) -> List[str]:
-        """Получает список свободных слов для запроса"""
-        try:
-            result = await db.execute(
-                select(QueriesData.keyword)
-                .distinct()
-                .join(QueriesData.keyword_type)
-                .where(
-                    QueriesData.query_id == query_id,
-                    KeywordType.keyword_type_name == "free word",
-                    QueriesData.keyword.isnot(None)
-                )
-            )
-            return [word[0] for word in result.all() if word[0]]
-        except SQLAlchemyError as e:
-            logging.error(f"Error getting free words: {e}")
             raise

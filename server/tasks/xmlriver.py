@@ -221,6 +221,7 @@ def handle_xmlriver_response(  # noqa: WPS211
                 )
 
             all_found_data.append(found_info)
+            is_fullname = fullname_type == 'true' if name_case else False
             with threading.Lock():
                 raw_data[url] = {
                     'title': title,
@@ -230,6 +231,7 @@ def handle_xmlriver_response(  # noqa: WPS211
                     'keywords': {(keyword, original_keyword, keyword_type)},
                     'resource_type': resource_type,
                     'weight': 1,
+                    'is_fullname': is_fullname
                 }
                 existing_urls.add(url)
         except Exception as e:
