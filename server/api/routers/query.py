@@ -44,6 +44,7 @@ from server.api.dao.query_translation_languages import QueryTranslationLanguages
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
+from server.api.dao.irbis.person_uuid import PersonUuidDAO
 from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
@@ -713,3 +714,31 @@ async def get_general_query_data(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
         )
+
+
+@router.get("/general_irbis_data")
+async def get_general_irbis_data(
+    query_id: int = Query(..., description="ID запроса"),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает общие данные о выполненном IRBIS запросе."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+        query = await UserQueriesDAO.get_query_by_id(user_id, query_id, db)
+        if not query:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        person_uuid = await PersonUuidDAO.get_person_uuid(query.query_id, db)
+        if not person_uuid:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        count_info = await PersonUuidDAO.get_count_info(person_uuid.id, db)
+    except Exception as e:
+        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Произошла ошибка при получении данных запроса",
+        )
+

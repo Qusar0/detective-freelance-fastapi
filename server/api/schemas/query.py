@@ -167,26 +167,8 @@ class GenerarQueryDataResponse(BaseModel):
     keyword_stats: Dict[str, int]
     free_words: Optional[List[str]]
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "query_id": 123,
-                "query_title": "Поиск новостей о компании",
-                "languages": [
-                    {"code": "ru", "name": "Русский"},
-                    {"code": "en", "name": "Английский"}
-                ],
-                "categories": [
-                    {"code": "reputation", "name": "Репутация"},
-                    {"code": "negativ", "name": "Негатив"}
-                ],
-                "plus_words": ["качество", "сервис"],
-                "minus_words": ["брак", "возврат"],
-                "keyword_stats": {
-                    "reputation": 15,
-                    "negativ": 8,
-                    "free word": 3
-                },
-                "free_words": ["инновации", "развитие", "технологии"]
-            }
-        }
+
+class IrbisDataRequest(BaseModel):
+    query_id: int
+    page: int = 1
+    size: int = 10
