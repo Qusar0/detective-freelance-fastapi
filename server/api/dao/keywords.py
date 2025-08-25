@@ -69,17 +69,22 @@ class KeywordsDAO(BaseDAO):
             logging.error(f"Ошибка при получении ключевых слов: {e}")
 
     @classmethod
-    async def get_keyword_type_id(
+    async def get_keyword_id(
         cls,
         db: AsyncSession,
-        keyword_type: str
+        keyword: str,
+        keyword_type: str,
     ) -> Optional[int]:
         """Получает ID типа ключевого слова по его названию"""
         try:
-            query = select(KeywordType.id).where(
-                KeywordType.keyword_type_name == keyword_type
+            result = await db.execute(
+                select(Keywords.id)
+                .join(KeywordType)
+                .where(
+                    Keywords.word == keyword,
+                    KeywordType.keyword_type_name == keyword_type,
+                ),
             )
-            result = await db.execute(query)
             return result.scalar_one_or_none()
 
         except SQLAlchemyError as e:

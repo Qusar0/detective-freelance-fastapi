@@ -3,7 +3,7 @@ import xmltodict
 import os
 import re
 import time
-from typing import List, Union, Optional, Dict, Any
+from typing import List, Union, Optional, Dict, Any, Set
 from urllib.parse import urlparse
 import requests
 import threading
@@ -17,22 +17,21 @@ from server.api.schemas.query import FoundInfo, NumberInfo
 
 
 def do_request_to_xmlriver(
-    url,
+    input_data,
     all_found_data,
     prohibited_sites,
-    keyword,
-    name_case,
-    keyword_type,
     urls,
     request_stats,
     stats_lock,
     logger: SearchLogger,
+    existing_urls,
+    results_container,
 ):
+    url, keyword, original_keyword, keyword_type, name_case = input_data
     max_attempts = 5
     retry_delay = 2
-    raw_data = []
 
-    def process_request(target_url):
+    def process_request(target_url, existing_urls: Set[str]):
         for attempt in range(1, max_attempts + 1):
             try:
                 response = requests.get(target_url)
@@ -41,9 +40,11 @@ def do_request_to_xmlriver(
                     all_found_data,
                     prohibited_sites,
                     keyword,
-                    raw_data,
+                    results_container,
+                    existing_urls,
                     name_case,
                     keyword_type,
+                    original_keyword,
                 )
 
                 if handling_resp == '15':
@@ -66,17 +67,15 @@ def do_request_to_xmlriver(
         return False
 
     if SEARCH_ENGINES['google'] in url:
-        process_request(url)
+        process_request(url, existing_urls)
 
     elif SEARCH_ENGINES['yandex'] in url:
         page_num = 0
         success = True
         while success:
             new_url = form_page_query(url, page_num)
-            success = process_request(new_url)
+            success = process_request(new_url, existing_urls)
             page_num += 1
-
-    return raw_data
 
 
 def handle_xmlriver_response(  # noqa: WPS211
@@ -84,9 +83,11 @@ def handle_xmlriver_response(  # noqa: WPS211
     all_found_data: List[Union[FoundInfo, NumberInfo]],
     prohibited_sites: List[str],
     keyword: str,
-    raw_data: List[Dict[str, Any]],
+    raw_data: Dict[str, Dict[str, Any]],
+    existing_urls: Set[str],
     name_case: Optional[List[str]] = None,
     keyword_type: Optional[str] = None,
+    original_keyword: Optional[str] = None
 ) -> Union[str, None]:
     """Обрабатывает ответ от XMLriver API, проверяя уникальность URL.
 
@@ -144,12 +145,14 @@ def handle_xmlriver_response(  # noqa: WPS211
     except (KeyError, xmltodict.ParsingInterrupted) as e:
         raise ValueError(f"Некорректный ответ от XMLriver: {str(e)}")
 
-    existing_urls = {item['url'] for item in raw_data}
     for group in groups:
         doc = group["doc"]
         url = doc["url"]
 
         if url in existing_urls:
+            with threading.Lock():
+                raw_data[url]['weight'] += 1
+                raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
             continue
 
         title = doc["title"]
@@ -217,18 +220,20 @@ def handle_xmlriver_response(  # noqa: WPS211
                     doc_type='',
                 )
 
-            raw_data.append({
-                'title': title,
-                'snippet': snippet,
-                'url': url,
-                'domain': site_url,
-                'pubDate': pub_date,
-                'keyword': keyword,
-                'keyword_type': keyword_type,
-                'resource_type': resource_type,
-            })
             all_found_data.append(found_info)
-            existing_urls.add(url)
+            is_fullname = fullname_type == 'true' if name_case else False
+            with threading.Lock():
+                raw_data[url] = {
+                    'title': title,
+                    'snippet': snippet,
+                    'domain': site_url,
+                    'pubDate': pub_date,
+                    'keywords': {(keyword, original_keyword, keyword_type)},
+                    'resource_type': resource_type,
+                    'weight': 1,
+                    'is_fullname': is_fullname
+                }
+                existing_urls.add(url)
         except Exception as e:
             logging.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
 
@@ -332,31 +337,26 @@ def parse_xml_response(
 
 def search_worker(  # noqa: WPS211
     input_data,
-    results_container,
+    results_container: Dict[str, Dict[str, Any]],
     all_found_info,
     urls,
     request_stats,
     stats_lock,
     logger,
+    existing_urls,
 ):
     """Функция для выполнения поисковых запросов в потоке."""
     try:
-        url, keyword, keyword_type, name_case = input_data
-        raw_data = do_request_to_xmlriver(
-            url,
+        do_request_to_xmlriver(
+            input_data,
             all_found_info,
             [],
-            keyword,
-            name_case,
-            keyword_type,
             urls,
             request_stats,
             stats_lock,
-            logger
+            logger,
+            existing_urls,
+            results_container,
         )
-        with threading.Lock():
-            existing_urls = {item['url'] for item in results_container}
-            new_items = [item for item in raw_data if item['url'] not in existing_urls]
-            results_container.extend(new_items)
     except Exception as e:
         logging.error(f"Ошибка в рабочем потоке: {str(e)}")

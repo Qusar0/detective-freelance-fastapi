@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete
 from datetime import datetime
-from typing import List
+from typing import List, Union
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
 from server.bots.notification_bot import BalanceNotifier
@@ -33,6 +33,8 @@ from server.api.schemas.query import (
     QueryDataRequest,
     GenerarQueryDataResponse,
     QueryDataResult,
+    NameQueryDataResponse,
+    NameQueryDataResult,
 )
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
@@ -594,7 +596,7 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.post("/query_data", response_model=QueryDataResponse)
+@router.post("/query_data", response_model=Union[NameQueryDataResponse, QueryDataResponse])
 async def get_query_data(
     request_data: QueryDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -645,25 +647,61 @@ async def get_query_data(
                 keyword_type_name = None
                 resource_type = None
 
-            result = QueryDataResult(
-                title=data_item.title,
-                info=data_item.info,
-                url=data_item.link,
-                publication_date=data_item.publication_date,
-                keyword_type_name=keyword_type_name,
-                resource_type=resource_type,
-            )
-            results.append(result)
+            keywords_list = [
+                kw_assoc.original_keyword.word
+                for kw_assoc in data_item.keywords
+                if kw_assoc.original_keyword
+            ]
+
+            if query.query_category != 'name':
+                query_data = QueryDataResult(
+                    title=data_item.title,
+                    info=data_item.info,
+                    url=data_item.link,
+                    publication_date=data_item.publication_date,
+                    keyword_type_name=keyword_type_name,
+                    keywords=keywords_list,
+                    resource_type=resource_type,
+                )
+            else:
+                query_data = NameQueryDataResult(
+                    title=data_item.title,
+                    info=data_item.info,
+                    url=data_item.link,
+                    publication_date=data_item.publication_date,
+                    keyword_type_name=keyword_type_name,
+                    keywords=keywords_list,
+                    resource_type=resource_type,
+                    is_fullname=data_item.is_fullname,
+                )
+
+            results.append(query_data)
 
         total_pages = (total + request_data.size - 1) // request_data.size
 
-        return QueryDataResponse(
-            data=results,
-            total=total,
-            page=request_data.page,
-            size=request_data.size,
-            total_pages=total_pages
-        )
+        if query.query_category != 'name':
+            result = QueryDataResponse(
+                data=results,
+                total=total,
+                page=request_data.page,
+                size=request_data.size,
+                total_pages=total_pages
+            )
+        else:
+            fullname_count = await QueriesDataDAO.get_fullname_count(
+                query.query_id,
+                request_data.keyword_type_category,
+                db,
+            )
+            result = NameQueryDataResponse(
+                data=results,
+                total=total,
+                fullname_count=fullname_count,
+                page=request_data.page,
+                size=request_data.size,
+                total_pages=total_pages
+            )
+        return result
 
     except Exception as e:
         logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)

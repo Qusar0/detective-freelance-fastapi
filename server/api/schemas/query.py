@@ -110,12 +110,33 @@ class QueryDataResult(BaseModel):
     url: Optional[str]
     publication_date: Optional[str]
     keyword_type_name: Optional[str]
+    keywords: Optional[List[str]]
     resource_type: Optional[str]
+
+
+class NameQueryDataResult(BaseModel):
+    title: Optional[str]
+    info: Optional[str]
+    url: Optional[str]
+    publication_date: Optional[str]
+    keyword_type_name: Optional[str]
+    keywords: Optional[List[str]]
+    resource_type: Optional[str]
+    is_fullname: bool
 
 
 class QueryDataResponse(BaseModel):
     data: List[QueryDataResult]
     total: int
+    page: int
+    size: int
+    total_pages: int
+
+
+class NameQueryDataResponse(BaseModel):
+    data: List[NameQueryDataResult]
+    total: int
+    fullname_count: int
     page: int
     size: int
     total_pages: int
