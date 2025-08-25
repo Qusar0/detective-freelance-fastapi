@@ -1,35 +1,17 @@
-import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import delete
-from datetime import datetime
-from typing import List
-from server.bots.notification_bot import BalanceNotifier
+from typing import List, Optional
 from server.api.database.database import get_db
-from server.api.models.models import (
-    UserQueries,
-    Events,
-    TextData,
-    QueriesBalance,
-    Language,
-)
-from server.api.schemas.query import (
+from server.api.schemas.irbis import (
+    CourtGeneralCase,
     IrbisDataRequest,
+    CourtGeneralFace,
+    CourtGeneralProgress,
 )
 
-from server.api.dao.queries_balance import QueriesBalanceDAO
-from server.api.dao.user_queries import UserQueriesDAO
-from server.api.dao.user_balances import UserBalancesDAO
-from server.api.dao.balance_history import BalanceHistoryDAO
-from server.api.dao.queries_data import QueriesDataDAO
-from server.api.dao.query_translation_languages import QueryTranslationLanguagesDAO
-from server.api.dao.query_search_category import QuerySearchCategoryDAO
-from server.api.dao.additional_query_word import AdditionalQueryWordDAO
-from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
-from server.api.dao.irbis.person_uuid import PersonUuidDAO
+from server.api.dao.irbis.person_uuid import IrbisPersonDAO
+from server.api.dao.irbis.court_general_jur import CourtGeneralJurDAO
 
 
 router = APIRouter(
@@ -38,7 +20,7 @@ router = APIRouter(
 )
 
 
-@router.post("/court_general_data")
+@router.post("/court_general_data", response_model=Optional[List[CourtGeneralCase]])
 async def get_query_data(
     request_data: IrbisDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -49,18 +31,56 @@ async def get_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        person_uuid = PersonUuidDAO.get_person_uuid(user_id, request_data.query_id, db)
-        if not person_uuid:
+        irbis_person = await IrbisPersonDAO.get_irbis_person(user_id, request_data.query_id, db)
+        if not irbis_person:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        query_data = await QueriesDataDAO.get_paginated_query_data(
-            query_id=request_data.query_id,
+        results = await CourtGeneralJurDAO.get_paginated_query_data(
+            irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
             db=db,
         )
 
-
-
-    except:
-        pass
+        cases = []
+        for case in results:
+            faces = []
+            progresses = []
+            for face in case.faces:
+                faces.append(
+                    CourtGeneralFace(
+                        role=face.role,
+                        face=face.face,
+                        role_name=face.role_name,
+                    )
+                )
+            for progress in case.progress:
+                progresses.append(
+                    CourtGeneralProgress(
+                        name=progress.name,
+                        progress_data=progress.progress_date,
+                        resolution=progress.resolution,
+                    )
+                )
+            cases.append(
+                CourtGeneralCase(
+                    case_number=case.case_number,
+                    court_name=case.court_name,
+                    start_date=case.start_date,
+                    end_date=case.end_date,
+                    review=case.review,
+                    region=case.region,
+                    process_type=case.process_type,
+                    judge=case.judge,
+                    papers=case.papers,
+                    papers_pretty=case.papers_pretty,
+                    links=case.links,
+                    progress=progresses,
+                    faces=faces,
+                )
+            )
+        return cases
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise e

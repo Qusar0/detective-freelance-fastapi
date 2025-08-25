@@ -31,6 +31,7 @@ from server.api.schemas.query import (
     FindByIRBISModel,
     QueryDataResponse,
     QueryDataRequest,
+    CategoryQueryDataRequest,
     GenerarQueryDataResponse,
     QueryDataResult,
     NameQueryDataResponse,
@@ -46,7 +47,7 @@ from server.api.dao.query_translation_languages import QueryTranslationLanguages
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
-from server.api.dao.irbis.person_uuid import PersonUuidDAO
+from server.api.dao.irbis.person_uuid import IrbisPersonDAO
 from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
@@ -596,7 +597,7 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.post("/query_data", response_model=Union[NameQueryDataResponse, QueryDataResponse])
+@router.post("/query_data", response_model=List[Union[NameQueryDataResult, QueryDataResult]])
 async def get_query_data(
     request_data: QueryDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -614,21 +615,6 @@ async def get_query_data(
         )
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
-
-        total = await QueriesDataDAO.get_query_data_count(
-            query_id=request_data.query_id,
-            keyword_type_category=request_data.keyword_type_category,
-            db=db
-        )
-
-        if total == 0:
-            return QueryDataResponse(
-                data=[],
-                total=0,
-                page=request_data.page,
-                size=request_data.size,
-                total_pages=0
-            )
 
         query_data = await QueriesDataDAO.get_paginated_query_data(
             query_id=request_data.query_id,
@@ -677,13 +663,53 @@ async def get_query_data(
 
             results.append(query_data)
 
+        return results
+
+    except Exception as e:
+        logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Произошла ошибка при получении данных запроса",
+        )
+
+
+@router.post("/category_query_data", response_model=Union[NameQueryDataResponse, QueryDataResponse])
+async def get_category_query_data(
+    request_data: CategoryQueryDataRequest = Body(...),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает данные о выполненном запросе с фильтрацией по категориям."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+
+        query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            request_data.query_id,
+            db,
+        )
+        if not query:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        total = await QueriesDataDAO.get_query_data_count(
+            query_id=request_data.query_id,
+            keyword_type_category=request_data.keyword_type_category,
+            db=db
+        )
+
+        if total == 0:
+            return QueryDataResponse(
+                total=0,
+                size=request_data.size,
+                total_pages=0
+            )
+
         total_pages = (total + request_data.size - 1) // request_data.size
 
         if query.query_category != 'name':
             result = QueryDataResponse(
-                data=results,
                 total=total,
-                page=request_data.page,
                 size=request_data.size,
                 total_pages=total_pages
             )
@@ -694,10 +720,8 @@ async def get_query_data(
                 db,
             )
             result = NameQueryDataResponse(
-                data=results,
                 total=total,
                 fullname_count=fullname_count,
-                page=request_data.page,
                 size=request_data.size,
                 total_pages=total_pages
             )
@@ -768,15 +792,14 @@ async def get_general_irbis_data(
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        person_uuid = await PersonUuidDAO.get_person_uuid(query.query_id, db)
+        person_uuid = await IrbisPersonDAO.get_irbis_person(query.query_id, db)
         if not person_uuid:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        count_info = await PersonUuidDAO.get_count_info(person_uuid.id, db)
+        await IrbisPersonDAO.get_count_info(person_uuid.id, db)
     except Exception as e:
         logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
         )
-

@@ -15,20 +15,18 @@ from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, ArbitrationCourtFullTable, BankruptcyPreviewTable,
     BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
-    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable, CourtGeneralHeaderTable, CourtGeneralFacesTable,
-    CourtGeneralProgressTable, CourtGeneralJurFullTable,
+    CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     DepositsPreviewTable, DepositsFullTable, DepositsPartiesTable, DepositsPledgeObjectTable,
     DisqualifiedPersonFullTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrgTable, PartInOrgIndividualTable, PartInOrgRoleTable,
-    TerrorListFullTable, PersonsUUID,
+    TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
 from server.tasks.base.base import BaseSearchTask
-from server.tasks.celery_config import (
-    get_event_loop,
-)
+from server.tasks.celery_config import get_event_loop
 from server.tasks.logger import SearchLogger
+from server.api.dao.irbis.match_type import MatchTypeDAO
 
 
 class IrbisSearchTask(BaseSearchTask):
@@ -55,7 +53,10 @@ class IrbisSearchTask(BaseSearchTask):
                 arbitr_preview, arbitr_full = await self._arbitration_court_data(person_uuid)
                 bankruptcy_preview, bankruptcy_full = await self._bankruptcy_data(person_uuid)
                 corruption_preview, corruption_full = await self._corruption_data(person_uuid)
-                court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(person_uuid)
+                court_gen_preview, court_gen_category, court_gen_full = await self._court_of_gen_jur_data(
+                    person_uuid,
+                    db,
+                )
                 deposits_preview, deposits_full = await self._deposits_data(person_uuid)
                 disqualified_full = await self._disqualified_pers_data(person_uuid)
                 fssp_preview, fssp_full = await self._fssp_data(person_uuid)
@@ -64,7 +65,7 @@ class IrbisSearchTask(BaseSearchTask):
                 tax_areas_full = await self._tax_areas_data(person_uuid)
                 terror_list_full = await self._terror_list_data(person_uuid)
 
-                person = PersonsUUID(
+                person = IrbisPerson(
                     query_id=self.query_id,
                     person_uuid=person_uuid,
                     arbit_court_preview=arbitr_preview,
@@ -189,7 +190,7 @@ class IrbisSearchTask(BaseSearchTask):
         return corruption_preview, corruption_full
 
     @staticmethod
-    async def _court_of_gen_jur_data(person_uuid: str):
+    async def _court_of_gen_jur_data(person_uuid: str, db):
         full_fio_data_preview, short_fio_data_preview = await CourtGeneralJurisdiction.get_data_preview(
             person_uuid, "", "all"
         )
@@ -230,63 +231,12 @@ class IrbisSearchTask(BaseSearchTask):
             )
             court_gen_category.append(obj)
 
-        full_data = await CourtGeneralJurisdiction.get_full_data(
-            person_uuid=person_uuid,
-            page=1,
-            rows=50,
-            filter0='allData',
-            filter_text='',
-            strategy='all'
-        )
         court_gen_full = []
-        for case_data in full_data:
-            header_data = case_data.get("header", {})
+        for match_type_name in {'full', 'partly'}:
+            match_type = MatchTypeDAO.get_type_by_name(match_type_name, db)
+            found_data = await CourtGeneralJurisdiction._process_court_cases(person_uuid, match_type)
+            court_gen_full.extend(found_data)
 
-            header = CourtGeneralHeaderTable(
-                case_number=header_data.get("case_number"),
-                region=header_data.get("region"),
-                court_name=header_data.get("court_name"),
-                process_type=header_data.get("process_type"),
-                start_date=header_data.get("start_date"),
-                end_date=header_data.get("end_date") or "to date",
-                review=header_data.get("review"),
-                judge=header_data.get("judge"),
-                articles=header_data.get("articles", []),
-                papers=", ".join(map(str, header_data.get("papers", []))),
-                papers_pretty=", ".join(map(str, header_data.get("papers_pretty", []))),
-                links=header_data.get("links", {}),
-            )
-
-            faces_data = case_data.get("faces", [])
-            faces = [
-                CourtGeneralFacesTable(
-                    role=face.get("role"),
-                    role_name=face.get("role_name"),
-                    face=face.get("face"),
-                    papers=", ".join(map(str, face.get("papers", []))),
-                    papers_pretty=", ".join(map(str, face.get("papers_pretty", [])))
-                )
-                for face in faces_data
-            ]
-
-            progress_data = case_data.get("progress", [])
-            progress = [
-                CourtGeneralProgressTable(
-                    progress_date=pr.get("progress_date"),
-                    status=pr.get("status"),
-                    note=pr.get("note")
-                )
-                for pr in progress_data
-            ]
-
-            case = CourtGeneralJurFullTable(
-                person_uuid=person_uuid,
-                headers=header,
-                faces=faces,
-                progress=progress
-            )
-
-            court_gen_full.append(case)
         return court_gen_preview, court_gen_category, court_gen_full
 
     @staticmethod
@@ -329,7 +279,7 @@ class IrbisSearchTask(BaseSearchTask):
             ]
 
             obj = DepositsFullTable(
-                person_uuid=person_uuid,
+                irbis_person_id=person_uuid,
                 pledge_count=deposit_info.get("pledge_count", 0),
                 pledge_type=deposit_info.get("pledge_type", ""),
                 response_id=deposit_info.get("response_id", 0),
@@ -466,7 +416,7 @@ class IrbisSearchTask(BaseSearchTask):
                 )
 
             obj = PartInOrgFullTable(
-                person_uuid=person_uuid,
+                irbis_person_id=person_uuid,
                 filter_type=entry.get("filter_type", ""),
                 count=entry.get("count", 0),
                 part_type=entry.get("part_type", ""),
@@ -493,7 +443,7 @@ class IrbisSearchTask(BaseSearchTask):
             money_value = money.get("value", 0.0)
 
             arrear_obj = TaxArrearsFullTable(
-                person_uuid=person_uuid,
+                irbis_person_id=person_uuid,
                 provider=provider,
                 money_name=money_name,
                 money_code=money_code,

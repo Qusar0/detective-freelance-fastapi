@@ -104,6 +104,12 @@ class QueryDataRequest(BaseModel):
     size: int = 10
 
 
+class CategoryQueryDataRequest(BaseModel):
+    query_id: int
+    keyword_type_category: str
+    size: int = 10
+
+
 class QueryDataResult(BaseModel):
     title: Optional[str]
     info: Optional[str]
@@ -126,18 +132,14 @@ class NameQueryDataResult(BaseModel):
 
 
 class QueryDataResponse(BaseModel):
-    data: List[QueryDataResult]
     total: int
-    page: int
     size: int
     total_pages: int
 
 
 class NameQueryDataResponse(BaseModel):
-    data: List[NameQueryDataResult]
     total: int
     fullname_count: int
-    page: int
     size: int
     total_pages: int
 
@@ -187,9 +189,3 @@ class GenerarQueryDataResponse(BaseModel):
     minus_words: List[str]
     keyword_stats: Dict[str, int]
     free_words: Optional[List[str]]
-
-
-class IrbisDataRequest(BaseModel):
-    query_id: int
-    page: int = 1
-    size: int = 10

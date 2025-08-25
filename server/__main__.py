@@ -16,6 +16,7 @@ from server.api.routers.auth import router as auth_router
 from server.api.routers.users import router as user_router
 from server.api.routers.query import router as query_router
 from server.api.routers.telegram import router as telegram_router
+from server.api.routers.irbis import router as irbis_router
 from server.api.routers.admin import router as admin_router, setup_admin
 from server.api.scripts.sse_manager import (
     event_generator,
@@ -52,6 +53,7 @@ app.include_router(user_router, prefix='/api')
 app.include_router(query_router, prefix='/api')
 app.include_router(telegram_router, prefix='/api')
 app.include_router(admin_router, prefix='/api')
+app.include_router(irbis_router, prefix='/api')
 
 
 @app.on_event("startup")

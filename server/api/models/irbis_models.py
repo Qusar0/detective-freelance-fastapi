@@ -11,10 +11,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from server.api.models.models import Base
+from api.models.models import Base
 
 
-class PersonsUUID(Base):
+class IrbisPerson(Base):
     __tablename__ = 'irbis_person'
 
     id: Mapped[int] = mapped_column(
@@ -30,26 +30,26 @@ class PersonsUUID(Base):
 
     person_uuid: Mapped[str] = mapped_column(String(128))
 
-    arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(back_populates='uid_relation')
-    arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='uid_relation')
-    bankruptcy_preview: Mapped['BankruptcyPreviewTable'] = relationship(back_populates='uid_relation')
-    bankruptcy_full: Mapped[List['BankruptcyFullTable']] = relationship(back_populates='uid_relation')
-    corruption_preview: Mapped['CorruptionPreviewTable'] = relationship(back_populates='uid_relation')
-    corruption_full: Mapped[List['CorruptionFullTable']] = relationship(back_populates='uid_relation')
-    court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(back_populates='uid_relation')
-    court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(back_populates='uid_relation')
-    court_gen_full: Mapped[List['CourtGeneralJurFullTable']] = relationship(back_populates='uid_relation')
-    deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(back_populates='uid_relation')
-    deposits_full: Mapped[List['DepositsFullTable']] = relationship(back_populates='uid_relation')
-    disqualified_preview: Mapped[List['DisqualifiedPersonPreviewTable']] = relationship(back_populates='uid_relation')
-    disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(back_populates='uid_relation')
-    fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(back_populates='uid_relation')
-    fssp_full: Mapped[List['FSSPFullTable']] = relationship(back_populates='uid_relation')
-    mlindex_full: Mapped['MLIndexFullTable'] = relationship(back_populates='uid_relation')
-    part_in_org_preview: Mapped[List['PartInOrgPreviewTable']] = relationship(back_populates='uid_relation')
-    part_in_org_full: Mapped[List['PartInOrgFullTable']] = relationship(back_populates='uid_relation')
-    tax_arrears_full: Mapped[List['TaxArrearsFullTable']] = relationship(back_populates='uid_relation')
-    terror_list_preview: Mapped[List['TerrorListFullTable']] = relationship(back_populates='uid_relation')
+    arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(back_populates='irbis_person')
+    arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='irbis_person')
+    bankruptcy_preview: Mapped['BankruptcyPreviewTable'] = relationship(back_populates='irbis_person')
+    bankruptcy_full: Mapped[List['BankruptcyFullTable']] = relationship(back_populates='irbis_person')
+    corruption_preview: Mapped['CorruptionPreviewTable'] = relationship(back_populates='irbis_person')
+    corruption_full: Mapped[List['CorruptionFullTable']] = relationship(back_populates='irbis_person')
+    court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(back_populates='irbis_person')
+    court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(back_populates='irbis_person')
+    court_gen_full: Mapped[List['CourtGeneralJurFullTable']] = relationship(back_populates='irbis_person')
+    deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(back_populates='irbis_person')
+    deposits_full: Mapped[List['DepositsFullTable']] = relationship(back_populates='irbis_person')
+    disqualified_preview: Mapped[List['DisqualifiedPersonPreviewTable']] = relationship(back_populates='irbis_person')
+    disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(back_populates='irbis_person')
+    fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(back_populates='irbis_person')
+    fssp_full: Mapped[List['FSSPFullTable']] = relationship(back_populates='irbis_person')
+    mlindex_full: Mapped['MLIndexFullTable'] = relationship(back_populates='irbis_person')
+    part_in_org_preview: Mapped[List['PartInOrgPreviewTable']] = relationship(back_populates='irbis_person')
+    part_in_org_full: Mapped[List['PartInOrgFullTable']] = relationship(back_populates='irbis_person')
+    tax_arrears_full: Mapped[List['TaxArrearsFullTable']] = relationship(back_populates='irbis_person')
+    terror_list_preview: Mapped[List['TerrorListFullTable']] = relationship(back_populates='irbis_person')
 
 
 class ArbitrationCourtPreviewTable(Base):
@@ -61,14 +61,14 @@ class ArbitrationCourtPreviewTable(Base):
         autoincrement=True,
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     type: Mapped[str] = mapped_column(String(4))
     plaintiff: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     responder: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='arbit_court_preview')
 
 
@@ -81,7 +81,7 @@ class ArbitrationCourtFullTable(Base):
         autoincrement=True,
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     court_name_val: Mapped[str] = mapped_column(String(128))
     role: Mapped[str] = mapped_column(String(1))
@@ -93,8 +93,8 @@ class ArbitrationCourtFullTable(Base):
     response_id: Mapped[str] = mapped_column(String(128))
     address_val: Mapped[str] = mapped_column(String(128))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='arbit_court_full')
 
 
@@ -107,13 +107,13 @@ class BankruptcyPreviewTable(Base):
         autoincrement=True,
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     name: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     inn: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='bankruptcy_preview')
 
 
@@ -126,7 +126,7 @@ class BankruptcyFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     first_name: Mapped[str] = mapped_column(String(128))
     second_name: Mapped[str] = mapped_column(String(128))
@@ -143,8 +143,8 @@ class BankruptcyFullTable(Base):
     information: Mapped[str] = mapped_column(String(256))
     link: Mapped[str] = mapped_column(String(256))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='bankruptcy_full')
 
 
@@ -157,12 +157,12 @@ class CorruptionPreviewTable(Base):
         autoincrement=True,
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='corruption_preview')
 
 
@@ -175,7 +175,7 @@ class CorruptionFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     key: Mapped[str] = mapped_column(String(256))
     full_name: Mapped[str] = mapped_column(String(256))
@@ -186,8 +186,8 @@ class CorruptionFullTable(Base):
     publish_date: Mapped[str] = mapped_column(String(128))
     excluded_reason: Mapped[str] = mapped_column(String(256))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='corruption_full')
 
 
@@ -200,7 +200,7 @@ class CourtGeneralJurPreviewTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     search_type: Mapped[str] = mapped_column(String(128))
     court_type: Mapped[str] = mapped_column(String(1))
@@ -210,8 +210,8 @@ class CourtGeneralJurPreviewTable(Base):
     face: Mapped[Optional[int]] = mapped_column(Integer, nullable=False, default=0)
     lawyer: Mapped[Optional[int]] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='court_gen_preview')
 
 
@@ -224,13 +224,13 @@ class CourtGeneralJurCategoricalTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     type: Mapped[str] = mapped_column(String(512))
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='court_gen_categorial')
 
 
@@ -242,29 +242,7 @@ class CourtGeneralJurFullTable(Base):
         primary_key=True,
         autoincrement=True
     )
-
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
-
-    headers: Mapped[Optional['CourtGeneralHeaderTable']] = relationship(
-        back_populates='case', cascade="all, delete-orphan", uselist=False
-    )
-    faces: Mapped[List['CourtGeneralFacesTable']] = relationship(
-        back_populates='case', cascade="all, delete-orphan"
-    )
-    progress: Mapped[List['CourtGeneralProgressTable']] = relationship(
-        back_populates='case', cascade="all, delete-orphan"
-    )
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
-        back_populates='court_gen_full')
-
-
-class CourtGeneralHeaderTable(Base):
-    __tablename__ = 'court_general_header'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
-
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     case_number: Mapped[str] = mapped_column(String)
     region: Mapped[int] = mapped_column(Integer)
     court_name: Mapped[str] = mapped_column(String)
@@ -273,13 +251,28 @@ class CourtGeneralHeaderTable(Base):
     end_date: Mapped[str] = mapped_column(String(128))
     review: Mapped[Optional[int]] = mapped_column(Integer)
     judge: Mapped[Optional[str]] = mapped_column(String)
-
     articles: Mapped[Optional[list[str]]] = mapped_column(JSONB)
     papers: Mapped[Optional[list[str]]] = mapped_column(String)
     papers_pretty: Mapped[Optional[list[str]]] = mapped_column(String)
     links: Mapped[Optional[dict[str, list[str]]]] = mapped_column(JSONB)
+    match_type_id: Mapped[int] = mapped_column(ForeignKey('match_types.id', ondelete='CASCADE'), nullable=True)
 
-    case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='headers')
+    faces: Mapped[List['CourtGeneralFacesTable']] = relationship(
+        back_populates='case',
+        cascade="all, delete-orphan",
+    )
+    progress: Mapped[List['CourtGeneralProgressTable']] = relationship(
+        back_populates='case',
+        cascade="all, delete-orphan",
+    )
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
+        back_populates='court_gen_full',
+    )
+    match_type: Mapped[Optional['MatchType']] = relationship(
+        'MatchTypeTable',
+        back_populates='court_cases'
+    )
 
 
 class CourtGeneralFacesTable(Base):
@@ -303,9 +296,9 @@ class CourtGeneralProgressTable(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     case_id: Mapped[int] = mapped_column(ForeignKey('court_general_full.id', ondelete='CASCADE'))
 
-    progress_date: Mapped[str] = mapped_column(String(128))
-    status: Mapped[Optional[str]] = mapped_column(String)
-    note: Mapped[Optional[str]] = mapped_column(String)
+    name: Mapped[Optional[str]] = mapped_column(String)
+    progress_date: Mapped[Optional[str]] = mapped_column(String(128))
+    resolution: Mapped[Optional[str]] = mapped_column(String)
 
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='progress')
 
@@ -319,14 +312,14 @@ class DepositsPreviewTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     pledge_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     pledge_type: Mapped[str] = mapped_column(String(128))
     response_id: Mapped[int] = mapped_column(Integer)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='deposits_preview')
 
 
@@ -339,7 +332,7 @@ class DepositsFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     pledge_count: Mapped[int] = mapped_column(Integer)
     pledge_type: Mapped[str] = mapped_column(String(128))
@@ -354,8 +347,8 @@ class DepositsFullTable(Base):
         back_populates='deposit',
         cascade='all, delete-orphan'
     )
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='deposits_full')
 
 
@@ -404,13 +397,14 @@ class DisqualifiedPersonPreviewTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-       'PersonsUUID',
-       back_populates='disqualified_preview')
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+       'IrbisPerson',
+       back_populates='disqualified_preview',
+    )
 
 
 class DisqualifiedPersonFullTable(Base):
@@ -422,7 +416,7 @@ class DisqualifiedPersonFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     response_id: Mapped[int] = mapped_column(Integer)
     reestr_key: Mapped[str] = mapped_column(String(512))
@@ -438,8 +432,8 @@ class DisqualifiedPersonFullTable(Base):
     office: Mapped[str] = mapped_column(String(512))
     department: Mapped[str] = mapped_column(String(512))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='disqualified_full')
 
 
@@ -451,15 +445,15 @@ class FSSPPreviewTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     response_id: Mapped[int] = mapped_column(Integer)
     type: Mapped[str] = mapped_column(String(512))
     type_sum: Mapped[float] = mapped_column(Numeric)
     type_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='fssp_preview')
 
 
@@ -471,7 +465,7 @@ class FSSPFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     ip: Mapped[str] = mapped_column(String(512))
     fio: Mapped[str] = mapped_column(String(512))
@@ -484,8 +478,8 @@ class FSSPFullTable(Base):
     pristav_phones: Mapped[Optional[str]] = mapped_column(String(512))
     response_id: Mapped[Optional[int]] = mapped_column(Integer)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='fssp_full')
 
 
@@ -497,7 +491,7 @@ class MLIndexFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     scoring: Mapped[float] = mapped_column(Numeric)
     errors: Mapped[str] = mapped_column(Text)
@@ -505,8 +499,8 @@ class MLIndexFullTable(Base):
     popularity_full: Mapped[float] = mapped_column(Numeric)
     popularity_short: Mapped[float] = mapped_column(Numeric)
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='mlindex_full')
 
 
@@ -518,13 +512,13 @@ class PartInOrgPreviewTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     filter_type: Mapped[str] = mapped_column(String(512))
     count: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
     part_type: Mapped[str] = mapped_column(String(512))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='part_in_org_preview')
 
 
@@ -536,7 +530,7 @@ class PartInOrgFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     filter_type: Mapped[str] = mapped_column(String(512))
     count: Mapped[float] = mapped_column(Numeric)
     part_type: Mapped[str] = mapped_column(String(512))
@@ -547,15 +541,15 @@ class PartInOrgFullTable(Base):
         cascade='all, delete-orphan',
         uselist=False
     )
-
     individual: Mapped[Optional['PartInOrgIndividualTable']] = relationship(
         back_populates='part',
         cascade='all, delete-orphan',
         uselist=False
     )
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
-        back_populates='part_in_org_full')
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
+        back_populates='part_in_org_full',
+    )
 
 
 class PartInOrgOrgTable(Base):
@@ -620,7 +614,7 @@ class TaxArrearsFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     provider: Mapped[str] = mapped_column(String(512))
 
@@ -633,8 +627,8 @@ class TaxArrearsFullTable(Base):
         back_populates='arrear',
         cascade='all, delete-orphan'
     )
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='tax_arrears_full')
 
 
@@ -667,13 +661,29 @@ class TerrorListFullTable(Base):
         autoincrement=True
     )
 
-    person_uuid: Mapped[int] = mapped_column(ForeignKey('persons_uuid.id', ondelete='CASCADE'), nullable=False)
+    irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
 
     response_id: Mapped[str] = mapped_column(String(512))
     fio: Mapped[str] = mapped_column(String(512))
     birth_date: Mapped[str] = mapped_column(String(128))
     birth_place: Mapped[str] = mapped_column(String(512))
 
-    uid_relation: Mapped['PersonsUUID'] = relationship(
-        'PersonsUUID',
+    irbis_person: Mapped['IrbisPerson'] = relationship(
+        'IrbisPerson',
         back_populates='terror_list_preview')
+
+
+class MatchType(Base):
+    __tablename__ = 'match_types'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+
+    court_cases: Mapped[List['CourtGeneralJurFullTable']] = relationship(
+        'CourtGeneralJurFullTable',
+        back_populates='match_type'
+    )

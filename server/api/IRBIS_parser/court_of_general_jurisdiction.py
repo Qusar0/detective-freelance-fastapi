@@ -1,6 +1,12 @@
 from typing import Optional
 
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
+from server.api.models.irbis_models import (
+    CourtGeneralFacesTable,
+    CourtGeneralProgressTable,
+    CourtGeneralJurFullTable,
+    MatchType,
+)
 
 
 class CourtGeneralJurisdiction:
@@ -95,3 +101,68 @@ class CourtGeneralJurisdiction:
             full_data = response["result"]
 
         return full_data
+
+    @staticmethod
+    async def _process_court_cases(person_uuid: str, match_type: MatchType):
+        """Обрабатывает данные судебных дел для указанного типа фильтра."""
+        court_gen_full = []
+        page = 1
+        full_data = ['']
+
+        while full_data:
+            full_data = await CourtGeneralJurisdiction.get_full_data(
+                person_uuid=person_uuid,
+                page=page,
+                rows=50,
+                filter0=match_type.name,
+                filter_text='',
+                strategy='all'
+            )
+
+            for case_data in full_data:
+                header_data = case_data.get("header", {})
+
+                faces_data = case_data.get("faces", [])
+                faces = [
+                    CourtGeneralFacesTable(
+                        role=face.get("role"),
+                        role_name=face.get("role_name"),
+                        face=face.get("face"),
+                        papers=", ".join(map(str, face.get("papers", []))),
+                        papers_pretty=", ".join(map(str, face.get("papers_pretty", [])))
+                    )
+                    for face in faces_data
+                ]
+
+                progress_data = case_data.get("case_progress", [])
+                progress = [
+                    CourtGeneralProgressTable(
+                        name=pr.get("name"),
+                        progress_date=pr.get("date"),
+                        resolution=pr.get("resolution")
+                    )
+                    for pr in progress_data
+                ]
+
+                case = CourtGeneralJurFullTable(
+                    irbis_person_id=person_uuid,
+                    faces=faces,
+                    progress=progress,
+                    case_number=header_data.get("case_number"),
+                    region=header_data.get("region"),
+                    court_name=header_data.get("court_name"),
+                    process_type=header_data.get("process_type"),
+                    start_date=header_data.get("start_date"),
+                    end_date=header_data.get("end_date") or "to date",
+                    review=header_data.get("review"),
+                    judge=header_data.get("judge"),
+                    articles=header_data.get("articles", []),
+                    papers=", ".join(map(str, header_data.get("papers", []))),
+                    papers_pretty=", ".join(map(str, header_data.get("papers_pretty", []))),
+                    links=header_data.get("links", {}),
+                    match_type_id=match_type.id,
+                )
+                court_gen_full.append(case)
+            page += 1
+
+        return court_gen_full

@@ -5,14 +5,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.dao.base import BaseDAO
 from server.api.dao.user_queries import UserQueriesDAO
-from server.api.models.irbis_models import PersonsUUID
+from server.api.models.irbis_models import IrbisPerson
 
 
-class PersonUuidDAO(BaseDAO):
-    model = PersonsUUID
+class IrbisPersonDAO(BaseDAO):
+    model = IrbisPerson
 
     @classmethod
-    async def get_person_uuid(cls, user_id: int, query_id: int, db: AsyncSession):
+    async def get_irbis_person(cls, user_id: int, query_id: int, db: AsyncSession):
         try:
             query = await UserQueriesDAO.get_query_by_id(
                 user_id,
@@ -24,7 +24,7 @@ class PersonUuidDAO(BaseDAO):
                 return None
 
             result = await db.execute(
-                select(PersonsUUID)
+                select(IrbisPerson)
                 .filter_by(query_id=query_id),
             )
 
