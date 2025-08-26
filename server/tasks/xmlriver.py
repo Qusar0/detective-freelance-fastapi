@@ -155,7 +155,7 @@ def handle_xmlriver_response(  # noqa: WPS211
                 raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
             continue
 
-        title = doc["title"]
+        title = doc["title"] or ''
         snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
         pub_date = doc.get("pubDate")
 
