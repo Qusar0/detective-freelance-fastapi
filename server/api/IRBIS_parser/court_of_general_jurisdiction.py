@@ -103,7 +103,7 @@ class CourtGeneralJurisdiction:
         return full_data
 
     @staticmethod
-    async def _process_court_cases(person_uuid: str, match_type: MatchType):
+    async def _process_court_cases(irbis_person_id: int, person_uuid: str, match_type: MatchType):
         """Обрабатывает данные судебных дел для указанного типа фильтра."""
         court_gen_full = []
         page = 1
@@ -145,7 +145,7 @@ class CourtGeneralJurisdiction:
                 ]
 
                 case = CourtGeneralJurFullTable(
-                    irbis_person_id=person_uuid,
+                    irbis_person_id=irbis_person_id,
                     faces=faces,
                     progress=progress,
                     case_number=header_data.get("case_number"),

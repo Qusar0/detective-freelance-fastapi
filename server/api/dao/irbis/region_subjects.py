@@ -3,24 +3,24 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.dao.base import BaseDAO
-from server.api.models.irbis_models import MatchType
+from server.api.models.irbis_models import RegionSubject
 
 
-class MatchTypeDAO(BaseDAO):
-    model = MatchType
+class RegionSubjectDAO(BaseDAO):
+    model = RegionSubject
 
     @classmethod
-    async def get_type_by_name(
+    async def get_region_by_code(
         cls,
-        name: str,
+        region_code: int,
         db: AsyncSession,
     ):
         """Получает тип поиска по имени."""
         try:
             result = await db.execute(
-                select(MatchType)
-                .where(MatchType.name == name)
+                select(RegionSubject)
+                .where(RegionSubject.subject_number == region_code)
             )
             return result.scalar_one_or_none()
         except Exception as e:
-            logging.error(f"Ошибка при получении типа поиска: {e}")
+            logging.error(f"Ошибка при получении региона по коду: {e}")
