@@ -157,6 +157,7 @@ def handle_xmlriver_response(  # noqa: WPS211
 
         title = doc["title"] or ''
         snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
+        processed_snippet = ''
         pub_date = doc.get("pubDate")
 
         parsed_url = urlparse(url)
