@@ -11,7 +11,44 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from api.models.models import Base
+from server.api.models.models import Base
+
+
+class PersonRegions(Base):
+    __tablename__ = 'person_regions'
+    
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey('irbis_person.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    region_id: Mapped[int] = mapped_column(
+        ForeignKey('region_subjects.id', ondelete='CASCADE'),
+        nullable=False
+    )
+
+    person: Mapped['IrbisPerson'] = relationship(back_populates='person_regions')
+    region: Mapped['RegionSubject'] = relationship(back_populates='person_regions')
+
+
+class RegionSubject(Base):
+    __tablename__ = 'region_subjects'
+    
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    subject_number: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    person_regions: Mapped[List['PersonRegions']] = relationship(
+        back_populates='region',
+        cascade='all, delete-orphan'
+    )
 
 
 class IrbisPerson(Base):
@@ -22,14 +59,21 @@ class IrbisPerson(Base):
         primary_key=True,
         autoincrement=True,
     )
-
     query_id: Mapped[int] = mapped_column(
         ForeignKey('user_queries.query_id', ondelete='CASCADE'),
         nullable=False,
     )
-
     person_uuid: Mapped[str] = mapped_column(String(128))
+    fullname: Mapped[str] = mapped_column(String(128))
+    birth_date: Mapped[Optional[str]] = mapped_column(String(20))
+    passport_series: Mapped[Optional[str]] = mapped_column(String(4))
+    passport_number: Mapped[Optional[str]] = mapped_column(String(6))
+    inn: Mapped[Optional[str]] = mapped_column(String(12))
 
+    person_regions: Mapped[List['PersonRegions']] = relationship(
+        back_populates='person',
+        cascade='all, delete-orphan'
+    )
     arbit_court_preview: Mapped[List['ArbitrationCourtPreviewTable']] = relationship(back_populates='irbis_person')
     arbit_court_full: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='irbis_person')
     bankruptcy_preview: Mapped['BankruptcyPreviewTable'] = relationship(back_populates='irbis_person')

@@ -465,7 +465,7 @@ async def find_by_irbis(
 
         channel = await generate_sse_message_type(user_id=user_id, db=db)
 
-        price = 10
+        price = 100
         query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
         query_title = " ".join([request_data.first_name.strip(), request_data.second_name.strip()])
@@ -479,7 +479,7 @@ async def find_by_irbis(
         )
 
         db.add(user_query)
-        await db.commit()
+        await db.flush()
 
         search_filters = {
             "query_id": user_query.query_id,
