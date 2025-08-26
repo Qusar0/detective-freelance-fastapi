@@ -7,7 +7,7 @@ from celery import shared_task
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.keywords import KeywordsDAO
-from server.api.models.models import QueriesData
+from server.api.models.models import QueriesData, QueryDataKeywords
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import (
@@ -76,13 +76,11 @@ class NumberSearchTask(BaseSearchTask):
     async def save_raw_results(self, raw_data, db):
         """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
         try:
-            for item in raw_data:
+            for url, item in raw_data.items():
                 title = item.get('raw_title') or item.get('title')
                 snippet = item.get('raw_snippet') or item.get('snippet')
-                url = item.get('url')
                 publication_date = item.get('pubDate')
                 keyword_type = 'free word'
-                keyword_type_id = await KeywordsDAO.get_keyword_type_id(db, keyword_type)
 
                 query_data = QueriesData(
                     query_id=self.query_id,
@@ -90,9 +88,16 @@ class NumberSearchTask(BaseSearchTask):
                     info=snippet,
                     link=url,
                     publication_date=publication_date,
-                    keyword_type_id=keyword_type_id,
                 )
                 db.add(query_data)
+                await db.flush()
+                original_keyword_id = await KeywordsDAO.get_keyword_id(db, 'free word', keyword_type)
+                query_data_keyword = QueryDataKeywords(
+                    query_data_id=query_data.id,
+                    keyword='ключевых слов нет',
+                    original_keyword_id=original_keyword_id,
+                )
+                db.add(query_data_keyword)
             await db.commit()
             logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
@@ -102,7 +107,7 @@ class NumberSearchTask(BaseSearchTask):
             raise
 
     async def xmlriver_num_do_request(self, db):
-        all_raw_data = []
+        all_raw_data = {}
         all_found_data = []
         urls = []
         proh_sites = await read_needless_sites(db)
@@ -111,6 +116,7 @@ class NumberSearchTask(BaseSearchTask):
         handling_resp = None
 
         google_urls = form_google_query(self.phone_num)
+        existing_urls = set()
         for url in google_urls:
             for attempt in range(1, max_attempts + 1):
                 try:
@@ -121,6 +127,7 @@ class NumberSearchTask(BaseSearchTask):
                         proh_sites,
                         self.phone_num,
                         all_raw_data,
+                        existing_urls,
                     )
 
                     if handling_resp not in ('500', '110', '111'):
@@ -152,6 +159,7 @@ class NumberSearchTask(BaseSearchTask):
                         proh_sites,
                         self.phone_num,
                         all_raw_data,
+                        existing_urls,
                     )
 
                     if handling_resp == '15':
