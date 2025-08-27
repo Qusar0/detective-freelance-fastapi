@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,5 +29,5 @@ class PersonRegionsDAO(BaseDAO):
                     db.add(person_region)
             return True
         except Exception as e:
-            logging.error(f"Ошибка при добавлении региона искомого человека: {e}")
+            logger.error(f"Ошибка при добавлении региона искомого человека: {e}")
             return False

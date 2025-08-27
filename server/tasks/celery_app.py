@@ -2,8 +2,18 @@ from celery import Celery
 
 from server.api.conf.config import settings
 import logging
+from loguru import logger
 
 
+logger.add(
+    "logs/debug.log",
+    level="DEBUG",
+    format="{level} | {time} | {function}:{line} | {message}",
+    rotation="4096 KB",
+    compression="zip",
+)
+
+logger.disable('sqlalchemy.engine')
 logging.getLogger('sqlalchemy.engine.Engine').disabled = True
 
 

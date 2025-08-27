@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
@@ -47,7 +47,7 @@ from server.api.dao.query_translation_languages import QueryTranslationLanguages
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
-from server.api.dao.irbis.person_uuid import IrbisPersonDAO
+from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.services.file_storage import FileStorageService
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
@@ -104,7 +104,7 @@ async def delete_query(
         return {"message": "Success"}
     except Exception as e:
         await db.rollback()
-        logging.error(f"Delete error for query {query_id}: {str(e)}")
+        logger.error(f"Delete error for query {query_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Database operation failed")
 
 
@@ -124,7 +124,7 @@ async def queries_count(
         count = len(result.fetchall())
         return {"count": count}
     except Exception as e:
-        logging.error(f"Failed to count queries: {e}")
+        logger.error(f"Failed to count queries: {e}")
         raise HTTPException(status_code=500, detail="Failed to count queries")
 
 
@@ -169,7 +169,7 @@ async def send_query_data(
 
         return result_list
     except Exception as e:
-        logging.error(f"Failed to get query data: {e}")
+        logger.error(f"Failed to get query data: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve query data")
 
 
@@ -255,7 +255,7 @@ async def find_by_name(
         start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
         return None
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
+        logger.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -313,7 +313,7 @@ async def find_by_number(
         return None
 
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
+        logger.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -370,7 +370,7 @@ async def find_by_email(
         return None
 
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
+        logger.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -448,7 +448,7 @@ async def find_by_company(
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
         return None
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
+        logger.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -509,7 +509,7 @@ async def find_by_irbis(
         start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
         return None
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
+        logger.error(f"Failed to process the query: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -530,7 +530,7 @@ async def calculate_price(
         )
         return {"price": price}
     except Exception as e:
-        logging.warning(f"Invalid input: {e}")
+        logger.warning(f"Invalid input: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -545,7 +545,7 @@ async def download_query(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"JWT auth failed: {e}")
+        logger.warning(f"JWT auth failed: {e}")
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
@@ -572,7 +572,7 @@ async def download_query(
         return PlainTextResponse(content=query_text, media_type='text/plain; charset=UTF-8')
 
     except Exception as e:
-        logging.error(f"Download query failed: {e}")
+        logger.error(f"Download query failed: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -593,7 +593,7 @@ async def get_available_languages(
 
         return translated
     except Exception as e:
-        logging.error(f"Не удалось получить языки: {e}")
+        logger.error(f"Не удалось получить языки: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
@@ -666,7 +666,7 @@ async def get_query_data(
         return results
 
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -728,7 +728,7 @@ async def get_category_query_data(
         return result
 
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -771,7 +771,7 @@ async def get_general_query_data(
             free_words=free_words,
         )
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        logger.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -792,13 +792,13 @@ async def get_general_irbis_data(
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        person_uuid = await IrbisPersonDAO.get_irbis_person(query.query_id, db)
+        person_uuid = await IrbisPersonDAO.get_irbis_person(user_id, query.query_id, db)
         if not person_uuid:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         await IrbisPersonDAO.get_count_info(person_uuid.id, db)
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        logger.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",

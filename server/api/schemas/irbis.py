@@ -1,5 +1,5 @@
-from typing import List, Optional, Dict
-from pydantic import BaseModel, validator
+from typing import List, Optional
+from pydantic import BaseModel, validator, Field
 from datetime import datetime
 
 
@@ -15,20 +15,28 @@ class CourtGeneralProgress(BaseModel):
     resolution: Optional[str]
 
 
+class RegionInfo(BaseModel):
+    code: int
+    name: str
+
+
+class ProcessTypeInfo(BaseModel):
+    code: str
+    name: str
+
+
 class CourtGeneralCase(BaseModel):
+    case_id: int
     case_number: str
     court_name: str
-    start_date: str  # или datetime если нужно парсить
-    end_date: str  # или datetime если нужно парсить
+    start_date: str
+    end_date: str
     review: int
-    region: int
-    process_type: str
+    region: RegionInfo
+    process_type: ProcessTypeInfo
     judge: Optional[str] = None
     papers: str
     papers_pretty: str
-    links: Dict[str, List[str]]
-    progress: List[CourtGeneralProgress]  # или List[Any] если структура неизвестна
-    faces: List[CourtGeneralFace]
 
     @validator('start_date', 'end_date', pre=True)
     def parse_date(cls, value):
@@ -43,8 +51,15 @@ class CourtGeneralCase(BaseModel):
 
 class IrbisDataRequest(BaseModel):
     query_id: int
-    page: int = 1
-    size: int = 10
+    page: int = Field(1, ge=1, description="Номер страницы (начинается с 1)")
+    size: int = Field(20, ge=1, le=100, description="Количество элементов на странице (1-100)")
+
+    all_regions: bool = Field(True, description="True - все регионы, False - только выбранные регионы")
+
+    case_categories: Optional[List[str]] = Field(
+        None,
+        description="Список категорий дел (коды: A, G, U, M, O). Если None - все категории",
+    )
 
 
 class CourtGeneralResponse(BaseModel):

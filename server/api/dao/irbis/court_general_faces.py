@@ -1,10 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from server.api.models.irbis_models import (
-    CourtGeneralFacesTable,
-)
+from server.api.models.irbis_models import CourtGeneralFacesTable
 from server.api.dao.base import BaseDAO
+from loguru import logger
 
 
 class CourtGeneralFacesDAO(BaseDAO):
@@ -16,18 +14,24 @@ class CourtGeneralFacesDAO(BaseDAO):
         case_id: int,
         db: AsyncSession,
     ):
-        """Получает пагинированные данные запроса."""
+        """Получает данные о лицах по ID дела."""
         try:
+            logger.debug(f"Запрос лиц для дела case_id: {case_id}")
+
             result = await db.execute(
                 select(CourtGeneralFacesTable)
                 .filter_by(case_id=case_id)
             )
 
-            faces = result.all()
+            faces = result.scalars().all()
 
             if not faces:
+                logger.debug(f"Лица для дела {case_id} не найдены")
                 return None
 
+            logger.info(f"Найдено {len(faces)} лиц для дела {case_id}")
             return faces
-        except:
-            pass
+
+        except Exception as e:
+            logger.error(f"Ошибка при получении лиц для дела {case_id}: {e}", exc_info=True)
+            return None

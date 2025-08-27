@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
@@ -30,7 +30,7 @@ class UserLanguageDAO:
 
             return language_code or 'ru'
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении языка пользователя: {e}")
+            logger.error(f"Ошибка при получении языка пользователя: {e}")
             return 'ru'
 
     @staticmethod
@@ -43,7 +43,7 @@ class UserLanguageDAO:
             )
             language = lang_result.scalar_one_or_none()
             if not language:
-                logging.warning(f"Язык с кодом {language_code} не найден")
+                logger.warning(f"Язык с кодом {language_code} не найден")
                 return False
 
             await db.execute(
@@ -54,6 +54,6 @@ class UserLanguageDAO:
             await db.commit()
             return True
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при обновлении языка пользователя: {e}")
+            logger.error(f"Ошибка при обновлении языка пользователя: {e}")
             await db.rollback()
             return False

@@ -117,8 +117,8 @@ class BaseSearchTask(ABC):
 
 @shared_task
 def delete_query_task(query_id):
-    import logging
-    logging.info(f"Celery: Попытка удалить query {query_id}")
+    from loguru import logger
+    logger.info(f"Celery: Попытка удалить query {query_id}")
 
     async def _delete():
         try:
@@ -129,12 +129,12 @@ def delete_query_task(query_id):
                 if text_data and text_data.file_path:
                     try:
                         await file_storage.delete_query_data(text_data.file_path)
-                        logging.info(f"Файл {text_data.file_path} успешно удалён.")
+                        logger.info(f"Файл {text_data.file_path} успешно удалён.")
                     except Exception as e:
-                        logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
+                        logger.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
                 await UserQueriesDAO.delete_query_by_id(query_id, db)
         except Exception as e:
-            logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
+            logger.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
 
     try:
         loop = asyncio.get_event_loop()

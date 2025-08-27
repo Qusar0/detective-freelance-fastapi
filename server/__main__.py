@@ -1,5 +1,5 @@
 import asyncio
-import logging
+from loguru import logger
 from fastapi.responses import StreamingResponse
 from fastapi import (
     FastAPI,
@@ -28,12 +28,18 @@ from server.api.database.database import get_db
 from server.api.models.models import Users
 
 
+logger.add(
+    "logs/debug.log",
+    level="DEBUG",
+    format="{level} | {time} | {function}:{line} | {message}",
+    rotation="4096 KB",
+    compression="zip",
+)
+
+
 def get_file_storage() -> FileStorageService:
     return FileStorageService()
 
-
-logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
-logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
 
 app = FastAPI()
 app.dependency_overrides[FileStorageService] = get_file_storage
@@ -59,6 +65,7 @@ app.include_router(irbis_router, prefix='/api')
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(redis_listener())
+    logger.info('Сервер запущен')
 
 
 @app.get("/api/sse/{channel}")
@@ -82,7 +89,7 @@ async def sse_endpoint(
         )
         await db.commit()
     except Exception as e:
-        logging.error(f"Failed to update last_visited: {e}")
+        logger.error(f"Ошибка обновления последнего посещения: {e}")
         await db.rollback()
 
     queue = asyncio.Queue()
@@ -94,4 +101,5 @@ async def sse_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_config=None)

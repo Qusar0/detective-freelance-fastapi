@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import requests
 import time
 from typing import List
@@ -47,7 +47,7 @@ class NumberSearchTask(BaseSearchTask):
 
             except Exception as e:
                 self.money_to_return += 5
-                logging.error(f"Ошибка в получении упоминаний: {e}")
+                logger.error(f"Ошибка в получении упоминаний: {e}")
 
         tags = parsed_data.get('sources', {}).get('tags', []) if parsed_data else []
 
@@ -65,7 +65,7 @@ class NumberSearchTask(BaseSearchTask):
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
-            logging.error(f"{str(e)}")
+            logger.error(f"{str(e)}")
             self.money_to_return = self.price
             raise e
 
@@ -99,10 +99,10 @@ class NumberSearchTask(BaseSearchTask):
                 )
                 db.add(query_data_keyword)
             await db.commit()
-            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
         except Exception as e:
-            logging.error(f"Failed to save raw results: {e}")
+            logger.error(f"Failed to save raw results: {e}")
             await db.rollback()
             raise
 

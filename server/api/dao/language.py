@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -31,7 +31,7 @@ class LanguageDAO(BaseDAO):
 
             return [lang.russian_name for lang in languages]
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении кода: {e}")
+            logger.error(f"Ошибка при получении кода: {e}")
 
     @classmethod
     async def save_query_languages(
@@ -50,7 +50,7 @@ class LanguageDAO(BaseDAO):
             languages = result.scalars().all()
 
             if not languages:
-                logging.error("Не найдено языков с указанными кодами")
+                logger.error("Не найдено языков с указанными кодами")
                 return False
 
             for language in languages:
@@ -65,8 +65,8 @@ class LanguageDAO(BaseDAO):
 
         except SQLAlchemyError as e:
             await db.rollback()
-            logging.error(f"Ошибка при сохранении языков перевода: {e}")
+            logger.error(f"Ошибка при сохранении языков перевода: {e}")
             return False
         except Exception as e:
-            logging.error(f"Неожиданная ошибка: {e}")
+            logger.error(f"Неожиданная ошибка: {e}")
             return False

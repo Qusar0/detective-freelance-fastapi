@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -37,5 +37,5 @@ class UserBalancesDAO(BaseDAO):
 
             await publish_event(channel, event_data)
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при списании с баланса: {e}")
+            logger.error(f"Ошибка при списании с баланса: {e}")
             await db.rollback()

@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,4 +18,4 @@ class ProhibitedSitesDAO(BaseDAO):
 
             return list(set(sites_from_db + user_prohibited_sites))
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при добавлении сайтов: {e}")
+            logger.error(f"Ошибка при добавлении сайтов: {e}")

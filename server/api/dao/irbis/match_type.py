@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,4 +23,4 @@ class MatchTypeDAO(BaseDAO):
             )
             return result.scalar_one_or_none()
         except Exception as e:
-            logging.error(f"Ошибка при получении типа поиска: {e}")
+            logger.error(f"Ошибка при получении типа поиска: {e}")

@@ -101,13 +101,13 @@ class QueryDataRequest(BaseModel):
     query_id: int
     keyword_type_category: str
     page: int = 1
-    size: int = 10
+    size: int = 20
 
 
 class CategoryQueryDataRequest(BaseModel):
     query_id: int
     keyword_type_category: str
-    size: int = 10
+    size: int = 20
 
 
 class QueryDataResult(BaseModel):

@@ -1,5 +1,5 @@
 from celery import shared_task
-import logging
+from loguru import logger
 from server.api.IRBIS_parser.arbitration_court import ArbitrationCourt
 from server.api.IRBIS_parser.bankruptcy import Bankruptcy
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
@@ -97,7 +97,7 @@ class IrbisSearchTask(BaseSearchTask):
 
         except Exception as e:
             self.logger.log_error(f"Создание записи провалилось. Ошибка: {e}")
-            logging.error(f"Создание записи провалилось. Ошибка: {e}")
+            logger.error(f"Создание записи провалилось. Ошибка: {e}")
 
     async def _update_balances(self, db):
         pass
@@ -249,13 +249,14 @@ class IrbisSearchTask(BaseSearchTask):
                 irbis_person_id,
                 self.person_uuid,
                 match_type,
+                db,
             )
             court_gen_full.extend(found_data)
         db.add_all(court_gen_full)
 
     async def _deposits_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Deposits.get_data_preview(self.person_uuid)
-        full_data = await Deposits.get_full_data(self.person_uuid, 1, 50)
+        full_data = await Deposits.get_full_data(self.person_uuid, 1, 100)
 
         deposits_preview = [
             DepositsPreviewTable(

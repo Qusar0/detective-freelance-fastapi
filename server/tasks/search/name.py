@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from typing import Tuple, List
 import threading
 from celery import shared_task
@@ -298,10 +298,10 @@ class NameSearchTask(BaseSearchTask):
                     )
                     db.add(query_data_keyword)
             await db.commit()
-            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
         except Exception as e:
-            logging.error(f"Failed to save raw results: {e}")
+            logger.error(f"Failed to save raw results: {e}")
             await db.rollback()
             raise
 

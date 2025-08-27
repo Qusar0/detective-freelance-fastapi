@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,7 +23,7 @@ class BalanceHistoryDAO(BaseDAO):
             db.add(balance_history)
             await db.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при сохранении истории: {e}")
+            logger.error(f"Ошибка при сохранении истории: {e}")
 
     @classmethod
     async def return_balance(cls, user_id, query_id, amount, channel, db):
@@ -37,7 +37,7 @@ class BalanceHistoryDAO(BaseDAO):
             )
             balance_history = result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении истории: {e}")
+            logger.error(f"Ошибка при получении истории: {e}")
 
         if balance_history and balance_history.transaction_type != "returned":
             balance_history.transaction_type = 'returned'
@@ -57,5 +57,5 @@ class BalanceHistoryDAO(BaseDAO):
                     "balance": user_balance.balance
                 })
             except (SQLAlchemyError, Exception) as e:
-                logging.error(f"Ошибка при обновлении баланса: {e}")
+                logger.error(f"Ошибка при обновлении баланса: {e}")
                 await db.rollback()

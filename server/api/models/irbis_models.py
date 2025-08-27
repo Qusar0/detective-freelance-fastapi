@@ -28,7 +28,7 @@ class PersonRegions(Base):
     )
     region_id: Mapped[int] = mapped_column(
         ForeignKey('region_subjects.id', ondelete='CASCADE'),
-        nullable=False
+        nullable=False,
     )
 
     person: Mapped['IrbisPerson'] = relationship(back_populates='person_regions')
@@ -49,6 +49,37 @@ class RegionSubject(Base):
         back_populates='region',
         cascade='all, delete-orphan'
     )
+    court_general_full: Mapped['CourtGeneralJurFullTable'] = relationship(
+        back_populates='region',
+        cascade='all, delete-orphan'
+    )
+
+
+class ProcessType(Base):
+    __tablename__ = 'process_types'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    code: Mapped[str] = mapped_column(String(1), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    court_general_jur_fulls: Mapped[List['CourtGeneralJurFullTable']] = relationship(back_populates='process_type')
+
+
+class PersonRoleType(Base):
+    __tablename__ = 'person_role_types'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    short_name: Mapped[str] = mapped_column(String(1), nullable=True)
+    russian_name: Mapped[str] = mapped_column(String(100), nullable=False)
 
 
 class IrbisPerson(Base):
@@ -281,9 +312,9 @@ class CourtGeneralJurFullTable(Base):
     )
     irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     case_number: Mapped[str] = mapped_column(String)
-    region: Mapped[int] = mapped_column(Integer)
+    region_id: Mapped[int] = mapped_column(ForeignKey('region_subjects.id', ondelete='CASCADE'), nullable=False)
     court_name: Mapped[str] = mapped_column(String)
-    process_type: Mapped[str] = mapped_column(String(1))
+    process_type_id: Mapped[str] = mapped_column(ForeignKey('process_types.id', ondelete='CASCADE'), nullable=False)
     start_date: Mapped[str] = mapped_column(String(128))
     end_date: Mapped[str] = mapped_column(String(128))
     review: Mapped[Optional[int]] = mapped_column(Integer)
@@ -308,8 +339,10 @@ class CourtGeneralJurFullTable(Base):
     )
     match_type: Mapped[Optional['MatchType']] = relationship(
         'MatchType',
-        back_populates='court_cases'
+        back_populates='court_cases',
     )
+    region: Mapped['RegionSubject'] = relationship(back_populates='court_general_full')
+    process_type: Mapped['ProcessType'] = relationship(back_populates='court_general_jur_fulls')
 
 
 class CourtGeneralFacesTable(Base):
@@ -437,8 +470,8 @@ class DisqualifiedPersonPreviewTable(Base):
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     irbis_person: Mapped['IrbisPerson'] = relationship(
-       'IrbisPerson',
-       back_populates='disqualified_preview',
+        'IrbisPerson',
+        back_populates='disqualified_preview',
     )
 
 

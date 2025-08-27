@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +49,7 @@ async def get_events(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"Invalid token: {e}")
+        logger.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
     result = await db.execute(
@@ -105,7 +105,7 @@ async def change_event_status(
     except HTTPException:
         raise
     except Exception as e:
-        logging.error("Ошибка изменения статуса события: " + str(e))
+        logger.error("Ошибка изменения статуса события: " + str(e))
         raise HTTPException(
             status_code=422,
             detail="Неверные данные",
@@ -121,7 +121,7 @@ async def get_balance(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.info("Invalid token: " + str(e))
+        logger.info("Invalid token: " + str(e))
         raise HTTPException(status_code=422, detail="Invalid token")
 
     result = await db.execute(
@@ -163,7 +163,7 @@ async def is_user_confirmed_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        logging.error(f"Ошибка проверки подтверждения email: {e}")
+        logger.error(f"Ошибка проверки подтверждения email: {e}")
         raise HTTPException(
             status_code=400,
             detail="Ошибка при проверке или отправке подтверждения",
@@ -180,7 +180,7 @@ async def top_up_balance(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"Invalid token: {e}")
+        logger.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
     result = await db.execute(
@@ -254,7 +254,7 @@ async def top_up_balance(
         }
 
     except Exception as e:
-        logging.warning(f"Invalid input: {e}")
+        logger.warning(f"Invalid input: {e}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -268,7 +268,7 @@ async def change_password(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"Invalid token: {e}")
+        logger.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
     result = await db.execute(select(Users).where(Users.id == user_id))
@@ -299,7 +299,7 @@ async def get_default_language(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"Invalid token: {e}")
+        logger.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
     default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
@@ -320,7 +320,7 @@ async def set_default_language(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as e:
-        logging.warning(f"Invalid token: {e}")
+        logger.warning(f"Invalid token: {e}")
         raise HTTPException(status_code=422, detail="Invalid token")
 
     success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)

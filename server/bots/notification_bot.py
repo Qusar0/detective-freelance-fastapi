@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ParseMode
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -29,9 +29,9 @@ async def send_notification(chat_id: int, text: str):
 async def send_balance_alert(chat_id: int, text: str):
     try:
         await bot.send_message(chat_id, text)
-        logging.info(f"Уведомление отправлено в чат {chat_id}")
+        logger.info(f"Уведомление отправлено в чат {chat_id}")
     except Exception as e:
-        logging.error(f"Ошибка при отправке уведомления: {e}")
+        logger.error(f"Ошибка при отправке уведомления: {e}")
 
 
 class BalanceNotifier:
@@ -70,7 +70,7 @@ class BalanceNotifier:
                         ]):
                             cls._notified_services.remove(service.service_name)
             except Exception as e:
-                logging.error(f"Balance check error: {e}")
+                logger.error(f"Balance check error: {e}")
 
             return original_result
 
@@ -78,11 +78,11 @@ class BalanceNotifier:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logger.basicConfig(level=logger.INFO)
     try:
         from aiogram import executor
         executor.start_polling(dp, skip_updates=True)
     except KeyboardInterrupt:
-        logging.info("🛑 Бот остановлен вручную")
+        logger.info("🛑 Бот остановлен вручную")
     except Exception as e:
-        logging.error(f"🚨 Ошибка при запуске бота: {e}")
+        logger.error(f"🚨 Ошибка при запуске бота: {e}")

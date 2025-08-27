@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select, insert, delete, update
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -17,7 +17,7 @@ class BaseDAO:
                 await session.commit()
                 return result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"SQL error: {e}")
+            logger.error(f"Ошибка SQL запроса: {e}")
 
     @classmethod
     async def _delete(cls, **filter_by):
@@ -27,7 +27,7 @@ class BaseDAO:
                 await session.execute(query)
                 await session.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"SQL error: {e}")
+            logger.error(f"Ошибка SQL запроса: {e}")
 
     @classmethod
     async def delete_all(cls, **filter_by):
@@ -38,7 +38,7 @@ class BaseDAO:
                 await session.commit()
                 return True
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"SQL error: {e}")
+            logger.error(f"Ошибка SQL запроса: {e}")
             return False
 
     @classmethod
@@ -72,4 +72,4 @@ class BaseDAO:
                 await session.commit()
                 return result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"SQL error: {e}")
+            logger.error(f"Ошибка SQL запроса: {e}")

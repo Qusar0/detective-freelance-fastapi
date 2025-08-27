@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import xmltodict
 import os
 import re
@@ -236,7 +236,7 @@ def handle_xmlriver_response(  # noqa: WPS211
                 }
                 existing_urls.add(url)
         except Exception as e:
-            logging.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
+            logger.error(f"Ошибка при создании записи: {title}, {snippet}: {str(e)}")
 
 
 def xml_errors_handler(xml_response):
@@ -297,7 +297,7 @@ def parse_xml_response(
         decoded_resp = response.content.decode('utf-8')
         response_data = xmltodict.parse(decoded_resp)
     except (UnicodeDecodeError, xmltodict.ParsingInterrupted) as e:
-        logging.error(f"XML decoding error: {e}")
+        logger.error(f"XML decoding error: {e}")
         return []
 
     try:
@@ -307,7 +307,7 @@ def parse_xml_response(
         grouping = results_xml.get('grouping', {})
         groups = grouping.get('group', [])
     except AttributeError as e:
-        logging.error(f"XML structure error: {e}")
+        logger.error(f"XML structure error: {e}")
         return []
 
     unique_results = {}
@@ -331,7 +331,7 @@ def parse_xml_response(
                 'resource_type': resource_type,
             }
         except Exception as e:
-            logging.error(f"Ошибка парсинга XML: {e}")
+            logger.error(f"Ошибка парсинга XML: {e}")
 
     return list(unique_results.values())
 
@@ -360,4 +360,4 @@ def search_worker(  # noqa: WPS211
             results_container,
         )
     except Exception as e:
-        logging.error(f"Ошибка в рабочем потоке: {str(e)}")
+        logger.error(f"Ошибка в рабочем потоке: {str(e)}")
