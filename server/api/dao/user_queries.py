@@ -56,14 +56,30 @@ class UserQueriesDAO(BaseDAO):
     @classmethod
     async def delete_query_by_id(cls, query_id, db):
         try:
+            from server.api.models.models import (
+                QueriesData,
+                AdditionalQueryWord,
+                QuerySearchCategory,
+                QueryTranslationLanguages,
+                Events,
+            )
+            from datetime import datetime
+
+            # Получаем запрос
             user_query = await cls.get_user_query(query_id, db)
             if user_query:
-                await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
+                # Удаляем данные из связанных таблиц
+                for table in [QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events]:
+                    await db.execute(delete(table).where(table.query_id == query_id))
+                
+                # Устанавливаем время удаления
+                user_query.deleted_at = datetime.now()
+                
                 await db.commit()
-                logging.info(f"Celery: Query {query_id} удалён автоматически.")
+                logging.info(f"Celery: Данные для query {query_id} удалены. Установлен deleted_at.")
         except (SQLAlchemyError, Exception) as e:
             await db.rollback()
-            logging.error(f"Ошибка при удалении query {query_id}: {str(e)}")
+            logging.error(f"Ошибка при удалении данных query {query_id}: {str(e)}")
             raise
 
     @classmethod

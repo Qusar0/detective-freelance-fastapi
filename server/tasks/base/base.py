@@ -46,10 +46,13 @@ class BaseSearchTask(ABC):
                 print(e)
                 await self._handle_error(user_query, db)
             finally:
-                delete_query_task.apply_async(
-                    args=[user_query.query_id],
-                    countdown=settings.query_delete_delay_seconds
-                )
+                # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                # Очистка старых запросов теперь выполняется отдельным скриптом cleanup_old_queries.py
+                # Старый Celery worker:
+                # delete_query_task.apply_async(
+                #     args=[user_query.query_id],
+                #     countdown=settings.query_delete_delay_seconds
+                # )
                 await self._update_balances(db)
 
     @abstractmethod
@@ -115,31 +118,33 @@ class BaseSearchTask(ABC):
                 f.write("\n".join(stats_text) + "\n\n")
 
 
-@shared_task
-def delete_query_task(query_id):
-    import logging
-    logging.info(f"Celery: Попытка удалить query {query_id}")
-
-    async def _delete():
-        try:
-            async with async_session() as db:
-                file_storage = FileStorageService()
-                result = await db.execute(select(TextData).where(TextData.query_id == query_id))
-                text_data = result.scalars().first()
-                if text_data and text_data.file_path:
-                    try:
-                        await file_storage.delete_query_data(text_data.file_path)
-                        logging.info(f"Файл {text_data.file_path} успешно удалён.")
-                    except Exception as e:
-                        logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
-                await UserQueriesDAO.delete_query_by_id(query_id, db)
-        except Exception as e:
-            logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
-
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop = asyncio.get_event_loop()
-    loop.run_until_complete(_delete())
+## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Функция Celery для удаления запросов, теперь используется внешний скрипт cleanup_old_queries.py
+# @shared_task
+# def delete_query_task(query_id):
+#     import logging
+#     logging.info(f"Celery: Попытка удалить query {query_id}")
+#
+#     async def _delete():
+#         try:
+#             async with async_session() as db:
+#                 file_storage = FileStorageService()
+#                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
+#                 text_data = result.scalars().first()
+#                 if text_data and text_data.file_path:
+#                     try:
+#                         await file_storage.delete_query_data(text_data.file_path)
+#                         logging.info(f"Файл {text_data.file_path} успешно удалён.")
+#                     except Exception as e:
+#                         logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
+#                 await UserQueriesDAO.delete_query_by_id(query_id, db)
+#         except Exception as e:
+#             logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
+#
+#     try:
+#         loop = asyncio.get_event_loop()
+#     except RuntimeError:
+#         loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(loop)
+#         loop = asyncio.get_event_loop()
+#     loop.run_until_complete(_delete())
