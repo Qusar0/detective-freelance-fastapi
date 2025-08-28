@@ -14,8 +14,6 @@ class IrbisPersonDAO(BaseDAO):
     @classmethod
     async def get_irbis_person(cls, user_id: int, query_id: int, db: AsyncSession):
         try:
-            logger.debug(f"Запрос IrbisPerson для user_id: {user_id}, query_id: {query_id}")
-
             query = await UserQueriesDAO.get_query_by_id(
                 user_id,
                 query_id,
@@ -23,7 +21,6 @@ class IrbisPersonDAO(BaseDAO):
             )
 
             if not query:
-                logger.warning(f"Запрос не найден для user_id: {user_id}, query_id: {query_id}")
                 return None
 
             result = await db.execute(
@@ -33,10 +30,6 @@ class IrbisPersonDAO(BaseDAO):
 
             irbis_person = result.scalars().first()
 
-            if irbis_person:
-                logger.debug(f"Найден IrbisPerson: {irbis_person.id} для query_id: {query_id}")
-            else:
-                logger.warning(f"IrbisPerson не найден для query_id: {query_id}")
             return irbis_person
         except (SQLAlchemyError, Exception) as e:
             logger.error(f"Ошибка при получении person uuid: {e}", exc_info=True)

@@ -16,8 +16,6 @@ class CourtGeneralFacesDAO(BaseDAO):
     ):
         """Получает данные о лицах по ID дела."""
         try:
-            logger.debug(f"Запрос лиц для дела case_id: {case_id}")
-
             result = await db.execute(
                 select(CourtGeneralFacesTable)
                 .filter_by(case_id=case_id)
@@ -26,10 +24,8 @@ class CourtGeneralFacesDAO(BaseDAO):
             faces = result.scalars().all()
 
             if not faces:
-                logger.debug(f"Лица для дела {case_id} не найдены")
                 return None
 
-            logger.info(f"Найдено {len(faces)} лиц для дела {case_id}")
             return faces
 
         except Exception as e:

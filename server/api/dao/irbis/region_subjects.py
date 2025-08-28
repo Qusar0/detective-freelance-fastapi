@@ -17,18 +17,12 @@ class RegionSubjectDAO(BaseDAO):
     ):
         """Получает регион по коду субъекта."""
         try:
-            logger.debug(f"Запрос региона по коду: {region_code}")
-
             result = await db.execute(
                 select(RegionSubject)
                 .where(RegionSubject.subject_number == region_code)
             )
             region = result.scalar_one_or_none()
 
-            if region:
-                logger.debug(f"Найден регион: {region.name} (код: {region_code})")
-            else:
-                logger.warning(f"Регион с кодом {region_code} не найден")
             return region
 
         except Exception as e:
