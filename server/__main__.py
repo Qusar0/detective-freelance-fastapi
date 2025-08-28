@@ -26,15 +26,7 @@ from server.api.scripts.sse_manager import (
 from server.api.services.file_storage import FileStorageService
 from server.api.database.database import get_db
 from server.api.models.models import Users
-
-
-logger.add(
-    "logs/debug.log",
-    level="DEBUG",
-    format="{level} | {time} | {function}:{line} | {message}",
-    rotation="4096 KB",
-    compression="zip",
-)
+import server.tasks.logger  # noqa: F401
 
 
 def get_file_storage() -> FileStorageService:

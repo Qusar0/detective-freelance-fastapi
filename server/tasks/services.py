@@ -4,9 +4,6 @@ import aiofiles
 import datetime
 import threading
 
-from server.api.models.models import ProhibitedPhoneSites
-from sqlalchemy import select
-
 
 def update_stats(request_stats, stats_lock, attempt, success=True):
     with stats_lock:
@@ -43,10 +40,3 @@ def manage_threads(threads):
 
     for thread in active_threads:
         thread.join()
-
-
-async def read_needless_sites(db):
-    result = await db.execute(
-        select(ProhibitedPhoneSites.site_link)
-    )
-    return result.scalars().all()

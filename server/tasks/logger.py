@@ -1,5 +1,17 @@
 import datetime
 import threading
+from loguru import logger
+import logging
+
+
+logger.add(
+    "logs/debug.log",
+    level="DEBUG",
+    format="{level} | {time} | {function}:{line} | {message}",
+    rotation="4096 KB",
+    compression="zip",
+)
+logging.getLogger('sqlalchemy.engine.Engine').disabled = True
 
 
 class SearchLogger:

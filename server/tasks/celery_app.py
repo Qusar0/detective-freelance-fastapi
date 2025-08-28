@@ -1,20 +1,7 @@
 from celery import Celery
 
 from server.api.conf.config import settings
-import logging
-from loguru import logger
-
-
-logger.add(
-    "logs/debug.log",
-    level="DEBUG",
-    format="{level} | {time} | {function}:{line} | {message}",
-    rotation="4096 KB",
-    compression="zip",
-)
-
-logger.disable('sqlalchemy.engine')
-logging.getLogger('sqlalchemy.engine.Engine').disabled = True
+import server.tasks.logger  # noqa: F401
 
 
 def create_celery() -> Celery:
@@ -22,6 +9,7 @@ def create_celery() -> Celery:
         "ias_detective",
         broker=settings.redis_url,
         backend=settings.redis_url,
+        broker_connection_retry_on_startup=True,
     )
 
     celery_app.conf.update(
