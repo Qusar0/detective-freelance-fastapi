@@ -26,7 +26,6 @@ from server.api.scripts.sse_manager import (
 from server.api.services.file_storage import FileStorageService
 from server.api.database.database import get_db
 from server.api.models.models import Users
-import server.tasks.logger  # noqa: F401
 
 
 def get_file_storage() -> FileStorageService:

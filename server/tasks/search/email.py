@@ -17,7 +17,7 @@ from server.tasks.celery_config import (
 )
 from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_yandex_query_email
-from server.tasks.logger import SearchLogger
+from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import update_stats, write_urls
 from server.tasks.xmlriver import handle_xmlriver_response

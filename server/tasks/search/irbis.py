@@ -25,7 +25,7 @@ from server.api.models.irbis_models import (
 )
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.celery_config import get_event_loop
-from server.tasks.logger import SearchLogger
+from server.logger import SearchLogger
 from server.api.dao.irbis.match_type import MatchTypeDAO
 from server.api.dao.irbis.person_regions import PersonRegionsDAO
 from sqlalchemy.ext.asyncio import AsyncSession

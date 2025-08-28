@@ -1,16 +1,20 @@
-import datetime
-import threading
+import os
 from loguru import logger
 import logging
+import threading
+import datetime
 
 
+log_file = os.getenv("LOG_FILE", "logs/debug.log")
 logger.add(
-    "logs/debug.log",
+    log_file,
     level="DEBUG",
     format="{level} | {time} | {function}:{line} | {message}",
     rotation="4096 KB",
     compression="zip",
+    enqueue=True,
 )
+
 logging.getLogger('sqlalchemy.engine.Engine').disabled = True
 
 

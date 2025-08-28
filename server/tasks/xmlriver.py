@@ -11,7 +11,7 @@ import httpx
 
 from server.tasks.celery_config import SEARCH_ENGINES
 from server.tasks.forms.sites import form_page_query
-from server.tasks.logger import SearchLogger
+from server.logger import SearchLogger
 from server.tasks.services import update_stats
 from server.api.schemas.query import FoundInfo, NumberInfo
 

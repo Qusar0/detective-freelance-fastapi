@@ -17,7 +17,7 @@ from server.api.schemas.query import FoundInfo
 from server.tasks.forms.forms import form_name_cases, form_search_key, form_titles
 from server.tasks.forms.inputs import form_input_pack
 from server.tasks.forms.responses import form_response_html
-from server.tasks.logger import SearchLogger
+from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import manage_threads, write_urls
 from server.tasks.xmlriver import search_worker
