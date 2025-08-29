@@ -50,13 +50,15 @@ class SearchResponseModel(BaseModel):
 
 
 class FindByNumberModel(BaseModel):
-    search_number: str
-    methods_type: List[str]
+    search_number: str = Field(..., description="Номер телефона человека, которго необходимо найти")
+    methods_type: List[str] = Field(..., description="Список методов поиска человека по телефону",
+                                    example=["mentions"])
 
 
 class FindByEmailModel(BaseModel):
-    email: str
-    methods_type: List[str]
+    email: str = Field(..., description="Email человека, которго необходимо найти")
+    methods_type: List[str] = Field(..., description="Список методов поиска человека по email",
+                                    example=["mentions", "acc checker"])
 
 
 class FindByCompanyModel(BaseModel):
@@ -79,22 +81,25 @@ class CalculatePriceRequest(BaseModel):
 
 
 class PriceResponse(BaseModel):
-    price: float
+    price: float = Field(..., description="Цена выполнения запроса")
 
 
 class DownloadQueryRequest(BaseModel):
-    query_id: int
+    query_id: int = Field(..., description="ID запроса в БД")
 
 
 class FindByIRBISModel(BaseModel):
-    first_name: str
-    last_name: str
-    regions: list[int]
-    second_name: Optional[str]
-    birth_date: Optional[str]
-    passport_series: Optional[str]
-    passport_number: Optional[str]
-    inn: Optional[str]
+    first_name: str = Field(..., description="Имя человека, которого необходимо найти")
+    last_name: str = Field(..., description="Фамилия человека, которого необходимо найти")
+    regions: list[int] = Field(..., description="Список регионов, по которым необходимо искать человека. "
+                                                        "Максимум значений - 2")
+    second_name: Optional[str] = Field(None, description="Отчество человека, которого необходимо найти")
+    birth_date: Optional[str] = Field(None, description="Дата рождения человека, которого необходимо найти")
+    passport_series: Optional[str] = Field(None, description="Серия паспорта человека,"
+                                                                     " которго необходимо найти")
+    passport_number: Optional[str] = Field(None, description="Номер паспорта человека,"
+                                                                     " которго необходимо найти")
+    inn: Optional[str] = Field(None, description="ИНН человека, которого необходимо найти")
 
 
 class QueryDataRequest(BaseModel):
