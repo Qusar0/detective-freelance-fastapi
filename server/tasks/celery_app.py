@@ -27,7 +27,11 @@ def create_celery() -> Celery:
 
     task_name = os.getenv("TASK", "")
 
-    task_modules = ["server.tasks.base.base", f"server.tasks.search.{task_name}"]
+    task_modules = ["server.tasks.base.base"]
+
+    if task_name:
+        task_modules.append(f"server.tasks.search.{task_name}")
+
     logger.info(f"Задачи для загрузки: {task_modules}")
     celery_app.autodiscover_tasks(task_modules)
 

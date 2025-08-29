@@ -9,6 +9,10 @@ from server.api.schemas.irbis import (
     ProcessTypeInfo,
     IrbisDataRequest,
     IrbisPersonInfo,
+    CourtGeneralCaseFull,
+    MatchTypeInfo,
+    CourtGeneralFace,
+    CourtGeneralProgress,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.court_general_jur import CourtGeneralJurDAO
@@ -136,4 +140,84 @@ async def get_person_info(
 
     except Exception as e:
         logger.error(f"Неожиданная ошибка в get_person_info: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+
+
+@router.get("/case_full/{case_id}", response_model=CourtGeneralCaseFull)
+async def get_full_case_info(
+    case_id: int,
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает полную информацию о судебном деле по ID дела."""
+    try:
+        logger.info(f"Запрос полной информации по делу ID: {case_id}")
+
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+        logger.debug(f"Аутентифицированный пользователь: {user_id}")
+
+        case = await CourtGeneralJurDAO.get_full_case_by_id(case_id, db)
+        if not case:
+            logger.warning(f"Дело {case_id} не найдено")
+            raise HTTPException(status_code=404, detail="Дело не найдено")
+
+        if case.irbis_person.query.user_id != user_id:
+            logger.warning(
+                f"Попытка доступа к делу {case_id} пользователем {user_id}. "
+                f"Владелец запроса: {case.irbis_person.query.user_id}"
+            )
+            raise HTTPException(status_code=403, detail="Доступ запрещен")
+
+        case_full = CourtGeneralCaseFull(
+            case_id=case.id,
+            case_number=case.case_number,
+            court_name=case.court_name,
+            start_date=case.start_date,
+            end_date=case.end_date,
+            review=case.review,
+            judge=case.judge,
+            articles=case.articles,
+            papers=case.papers,
+            papers_pretty=case.papers_pretty,
+            links=case.links,
+            region=RegionInfo(
+                code=case.region.subject_number,
+                name=case.region.name,
+            ),
+            process_type=ProcessTypeInfo(
+                code=case.process_type.code,
+                name=case.process_type.name,
+            ),
+            match_type=MatchTypeInfo(
+                id=case.match_type.id,
+                name=case.match_type.name,
+            ) if case.match_type else None,
+            faces=[
+                CourtGeneralFace(
+                    role=face.role,
+                    face=face.face,
+                    role_name=face.role_name,
+                )
+                for face in case.faces
+            ],
+            progress=[
+                CourtGeneralProgress(
+                    name=progress.name,
+                    progress_data=progress.progress_date,
+                    resolution=progress.resolution,
+                )
+                for progress in case.progress
+            ]
+        )
+
+        logger.success(f"Успешно возвращена полная информация по делу {case_id}")
+        return case_full
+
+    except HTTPException as e:
+        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        raise e
+
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

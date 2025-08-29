@@ -1,6 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
+
+
+class MatchTypeInfo(BaseModel):
+    id: int = Field(..., description="ID типа совпадения")
+    name: str = Field(..., description="Название типа совпадения")
 
 
 class CourtGeneralFace(BaseModel):
@@ -69,3 +74,24 @@ class IrbisPersonInfo(BaseModel):
     passport_number: Optional[str] = Field(None, description="Номер паспорта")
     inn: Optional[str] = Field(None, description="ИНН")
     regions: List[RegionInfo] = Field(..., description="Список выбранных регионов для поиска")
+
+
+class CourtGeneralCaseFull(BaseModel):
+    case_id: int = Field(..., description="ID дела в базе данных")
+    case_number: str = Field(..., description="Номер дела")
+    court_name: str = Field(..., description="Название суда")
+    start_date: str = Field(..., description="Дата начала дела")
+    end_date: str = Field(..., description="Дата окончания дела")
+    review: Optional[int] = Field(None, description="Количество аппеляций")
+    judge: Optional[str] = Field(None, description="ФИО судьи")
+    articles: Optional[List[str]] = Field(None, description="Статьи закона")
+    papers: Optional[str] = Field(None, description="Категории дела из первоисточника")
+    papers_pretty: Optional[str] = Field(None, description="Категории дела (эталонные)")
+    links: Optional[Dict[str, List[str]]] = Field(None, description="Ссылки на документы")
+
+    region: RegionInfo = Field(..., description="Информация о регионе")
+    process_type: ProcessTypeInfo = Field(..., description="Информация о типе процесса")
+    match_type: Optional[MatchTypeInfo] = Field(None, description="Информация о типе совпадения")
+
+    faces: List[CourtGeneralFace] = Field(..., description="Участники дела")
+    progress: List[CourtGeneralProgress] = Field(..., description="Ход процесса")

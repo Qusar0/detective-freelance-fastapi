@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 from server.api.models.models import Base
+from server.api.models.models import UserQueries
 
 
 class PersonRegions(Base):
@@ -125,6 +126,7 @@ class IrbisPerson(Base):
     part_in_org_full: Mapped[List['PartInOrgFullTable']] = relationship(back_populates='irbis_person')
     tax_arrears_full: Mapped[List['TaxArrearsFullTable']] = relationship(back_populates='irbis_person')
     terror_list_preview: Mapped[List['TerrorListFullTable']] = relationship(back_populates='irbis_person')
+    query: Mapped['UserQueries'] = relationship('UserQueries', back_populates='irbis_person')
 
 
 class ArbitrationCourtPreviewTable(Base):

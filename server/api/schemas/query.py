@@ -23,7 +23,6 @@ class QueriesCountResponse(BaseModel):
 class QueryData(BaseModel):
     query_id: int
     query_title: str
-    query_unix_date: str
     query_created_at: str
     query_status: str
     balance: float

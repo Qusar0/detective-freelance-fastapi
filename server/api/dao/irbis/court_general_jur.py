@@ -7,6 +7,7 @@ from server.api.models.irbis_models import (
     CourtGeneralJurFullTable,
     ProcessType,
     PersonRegions,
+    IrbisPerson,
 )
 from server.api.dao.base import BaseDAO
 from loguru import logger
@@ -68,4 +69,33 @@ class CourtGeneralJurDAO(BaseDAO):
 
         except Exception as e:
             logger.error(f"DAO: Ошибка при получении данных судебных дел: {e}", exc_info=True)
+            raise
+
+    @staticmethod
+    async def get_full_case_by_id(
+        case_id: int,
+        db: AsyncSession
+    ) -> Optional[CourtGeneralJurFullTable]:
+        """Получение полной информации о деле по ID с связанными данными."""
+        try:
+            logger.debug(f"DAO: Получение полной информации по делу ID: {case_id}")
+
+            query = select(CourtGeneralJurFullTable).where(
+                CourtGeneralJurFullTable.id == case_id,
+            ).options(
+                selectinload(CourtGeneralJurFullTable.region),
+                selectinload(CourtGeneralJurFullTable.process_type),
+                selectinload(CourtGeneralJurFullTable.match_type),
+                selectinload(CourtGeneralJurFullTable.faces),
+                selectinload(CourtGeneralJurFullTable.progress),
+                selectinload(CourtGeneralJurFullTable.irbis_person).selectinload(IrbisPerson.query),
+            )
+
+            result = await db.execute(query)
+            case = result.scalar_one_or_none()
+
+            return case
+
+        except Exception as e:
+            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}", exc_info=True)
             raise

@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
@@ -67,10 +68,21 @@ class UserQueriesDAO(BaseDAO):
             raise
 
     @classmethod
-    async def get_queries_page(cls, filter: tuple, page: int, db: AsyncSession, page_size: int = 10):
+    async def get_queries_page(
+        cls,
+        user_id: int,
+        query_category: str,
+        page: int,
+        db: AsyncSession,
+        page_size: int = 10,
+    ):
         stmt = (
             select(UserQueries)
-            .filter_by(user_id=filter[0], query_category=filter[1])
+            .options(
+                selectinload(UserQueries.queries_balances)
+            )
+            .where(UserQueries.deleted_at == None)  # noqa: E711
+            .filter_by(user_id=user_id, query_category=query_category)
             .order_by(UserQueries.query_created_at.desc())
         )
 

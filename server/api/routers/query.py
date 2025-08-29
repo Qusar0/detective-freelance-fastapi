@@ -15,7 +15,6 @@ from server.api.models.models import (
     UserQueries,
     Events,
     TextData,
-    QueriesBalance,
     Language,
 )
 from server.api.schemas.query import (
@@ -139,34 +138,20 @@ async def send_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        user_queries = await UserQueriesDAO.get_queries_page([user_id, query_category], page, db=db)
+        user_queries = await UserQueriesDAO.get_queries_page(user_id, query_category, page, db=db)
 
         result_list = []
-        query_ids = [str(q.query_id) for q in user_queries]
 
         for q in user_queries:
-            result_list.append({
-                "query_id": q.query_id,
-                "user_id": q.user_id,
-                "query_title": q.query_title,
-                "query_unix_date": q.query_unix_date.strftime('%Y/%m/%d %H:%M:%S'),
-                "query_created_at": q.query_created_at.strftime('%Y/%m/%d %H:%M:%S'),
-                "query_status": q.query_status
-            })
-
-        query_ids = [int(qid) for qid in query_ids]
-
-        balances_result = await db.execute(
-            select(QueriesBalance)
-            .where(QueriesBalance.query_id.in_(query_ids))
-        )
-
-        balances = balances_result.scalars().all()
-        balance_map = {row.query_id: float(row.balance) for row in balances}
-
-        for item in result_list:
-            item["balance"] = balance_map.get(int(item["query_id"]), 0)
-
+            result_list.append(
+                QueryData(
+                    query_id=q.query_id,
+                    query_title=q.query_title,
+                    query_created_at=q.query_created_at.strftime('%Y/%m/%d %H:%M:%S'),
+                    query_status=q.query_status,
+                    balance=q.queries_balances.balance,
+                ),
+            )
         return result_list
     except Exception as e:
         logger.error(f"Failed to get query data: {e}")
