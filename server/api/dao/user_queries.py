@@ -74,8 +74,7 @@ class UserQueriesDAO(BaseDAO):
                 
                 # Устанавливаем время удаления
                 user_query.deleted_at = datetime.now()
-                
-                await db.commit()
+
                 logging.info(f"Celery: Данные для query {query_id} удалены. Установлен deleted_at.")
         except (SQLAlchemyError, Exception) as e:
             await db.rollback()
