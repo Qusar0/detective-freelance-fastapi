@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from typing import Tuple, List
 import threading
 from celery import shared_task
@@ -17,7 +17,7 @@ from server.api.schemas.query import FoundInfo
 from server.tasks.forms.forms import form_name_cases, form_search_key, form_titles
 from server.tasks.forms.inputs import form_input_pack
 from server.tasks.forms.responses import form_response_html
-from server.tasks.logger import SearchLogger
+from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import manage_threads, write_urls
 from server.tasks.xmlriver import search_worker
@@ -298,10 +298,10 @@ class NameSearchTask(BaseSearchTask):
                     )
                     db.add(query_data_keyword)
             await db.commit()
-            logging.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
 
         except Exception as e:
-            logging.error(f"Failed to save raw results: {e}")
+            logger.error(f"Failed to save raw results: {e}")
             await db.rollback()
             raise
 

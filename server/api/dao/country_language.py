@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from typing import Dict, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,4 +45,4 @@ class CountryLanguageDAO(BaseDAO):
 
             return result_dict
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении страны: {e}")
+            logger.error(f"Ошибка при получении страны: {e}")

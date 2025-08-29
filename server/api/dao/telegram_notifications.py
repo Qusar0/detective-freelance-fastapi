@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -39,4 +39,4 @@ class TelegramNorificationsDAO(BaseDAO):
 
             return user.chat_id if user else False
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении статуса пользователя: {e}")
+            logger.error(f"Ошибка при получении статуса пользователя: {e}")

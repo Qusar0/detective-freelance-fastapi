@@ -1,5 +1,5 @@
 import asyncio
-import logging
+from loguru import logger
 from fastapi.responses import StreamingResponse
 from fastapi import (
     FastAPI,
@@ -16,6 +16,7 @@ from server.api.routers.auth import router as auth_router
 from server.api.routers.users import router as user_router
 from server.api.routers.query import router as query_router
 from server.api.routers.telegram import router as telegram_router
+from server.api.routers.irbis import router as irbis_router
 from server.api.routers.admin import router as admin_router, setup_admin
 from server.api.scripts.sse_manager import (
     event_generator,
@@ -30,9 +31,6 @@ from server.api.models.models import Users
 def get_file_storage() -> FileStorageService:
     return FileStorageService()
 
-
-logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
-logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
 
 app = FastAPI()
 app.dependency_overrides[FileStorageService] = get_file_storage
@@ -52,11 +50,13 @@ app.include_router(user_router, prefix='/api')
 app.include_router(query_router, prefix='/api')
 app.include_router(telegram_router, prefix='/api')
 app.include_router(admin_router, prefix='/api')
+app.include_router(irbis_router, prefix='/api')
 
 
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(redis_listener())
+    logger.info('Сервер запущен')
 
 
 @app.get("/api/sse/{channel}")
@@ -80,7 +80,7 @@ async def sse_endpoint(
         )
         await db.commit()
     except Exception as e:
-        logging.error(f"Failed to update last_visited: {e}")
+        logger.error(f"Ошибка обновления последнего посещения: {e}")
         await db.rollback()
 
     queue = asyncio.Queue()
@@ -92,4 +92,5 @@ async def sse_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    uvicorn.run(app, host="0.0.0.0", port=8001, log_config=None)

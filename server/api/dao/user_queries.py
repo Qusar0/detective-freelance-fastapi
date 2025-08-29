@@ -1,8 +1,9 @@
-import logging
+from loguru import logger
 from datetime import datetime
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
@@ -21,7 +22,7 @@ class UserQueriesDAO(BaseDAO):
             )
             return result.scalars().first()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении запроса пользователя: {e}")
+            logger.error(f"Ошибка при получении запроса пользователя: {e}")
 
     @classmethod
     async def save_user_query(cls, user_id, query_title, category):
@@ -43,7 +44,7 @@ class UserQueriesDAO(BaseDAO):
 
                 return user_query
             except (SQLAlchemyError, Exception) as e:
-                logging.error(f"Ошибка при сохранении запроса пользователя: {e}")
+                logger.error(f"Ошибка при сохранении запроса пользователя: {e}")
 
     @classmethod
     async def change_query_status(cls, user_query, query_type, db):
@@ -51,7 +52,7 @@ class UserQueriesDAO(BaseDAO):
         try:
             await db.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при смене статуса запроса: {e}")
+            logger.error(f"Ошибка при смене статуса запроса: {e}")
 
     @classmethod
     async def delete_query_by_id(cls, query_id, db):
@@ -60,17 +61,28 @@ class UserQueriesDAO(BaseDAO):
             if user_query:
                 await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
                 await db.commit()
-                logging.info(f"Celery: Query {query_id} удалён автоматически.")
+                logger.info(f"Celery: Query {query_id} удалён автоматически.")
         except (SQLAlchemyError, Exception) as e:
             await db.rollback()
-            logging.error(f"Ошибка при удалении query {query_id}: {str(e)}")
+            logger.error(f"Ошибка при удалении query {query_id}: {str(e)}")
             raise
 
     @classmethod
-    async def get_queries_page(cls, filter: tuple, page: int, db: AsyncSession, page_size: int = 10):
+    async def get_queries_page(
+        cls,
+        user_id: int,
+        query_category: str,
+        page: int,
+        db: AsyncSession,
+        page_size: int = 10,
+    ):
         stmt = (
             select(UserQueries)
-            .filter_by(user_id=filter[0], query_category=filter[1])
+            .options(
+                selectinload(UserQueries.queries_balances)
+            )
+            .where(UserQueries.deleted_at == None)  # noqa: E711
+            .filter_by(user_id=user_id, query_category=query_category)
             .order_by(UserQueries.query_created_at.desc())
         )
 
@@ -84,7 +96,7 @@ class UserQueriesDAO(BaseDAO):
 
             return queries
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении страницы запроса: {e}")
+            logger.error(f"Ошибка при получении страницы запроса: {e}")
 
     @classmethod
     async def get_query_by_id(cls, user_id: int, query_id, db: AsyncSession):

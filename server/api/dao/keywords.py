@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -66,7 +66,7 @@ class KeywordsDAO(BaseDAO):
             coefficient = len(languages) or 1
             return (counter * coefficient, translated_words)
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении ключевых слов: {e}")
+            logger.error(f"Ошибка при получении ключевых слов: {e}")
 
     @classmethod
     async def get_keyword_id(
@@ -88,5 +88,5 @@ class KeywordsDAO(BaseDAO):
             return result.scalar_one_or_none()
 
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка при получении ID типа ключевого слова: {e}")
+            logger.error(f"Ошибка при получении ID типа ключевого слова: {e}")
             return None
