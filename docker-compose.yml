@@ -150,7 +150,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python cleanup_old_queries.py
+    command: python server/cleanup_old_queries.py
     volumes:
       - .:/app
       - ./server:/app/server
