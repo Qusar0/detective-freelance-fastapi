@@ -3,8 +3,13 @@ from datetime import datetime
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from server.api.models.models import (QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events)
-from datetime import datetime
+from server.api.models.models import (
+    QueriesData,
+    AdditionalQueryWord,
+    QuerySearchCategory,
+    QueryTranslationLanguages,
+    Events
+)
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
@@ -62,9 +67,10 @@ class UserQueriesDAO(BaseDAO):
                 for table in [QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events]:
                     await db.execute(delete(table).where(table.query_id == query_id))
                 user_query.deleted_at = datetime.now()
-                logging.info(f"Данные для query {query_id} удалены. Установлено значение deleted_at: {user_query.deleted_at}.")
+                logging.info(f"Данные для query {query_id} удалены. Установлен deleted_at: {user_query.deleted_at}.")
         except (SQLAlchemyError, Exception) as e:
-            #await db.rollback() - его можно убрать, если этот метод не вызывается нигде кроме моего скрипта (как я понимаю не вызывается)
+            # await db.rollback()
+            # его можно убрать, если этот метод не вызывается нигде кроме моего скрипта (как я понимаю не вызывается)
             logging.error(f"Ошибка при удалении данных query {query_id}: {str(e)}")
             raise
 
