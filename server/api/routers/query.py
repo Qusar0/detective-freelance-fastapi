@@ -285,6 +285,7 @@ async def find_by_email(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        logger.info(f"Производится поиск по email")
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
@@ -322,6 +323,7 @@ async def find_by_company(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        logger.info(f"Производится поиск по компании")
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
@@ -382,6 +384,7 @@ async def find_by_irbis(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        logger.info(f"Производится поиск с помощью IRBIS")
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
@@ -461,6 +464,7 @@ async def download_query(
             db,
         )
         if not query:
+            logger.error(f"Запрос не найден или недоступен")
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         text_result = await db.execute(
@@ -470,6 +474,7 @@ async def download_query(
         file_path = text_result.scalar_one_or_none()
 
         if not file_path:
+            logger.error(f"Данные запроса не найдены или недоступны")
             raise HTTPException(status_code=404, detail="Query data not found")
 
         query_text = await file_storage.get_query_data(file_path)
@@ -530,6 +535,7 @@ async def get_query_data(
             db,
         )
         if not query:
+            logger.error(f"Запрос не найден или недоступен")
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         query_data = await QueriesDataDAO.get_paginated_query_data(
@@ -610,6 +616,7 @@ async def get_category_query_data(
             db,
         )
         if not query:
+            logger.error(f"Запрос не найден или недоступен")
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         total = await QueriesDataDAO.get_query_data_count(
