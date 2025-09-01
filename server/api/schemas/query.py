@@ -23,7 +23,6 @@ class QueriesCountResponse(BaseModel):
 class QueryData(BaseModel):
     query_id: int
     query_title: str
-    query_unix_date: str
     query_created_at: str
     query_status: str
     balance: float
@@ -101,7 +100,13 @@ class QueryDataRequest(BaseModel):
     query_id: int
     keyword_type_category: str
     page: int = 1
-    size: int = 10
+    size: int = 20
+
+
+class CategoryQueryDataRequest(BaseModel):
+    query_id: int
+    keyword_type_category: str
+    size: int = 20
 
 
 class QueryDataResult(BaseModel):
@@ -126,18 +131,14 @@ class NameQueryDataResult(BaseModel):
 
 
 class QueryDataResponse(BaseModel):
-    data: List[QueryDataResult]
     total: int
-    page: int
     size: int
     total_pages: int
 
 
 class NameQueryDataResponse(BaseModel):
-    data: List[NameQueryDataResult]
     total: int
     fullname_count: int
-    page: int
     size: int
     total_pages: int
 
@@ -187,27 +188,3 @@ class GenerarQueryDataResponse(BaseModel):
     minus_words: List[str]
     keyword_stats: Dict[str, int]
     free_words: Optional[List[str]]
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "query_id": 123,
-                "query_title": "Поиск новостей о компании",
-                "languages": [
-                    {"code": "ru", "name": "Русский"},
-                    {"code": "en", "name": "Английский"}
-                ],
-                "categories": [
-                    {"code": "reputation", "name": "Репутация"},
-                    {"code": "negativ", "name": "Негатив"}
-                ],
-                "plus_words": ["качество", "сервис"],
-                "minus_words": ["брак", "возврат"],
-                "keyword_stats": {
-                    "reputation": 15,
-                    "negativ": 8,
-                    "free word": 3
-                },
-                "free_words": ["инновации", "развитие", "технологии"]
-            }
-        }

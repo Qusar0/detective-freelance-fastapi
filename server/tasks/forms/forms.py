@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import httpx
 from typing import List
 from phonenumbers import parse, NumberParseException
@@ -126,7 +126,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
 
     supported_languages = ['ru', 'uk', 'kk']
     if language not in supported_languages:
-        logging.info(f"Язык {language} не поддерживается Морфером. Возвращаем исходные данные.")
+        logger.info(f"Язык {language} не поддерживается Морфером. Возвращаем исходные данные.")
         return [full_name]
 
     language_endpoints = {
@@ -173,7 +173,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
                 if case in data:
                     cases.add(data[case])
         except (httpx.HTTPError, KeyError) as e:
-            logging.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
+            logger.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
 
     name_cases = [name.split(" ") for name in cases]
     name_cases.insert(0, full_name)
@@ -195,7 +195,7 @@ def form_search_key(name_case: List[str], len_kwds_from_user) -> List[str]:
     name = name_case[0]
     surname = name_case[1]
 
-    logging.debug(f"DEBUG - name_case: {name_case}")
+    logger.debug(f"DEBUG - name_case: {name_case}")
 
     if len(name_case) == 3:
         patronymic = name_case[2]

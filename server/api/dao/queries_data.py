@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-import logging
+from loguru import logger
 
 from server.api.models.models import QueriesData, KeywordType, Keywords, QueryDataKeywords
 from server.api.dao.base import BaseDAO
@@ -38,7 +38,7 @@ class QueriesDataDAO(BaseDAO):
             result = await db.execute(count_query)
             return result.scalar()
         except SQLAlchemyError as e:
-            logging.error(f"Error counting query data: {e}")
+            logger.error(f"Error counting query data: {e}")
             raise
 
     @classmethod
@@ -66,7 +66,7 @@ class QueriesDataDAO(BaseDAO):
             result = await db.execute(paginated_query)
             return result.unique().all()
         except SQLAlchemyError as e:
-            logging.error(f"Error getting paginated query data: {e}")
+            logger.error(f"Error getting paginated query data: {e}")
             raise
 
     @classmethod
@@ -131,5 +131,5 @@ class QueriesDataDAO(BaseDAO):
             result = await db.execute(count_query)
             return result.scalar()
         except SQLAlchemyError as e:
-            logging.error(f"Error counting query data: {e}")
+            logger.error(f"Error counting query data: {e}")
             raise

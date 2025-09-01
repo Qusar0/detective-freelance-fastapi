@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_jwt_auth import AuthJWT
@@ -25,7 +25,7 @@ async def connect_tg(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
     except Exception as why:
-        logging.warning("Invalid token: " + str(why))
+        logger.warning("Invalid token: " + str(why))
         raise HTTPException(status_code=422, detail="Invalid token")
 
     try:
@@ -39,7 +39,7 @@ async def connect_tg(
     except HTTPException:
         raise
     except Exception as e:
-        logging.warning("Ошибка при сохранении связи: " + str(e))
+        logger.warning("Ошибка при сохранении связи: " + str(e))
         raise HTTPException(status_code=422, detail="Неверные данные")
 
 
@@ -48,13 +48,13 @@ async def write_support(payload: WriteSupportRequest, Authorize: AuthJWT = Depen
     try:
         Authorize.jwt_required()
     except Exception as why:
-        logging.warning("Invalid token: " + str(why))
+        logger.warning("Invalid token: " + str(why))
         raise HTTPException(status_code=422, detail="Invalid token")
 
     try:
         await send_message_async(payload.theme, payload.description, payload.contacts)
     except Exception as e:
-        logging.warning("Ошибка при отправке сообщения: " + str(e))
+        logger.warning("Ошибка при отправке сообщения: " + str(e))
         raise HTTPException(status_code=422, detail="Ошибка отправки")
 
     return {"status": "message sent."}

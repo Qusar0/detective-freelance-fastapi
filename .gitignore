@@ -133,3 +133,4 @@ app/
 backups/
 query_data/
 url_logs/
+logs/

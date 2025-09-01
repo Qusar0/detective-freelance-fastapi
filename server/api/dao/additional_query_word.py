@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,7 +27,7 @@ class AdditionalQueryWordDAO(BaseDAO):
             word_type_id = type_result.scalar_one_or_none()
 
             if not word_type_id:
-                logging.error(f"Тип слова '{word_type}' не найден")
+                logger.error(f"Тип слова '{word_type}' не найден")
                 return False
 
             if isinstance(words, str):
@@ -37,7 +37,7 @@ class AdditionalQueryWordDAO(BaseDAO):
                 word_list = words
 
             if not word_list:
-                logging.error("Не найдено слов для добавления")
+                logger.error(f"Не найдено слов для добавления для типа {word_type} и слов {words}")
                 return False
 
             for word in word_list:
@@ -53,10 +53,10 @@ class AdditionalQueryWordDAO(BaseDAO):
 
         except SQLAlchemyError as e:
             await db.rollback()
-            logging.error(f"Ошибка при добавлении дополнительных слов: {e}")
+            logger.error(f"Ошибка при добавлении дополнительных слов: {e}")
             return False
         except Exception as e:
-            logging.error(f"Неожиданная ошибка: {e}")
+            logger.error(f"Неожиданная ошибка: {e}")
             return False
 
     @classmethod
@@ -80,7 +80,7 @@ class AdditionalQueryWordDAO(BaseDAO):
             return list(result.scalars())
 
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка при получении дополнительных слов: {e}")
+            logger.error(f"Ошибка при получении дополнительных слов: {e}")
             return []
 
     @classmethod
@@ -102,5 +102,5 @@ class AdditionalQueryWordDAO(BaseDAO):
             )
             return [word[0] for word in result.all()]
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка получения категории слов '{word_type}': {e}")
+            logger.error(f"Ошибка получения категории слов '{word_type}': {e}")
             raise

@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from typing import List, Dict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,7 @@ class QuerySearchCategoryDAO(BaseDAO):
     ) -> bool:
         """Добавляет категории поиска для запроса."""
         if not categories_str:
-            logging.error("Пустая строка категорий")
+            logger.error("Пустая строка категорий")
             return False
 
         try:
@@ -38,7 +38,7 @@ class QuerySearchCategoryDAO(BaseDAO):
             category_types = result.scalars().all()
 
             if not category_types:
-                logging.error("Не найдено ни одного типа категории")
+                logger.error("Не найдено ни одного типа категории")
                 return False
 
             for category_type in category_types:
@@ -53,10 +53,10 @@ class QuerySearchCategoryDAO(BaseDAO):
 
         except SQLAlchemyError as e:
             await db.rollback()
-            logging.error(f"Ошибка при добавлении категорий поиска: {e}")
+            logger.error(f"Ошибка при добавлении категорий поиска: {e}")
             return False
         except Exception as e:
-            logging.error(f"Неожиданная ошибка: {e}")
+            logger.error(f"Неожиданная ошибка: {e}")
             return False
 
     @classmethod
@@ -77,5 +77,5 @@ class QuerySearchCategoryDAO(BaseDAO):
             )
             return [{"code": en_name, "name": ru_name} for ru_name, en_name in result.all()]
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка получения категорий поиска: {e}")
+            logger.error(f"Ошибка получения категорий поиска: {e}")
             raise

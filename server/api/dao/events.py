@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,4 +28,4 @@ class EventsDAO(BaseDAO):
 
             return user_query.event_id, user_query.event_type, user_query.created_time, user_query.event_status
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при сохранении ивента: {e}")
+            logger.error(f"Ошибка при сохранении ивента: {e}")

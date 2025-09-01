@@ -1,5 +1,5 @@
 from typing import Dict
-import logging
+from loguru import logger
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -79,5 +79,5 @@ class QueryKeywordStatsDAO(BaseDAO):
             return result_stats
 
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка получения статистики ключевых слов: {e}")
+            logger.error(f"Ошибка получения статистики ключевых слов: {e}")
             raise

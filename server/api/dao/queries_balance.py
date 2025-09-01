@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -20,4 +20,4 @@ class QueriesBalanceDAO(BaseDAO):
             db.add(balance)
             await db.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при сохранении баланса: {e}")
+            logger.error(f"Ошибка при сохранении баланса: {e}")

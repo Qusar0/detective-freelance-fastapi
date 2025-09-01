@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,7 +26,7 @@ class ServicesBalanceDAO(BaseDAO):
                     ibhldr_balance.balance = requests_left
                     await db.commit()
             except (SQLAlchemyError, Exception) as e:
-                logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
+                logger.error(f"Ошибка при обновлении баланса сервиса: {e}")
                 await db.rollback()
 
     @classmethod
@@ -42,7 +42,7 @@ class ServicesBalanceDAO(BaseDAO):
                     TgDev_io_balance.balance = requests_left
                     await db.commit()
             except (SQLAlchemyError, Exception) as e:
-                logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
+                logger.error(f"Ошибка при обновлении баланса сервиса: {e}")
                 await db.rollback()
 
     @classmethod
@@ -63,7 +63,7 @@ class ServicesBalanceDAO(BaseDAO):
                 xmlriver_balance.balance = balance
                 await db.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
+            logger.error(f"Ошибка при обновлении баланса сервиса: {e}")
             await db.rollback()
 
     @classmethod
@@ -84,7 +84,7 @@ class ServicesBalanceDAO(BaseDAO):
                 lampyre_balance.balance = resp.json()['balance']
                 await db.commit()
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при обновлении баланса сервиса: {e}")
+            logger.error(f"Ошибка при обновлении баланса сервиса: {e}")
             await db.rollback()
 
     @classmethod
@@ -99,4 +99,4 @@ class ServicesBalanceDAO(BaseDAO):
             if service:
                 return service.balance
         except (SQLAlchemyError, Exception) as e:
-            logging.error(f"Ошибка при получении баланса сервиса: {e}")
+            logger.error(f"Ошибка при получении баланса сервиса: {e}")
