@@ -78,7 +78,6 @@ class BalanceNotifier:
 
 
 if __name__ == "__main__":
-    logger.basicConfig(level=logger.INFO)
     try:
         from aiogram import executor
         executor.start_polling(dp, skip_updates=True)

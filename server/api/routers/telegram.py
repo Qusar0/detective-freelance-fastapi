@@ -2,6 +2,7 @@ from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.database.database import get_db
@@ -24,11 +25,7 @@ async def connect_tg(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
-    except Exception as why:
-        logger.warning("Invalid token: " + str(why))
-        raise HTTPException(status_code=422, detail="Invalid token")
 
-    try:
         success = await TelegramNorificationsDAO.save_user_and_chat(user_id, chat, db)
         if not success:
             raise HTTPException(status_code=422, detail="Пользователь уже привязан")
@@ -36,8 +33,12 @@ async def connect_tg(
             "status": "success",
             "message": "Телеграмм аккаунт успешно привязан",
         }
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.warning("Ошибка при сохранении связи: " + str(e))
         raise HTTPException(status_code=422, detail="Неверные данные")
@@ -47,14 +48,11 @@ async def connect_tg(
 async def write_support(payload: WriteSupportRequest, Authorize: AuthJWT = Depends()):
     try:
         Authorize.jwt_required()
-    except Exception as why:
-        logger.warning("Invalid token: " + str(why))
-        raise HTTPException(status_code=422, detail="Invalid token")
-
-    try:
         await send_message_async(payload.theme, payload.description, payload.contacts)
+        return {"status": "message sent."}
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.warning("Ошибка при отправке сообщения: " + str(e))
         raise HTTPException(status_code=422, detail="Ошибка отправки")
-
-    return {"status": "message sent."}

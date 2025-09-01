@@ -40,3 +40,7 @@ class FileStorageService:
         except Exception as e:
             logger.error(f"Failed to delete query data file: {e}")
             raise HTTPException(status_code=500, detail="Failed to delete query data")
+
+
+def get_file_storage() -> FileStorageService:
+    return FileStorageService()

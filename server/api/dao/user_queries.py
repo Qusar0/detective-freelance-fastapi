@@ -12,7 +12,6 @@ from server.api.models.models import (
     Events,
     TextData,
 )
-from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
 from server.api.services.file_storage import FileStorageService
@@ -33,26 +32,26 @@ class UserQueriesDAO(BaseDAO):
             logger.error(f"Ошибка при получении запроса пользователя: {e}")
 
     @classmethod
-    async def save_user_query(cls, user_id, query_title, category):
-        async with get_db() as session:
-            now = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    async def save_user_query(cls, user_id: int, query_title: str, category: str, db: AsyncSession):
+        try:
+            query_unix_date = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
+            query_created_at = datetime.now()
 
             user_query = UserQueries(
                 user_id=user_id,
-                query_unix_date="1980/01/01 00:00:00",
-                query_created_at=now,
+                query_unix_date=query_unix_date,
+                query_created_at=query_created_at,
                 query_title=query_title,
                 query_status="pending",
                 query_category=category
             )
-            try:
-                session.add(user_query)
-                await session.commit()
-                await session.refresh(user_query)
 
-                return user_query
-            except (SQLAlchemyError, Exception) as e:
-                logger.error(f"Ошибка при сохранении запроса пользователя: {e}")
+            db.add(user_query)
+            await db.flush()
+
+            return user_query.query_id
+        except (SQLAlchemyError, Exception) as e:
+            logger.error(f"Ошибка при сохранении запроса пользователя: {e}")
 
     @classmethod
     async def change_query_status(cls, user_query, query_type, db):
