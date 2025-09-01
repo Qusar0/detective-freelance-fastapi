@@ -1,6 +1,7 @@
 from loguru import logger
 from datetime import datetime
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from server.api.models.models import (
@@ -69,14 +70,25 @@ class UserQueriesDAO(BaseDAO):
                 file_storage = FileStorageService()
                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
                 text_data = result.scalars().first()
+
                 if text_data and text_data.file_path:
                     try:
                         await file_storage.delete_query_data(text_data.file_path)
                         logger.info(f"Файл {text_data.file_path} успешно удалён.")
                     except Exception as e:
                         logger.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
-                for table in [QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events, TextData]:
+
+                tables = {
+                    QueriesData,
+                    AdditionalQueryWord,
+                    QuerySearchCategory,
+                    QueryTranslationLanguages,
+                    Events,
+                    TextData,
+                }
+                for table in tables:
                     await db.execute(delete(table).where(table.query_id == query_id))
+
                 user_query.deleted_at = datetime.now()
                 logger.info(f"Данные для query {query_id} удалены. Установлен deleted_at: {user_query.deleted_at}.")
         except SQLAlchemyError as e:

@@ -2,9 +2,6 @@ import datetime
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from threading import Lock
-from celery import shared_task
-from sqlalchemy import select
-from loguru import logger
 
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.telegram_notifications import TelegramNorificationsDAO
