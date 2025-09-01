@@ -1,6 +1,7 @@
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import get_db
 from server.api.schemas.users import (
@@ -34,10 +35,10 @@ router = APIRouter(
 def is_authenticated(Authorize: AuthJWT = Depends()):
     try:
         Authorize.jwt_required()
-    except Exception:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    return {"status": "success", "message": "User authenticated"}
+        return {"status": "success", "message": "User authenticated"}
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
 
 
 @router.get("/get_events")
@@ -48,30 +49,33 @@ async def get_events(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
+
+        result = await db.execute(
+            select(Events)
+            .join(UserQueries, UserQueries.query_id == Events.query_id)
+            .where(UserQueries.user_id == user_id)
+            .order_by(Events.created_time.desc())
+        )
+        event_rows = result.scalars().all()
+
+        events: Dict[int, Dict] = {}
+        for idx, row in enumerate(event_rows):
+            event_data = dict(row.additional_data)
+            event_data.update({
+                "event_id": row.event_id,
+                "event_type": row.event_type,
+                "created_time": str(row.created_time),
+                "event_status": row.event_status
+            })
+            events[idx] = event_data
+
+        return events
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
-
-    result = await db.execute(
-        select(Events)
-        .join(UserQueries, UserQueries.query_id == Events.query_id)
-        .where(UserQueries.user_id == user_id)
-        .order_by(Events.created_time.desc())
-    )
-    event_rows = result.scalars().all()
-
-    events: Dict[int, Dict] = {}
-    for idx, row in enumerate(event_rows):
-        event_data = dict(row.additional_data)
-        event_data.update({
-            "event_id": row.event_id,
-            "event_type": row.event_type,
-            "created_time": str(row.created_time),
-            "event_status": row.event_status
-        })
-        events[idx] = event_data
-
-    return events
+        logger.warning(f"Ошибка получения событий: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/change_event_status", status_code=200)
@@ -102,14 +106,15 @@ async def change_event_status(
 
         return {"message": "Статус успешно изменен"}
 
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error("Ошибка изменения статуса события: " + str(e))
-        raise HTTPException(
-            status_code=422,
-            detail="Неверные данные",
-        )
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.get("/get_balance")
@@ -120,20 +125,23 @@ async def get_balance(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
+
+        result = await db.execute(
+            select(UserBalances)
+            .where(UserBalances.user_id == user_id),
+        )
+        balance_entry = result.scalar_one_or_none()
+
+        if not balance_entry:
+            raise HTTPException(status_code=404, detail="Balance not found")
+
+        return round(float(balance_entry.balance), 2)
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.info("Invalid token: " + str(e))
-        raise HTTPException(status_code=422, detail="Invalid token")
-
-    result = await db.execute(
-        select(UserBalances)
-        .where(UserBalances.user_id == user_id),
-    )
-    balance_entry = result.scalar_one_or_none()
-
-    if not balance_entry:
-        raise HTTPException(status_code=404, detail="Balance not found")
-
-    return round(float(balance_entry.balance), 2)
+        logger.info("Ошибка получения баланса: " + str(e))
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.get("/is_confirmed", response_model=ConfirmResponse)
@@ -148,24 +156,27 @@ async def is_user_confirmed_endpoint(
         result = await db.execute(select(Users).where(Users.id == user_id))
         user = result.scalar_one_or_none()
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        if user.is_confirmed:
-            return ConfirmResponse(status="Confirmed", message="User confirmed")
+        if not user.is_confirmed:
+            await send_confirmation_email(user)
+            raise HTTPException(
+                status_code=401,
+                detail="На ваш email повторно выслано сообщение с подтверждением почты"
+            )
 
-        await send_confirmation_email(user)
+        return ConfirmResponse(status="Confirmed", message="User confirmed")
 
-        raise HTTPException(
-            status_code=401,
-            detail="На ваш email повторно выслано сообщение с подтверждением почты"
-        )
-
-    except HTTPException:
-        raise
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Ошибка проверки подтверждения email: {e}")
         raise HTTPException(
-            status_code=400,
+            status_code=500,
             detail="Ошибка при проверке или отправке подтверждения",
         )
 
@@ -179,29 +190,25 @@ async def top_up_balance(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
-    except Exception as e:
-        logger.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
 
-    result = await db.execute(
-        select(Users)
-        .where(Users.id == user_id),
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    if not user.is_confirmed:
-        await send_confirmation_email(user)
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "status": "error",
-                "message": "Для пополнения баланса необходимо подтвердить email. Ссылка отправлена повторно.",
-            }
+        result = await db.execute(
+            select(Users)
+            .where(Users.id == user_id),
         )
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    try:
+        if not user.is_confirmed:
+            await send_confirmation_email(user)
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "status": "error",
+                    "message": "Для пополнения баланса необходимо подтвердить email. Ссылка отправлена повторно.",
+                }
+            )
+
         payment = PaymentHistory(
             transaction_id=params.transaction_id,
             currency=params.currency,
@@ -252,10 +259,15 @@ async def top_up_balance(
                 "invoice_id": params.invoice_id,
             }
         }
-
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.warning(f"Invalid input: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.warning(f"Ошибка при пополнении баланса: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/change_password")
@@ -267,26 +279,34 @@ async def change_password(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
+
+        result = await db.execute(select(Users).where(Users.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        if not bcrypt.verify(data.old_password, user.password):
+            raise HTTPException(status_code=403, detail="Доступ запрещен")
+
+        user.password = bcrypt.hash(data.new_password)
+        db.add(user)
+        await db.commit()
+
+        email_content = get_password_changed_email(user.email)
+        await send_email(**email_content)
+
+        return {"status": "success", "message": "Пароль успешно изменён"}
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        await db.rollback()
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
-
-    result = await db.execute(select(Users).where(Users.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    if not bcrypt.verify(data.old_password, user.password):
-        raise HTTPException(status_code=403, detail="Неверный текущий пароль")
-
-    user.password = bcrypt.hash(data.new_password)
-    db.add(user)
-    await db.commit()
-
-    email_content = get_password_changed_email(user.email)
-    await send_email(**email_content)
-
-    return {"status": "success", "message": "Пароль успешно изменён"}
+        logger.warning(f"Ошибка при смене пароля: {e}")
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.get("/default_language", response_model=GetDefaultLanguageResponse)
@@ -298,15 +318,21 @@ async def get_default_language(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
-    except Exception as e:
-        logger.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
 
-    default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
-    return {
-        "status": "success",
-        "default_language_code": default_language_code
-    }
+        default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
+        return {
+            "status": "success",
+            "default_language_code": default_language_code
+        }
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.warning(f"Ошибка при получении языка по-умолчанию: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/set_default_language", response_model=SetDefaultLanguageResponse)
@@ -319,15 +345,22 @@ async def set_default_language(
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
-    except Exception as e:
-        logger.warning(f"Invalid token: {e}")
-        raise HTTPException(status_code=422, detail="Invalid token")
 
-    success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)
-    if not success:
-        raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
-    return {
-        "status": "success",
-        "message": "Язык по умолчанию обновлен",
-        "default_language_code": request.default_language_code
-    }
+        success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)
+        if not success:
+            raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
+
+        return SetDefaultLanguageResponse(
+            status='success',
+            message='Язык по умолчанию обновлен',
+            default_language_code=request.default_language_code,
+        )
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.warning(f"Ошибка при получении языка по-умолчанию: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

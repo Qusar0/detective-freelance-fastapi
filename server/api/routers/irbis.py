@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from server.api.database.database import get_db
@@ -86,11 +87,13 @@ async def get_query_data(
         return cases
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
+        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
         raise e
-
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в court_general_data: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка в court_general_data: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -137,7 +140,9 @@ async def get_person_info(
     except HTTPException as e:
         logger.warning(f"HTTPException в get_person_info: {e.detail}, статус: {e.status_code}")
         raise e
-
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Неожиданная ошибка в get_person_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
@@ -217,7 +222,9 @@ async def get_full_case_info(
     except HTTPException as e:
         logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
         raise e
-
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
