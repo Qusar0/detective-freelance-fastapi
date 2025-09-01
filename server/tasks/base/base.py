@@ -1,3 +1,4 @@
+from loguru import logger
 import datetime
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -37,7 +38,8 @@ class BaseSearchTask(ABC):
                 await self._process_search(db)
                 await self._handle_success(user_query, db)
             except Exception as e:
-                print(e)
+                logger.error(f"Error has occurred in task: {str(e)}")
+                #print(e)
                 await self._handle_error(user_query, db)
             finally:
                 await self._update_balances(db)

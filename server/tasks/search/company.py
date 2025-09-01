@@ -142,7 +142,8 @@ class CompanySearchTask(BaseSearchTask):
             await write_urls(urls, "company")
 
         except Exception as e:
-            print(e)
+            logger.error(f"Error has occured in search by company: {str(e)}")
+            #print(e)
             self.money_to_return = self.price
             raise e
 

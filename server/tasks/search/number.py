@@ -140,6 +140,7 @@ class NumberSearchTask(BaseSearchTask):
                     if attempt < max_attempts:
                         time.sleep(retry_delay)
             else:
+                logger.error(f"Google запрос полностью провален: {url}")
                 self.logger.log_error(f"Google запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 
@@ -177,6 +178,7 @@ class NumberSearchTask(BaseSearchTask):
                     if attempt < max_attempts:
                         time.sleep(retry_delay)
             else:
+                logger.error(f"Yandex запрос полностью провален: {url}")
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 

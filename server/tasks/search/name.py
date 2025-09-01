@@ -98,7 +98,8 @@ class NameSearchTask(BaseSearchTask):
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
-            print(e)
+            logger.error(f"Error has occured in search by name: {str(e)}")
+            #print(e)
             self.money_to_return = self.price
             raise e
 
