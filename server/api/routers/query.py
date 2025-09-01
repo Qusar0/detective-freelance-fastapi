@@ -46,7 +46,6 @@ from server.api.dao.query_translation_languages import QueryTranslationLanguages
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
-from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.services.file_storage import FileStorageService, get_file_storage
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company

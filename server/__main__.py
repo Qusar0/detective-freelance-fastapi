@@ -14,9 +14,6 @@ from server.api.scripts.sse_manager import redis_listener
 from server.api.services.file_storage import FileStorageService, get_file_storage
 
 
-
-
-
 app = FastAPI()
 app.dependency_overrides[FileStorageService] = get_file_storage
 
