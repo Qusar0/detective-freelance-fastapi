@@ -1,13 +1,21 @@
 from loguru import logger
 from datetime import datetime
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import selectinload
-
+from server.api.models.models import (
+    QueriesData,
+    AdditionalQueryWord,
+    QuerySearchCategory,
+    QueryTranslationLanguages,
+    Events,
+    TextData,
+)
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
+from server.api.services.file_storage import FileStorageService
 
 
 class UserQueriesDAO(BaseDAO):
@@ -55,17 +63,40 @@ class UserQueriesDAO(BaseDAO):
             logger.error(f"Ошибка при смене статуса запроса: {e}")
 
     @classmethod
-    async def delete_query_by_id(cls, query_id, db):
+    async def delete_query_info_by_id(cls, query_id, db):
         try:
             user_query = await cls.get_user_query(query_id, db)
             if user_query:
-                await db.execute(delete(UserQueries).where(UserQueries.query_id == query_id))
-                await db.commit()
-                logger.info(f"Celery: Query {query_id} удалён автоматически.")
-        except (SQLAlchemyError, Exception) as e:
-            await db.rollback()
-            logger.error(f"Ошибка при удалении query {query_id}: {str(e)}")
-            raise
+                file_storage = FileStorageService()
+                result = await db.execute(select(TextData).where(TextData.query_id == query_id))
+                text_data = result.scalars().first()
+
+                if text_data and text_data.file_path:
+                    try:
+                        await file_storage.delete_query_data(text_data.file_path)
+                        logger.info(f"Файл {text_data.file_path} успешно удалён.")
+                    except Exception as e:
+                        logger.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
+
+                tables = {
+                    QueriesData,
+                    AdditionalQueryWord,
+                    QuerySearchCategory,
+                    QueryTranslationLanguages,
+                    Events,
+                    TextData,
+                }
+                for table in tables:
+                    await db.execute(delete(table).where(table.query_id == query_id))
+
+                user_query.deleted_at = datetime.now()
+                logger.info(f"Данные для query {query_id} удалены. Установлен deleted_at: {user_query.deleted_at}.")
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка базы данных при удалении query {query_id}: {str(e)}")
+            raise e
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при удалении query {query_id}: {str(e)}")
+            raise e
 
     @classmethod
     async def get_queries_page(

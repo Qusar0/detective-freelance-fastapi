@@ -139,19 +139,17 @@ services:
       - redis
       - web
 
-  celery_delete:
+  query_cleanup:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A server.tasks.celery_app worker --loglevel=INFO
-    working_dir: /app/server
+    command: python server/cleanup_old_queries.py
     volumes:
+      - .:/app
       - ./server:/app/server
       - tdlib_data:/app/server/api/scripts/tdlib_sources
       - db_data:/app/server/api/scripts/BotDB
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    restart: unless-stopped
     depends_on:
       - redis
       - web

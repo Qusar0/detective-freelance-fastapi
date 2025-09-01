@@ -1,7 +1,6 @@
 import datetime
 import decimal
 from typing import List, Optional
-
 from sqlalchemy import (
     Boolean,
     DateTime,
