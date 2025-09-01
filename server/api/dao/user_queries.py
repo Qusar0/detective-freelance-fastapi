@@ -8,11 +8,13 @@ from server.api.models.models import (
     AdditionalQueryWord,
     QuerySearchCategory,
     QueryTranslationLanguages,
-    Events
+    Events,
+    TextData,
 )
 from server.api.database.database import get_db
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
+from server.api.services.file_storage import FileStorageService
 
 
 class UserQueriesDAO(BaseDAO):
@@ -64,15 +66,25 @@ class UserQueriesDAO(BaseDAO):
         try:
             user_query = await cls.get_user_query(query_id, db)
             if user_query:
-                for table in [QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events]:
+                file_storage = FileStorageService()
+                result = await db.execute(select(TextData).where(TextData.query_id == query_id))
+                text_data = result.scalars().first()
+                if text_data and text_data.file_path:
+                    try:
+                        await file_storage.delete_query_data(text_data.file_path)
+                        logging.info(f"Файл {text_data.file_path} успешно удалён.")
+                    except Exception as e:
+                        logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
+                for table in [QueriesData, AdditionalQueryWord, QuerySearchCategory, QueryTranslationLanguages, Events, TextData]:
                     await db.execute(delete(table).where(table.query_id == query_id))
                 user_query.deleted_at = datetime.now()
                 logging.info(f"Данные для query {query_id} удалены. Установлен deleted_at: {user_query.deleted_at}.")
-        except (SQLAlchemyError, Exception) as e:
-            # await db.rollback()
-            # его можно убрать, если этот метод не вызывается нигде кроме моего скрипта (как я понимаю не вызывается)
-            logging.error(f"Ошибка при удалении данных query {query_id}: {str(e)}")
-            raise
+        except SQLAlchemyError as e:
+            logging.error(f"Ошибка базы данных при удалении query {query_id}: {str(e)}")
+            raise e
+        except Exception as e:
+            logging.error(f"Неожиданная ошибка при удалении query {query_id}: {str(e)}")
+            raise e
 
     @classmethod
     async def get_queries_page(cls, filter: tuple, page: int, db: AsyncSession, page_size: int = 10):

@@ -127,25 +127,6 @@ services:
       - redis
       - web
 
-  # Старый сервис очистки (через Celery)
-  # celery_delete:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # Новый сервис очистки (через Python скрипт)
   query_cleanup:
     build:
       context: .
