@@ -104,7 +104,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _arbitration_court_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_name, data_preview_inn = await ArbitrationCourt.get_data_preview(self.person_uuid)
-        full_data = await ArbitrationCourt.get_full_data(self.person_uuid, 1, 50, 'all')
 
         arbitr_preview_name = ArbitrationCourtPreviewTable(
             irbis_person_id=irbis_person_id,
@@ -122,22 +121,16 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(arbitr_preview_inn)
 
-        arbitr_full = []
-        for item in full_data:
-            obj = ArbitrationCourtFullTable(
-                irbis_person_id=irbis_person_id,
-                court_name_val=item.get("court_name_val", None),
-                role=item.get("role", None),
-                case_date=item.get("case_date", None),
-                case_id=item.get("case_id", None),
-                inn=item.get("inn", None),
-                name=item.get("name", None),
-                case_type=item.get("case_type", None),
-                response_id=item.get("id", None),
-                address_val=item.get("address_val", None)
+        arbitration_court_full = []
+        for search_type in {'all', 'inn'}:
+            found_data = await ArbitrationCourt._process_arbitration_cases(
+                irbis_person_id,
+                self.person_uuid,
+                search_type,
+                db,
             )
-            arbitr_full.append(obj)
-        db.add_all(arbitr_full)
+            arbitration_court_full.extend(found_data)
+        db.add_all(arbitration_court_full)
 
     async def _bankruptcy_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_name, data_preview_inn = await Bankruptcy.get_data_preview(self.person_uuid)

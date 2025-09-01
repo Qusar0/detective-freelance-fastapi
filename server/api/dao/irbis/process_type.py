@@ -10,20 +10,16 @@ class ProcessTypeDAO(BaseDAO):
     model = ProcessType
 
     @classmethod
-    async def get_process_type_by_code(
+    async def get_process_types_map(
         cls,
-        process_type_code: str,
         db: AsyncSession,
     ):
-        """Получает тип поиска по коду."""
+        """Получает типы поиска."""
         try:
-            result = await db.execute(
-                select(ProcessType)
-                .where(ProcessType.code == process_type_code)
-            )
-            process_type = result.scalar_one_or_none()
-
-            return process_type
+            result = await db.execute(select(cls.model))
+            process_types = result.scalars().all()
+            process_type_map = {process_type.code: process_type for process_type in process_types}
+            return process_type_map
         except Exception as e:
-            logger.error(f"Ошибка при получении типа процесса по коду {process_type_code}: {e}", exc_info=True)
-            return None
+            logger.error(f"Ошибка при получении типов процесса: {e}", exc_info=True)
+            return {}

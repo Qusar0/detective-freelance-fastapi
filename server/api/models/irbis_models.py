@@ -11,8 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from server.api.models.models import Base
-from server.api.models.models import UserQueries
+from api.models.models import Base, UserQueries
 
 
 class PersonRegions(Base):
@@ -46,11 +45,16 @@ class RegionSubject(Base):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     subject_number: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+
     person_regions: Mapped[List['PersonRegions']] = relationship(
         back_populates='region',
         cascade='all, delete-orphan'
     )
     court_general_full: Mapped['CourtGeneralJurFullTable'] = relationship(
+        back_populates='region',
+        cascade='all, delete-orphan'
+    )
+    arbitration_court_full: Mapped['ArbitrationCourtFullTable'] = relationship(
         back_populates='region',
         cascade='all, delete-orphan'
     )
@@ -163,13 +167,61 @@ class ArbitrationCourtFullTable(Base):
     case_id: Mapped[str] = mapped_column(String(128))
     inn: Mapped[Optional[str]] = mapped_column(String(128))
     name: Mapped[str] = mapped_column(String(128))
-    case_type: Mapped[Optional[str]] = mapped_column(String(1))
-    response_id: Mapped[str] = mapped_column(String(128))
+    case_type_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('arbitr_court_case_types.id', ondelete='SET NULL'), 
+        nullable=True,
+    )
     address_val: Mapped[str] = mapped_column(String(128))
+    region_id: Mapped[int] = mapped_column(ForeignKey('region_subjects.id', ondelete='CASCADE'), nullable=True)
+    case_number: Mapped[str] = mapped_column(String(128), nullable=True)
+    search_type: Mapped[str] = mapped_column(String(4), nullable=True)
 
-    irbis_person: Mapped['IrbisPerson'] = relationship(
-        'IrbisPerson',
-        back_populates='arbit_court_full',
+    irbis_person: Mapped['IrbisPerson'] = relationship(back_populates='arbit_court_full')
+    region: Mapped['RegionSubject'] = relationship(back_populates='arbitration_court_full')
+    oponents: Mapped[List['ArbitrationCourtOpponents']] = relationship(back_populates='arbitration_court_full')
+
+
+class ArbitrationCourtOpponents(Base):
+    __tablename__ = 'arbitr_court_oponents'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+
+    arbitration_court_full_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            'arbitr_court_full.id',
+            ondelete='CASCADE',
+        ),
+        nullable=True,
+    )
+    name: Mapped[str] = mapped_column(String(128))
+
+    arbitration_court_full: Mapped['ArbitrationCourtFullTable'] = relationship(
+        back_populates='oponents',
+    )
+    case_type: Mapped[Optional['ArbitrationCourtCaseTypes']] = relationship(
+        'ArbitrationCourtCaseTypes',
+        back_populates='arbitration_court_cases',
+    )
+
+
+class ArbitrationCourtCaseTypes(Base):
+    __tablename__ = 'arbitr_court_case_types'
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    code: Mapped[int] = mapped_column(String(10))
+    name: Mapped[str] = mapped_column(String(128))
+
+    arbitration_court_cases: Mapped[List['ArbitrationCourtFullTable']] = relationship(
+        'ArbitrationCourtFullTable',
+        back_populates='case_type',
     )
 
 

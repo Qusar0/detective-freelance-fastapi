@@ -17,7 +17,7 @@ class CourtGeneralJurDAO(BaseDAO):
     model = CourtGeneralJurFullTable
 
     @staticmethod
-    async def get_paginated_court_general_data(
+    async def get_paginated_data(
         irbis_person_id: int,
         page: int,
         size: int,
