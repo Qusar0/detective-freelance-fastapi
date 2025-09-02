@@ -99,7 +99,6 @@ class NameSearchTask(BaseSearchTask):
 
         except Exception as e:
             logger.error(f"Error has occured in search by name: {str(e)}")
-            #print(e)
             self.money_to_return = self.price
             raise e
 

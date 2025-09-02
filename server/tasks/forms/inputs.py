@@ -74,4 +74,3 @@ def form_input_pack(
         input_pack.append((url, keyword, original_keyword, keyword_type, name_case))
     except Exception as e:
         logger.warning(f"Exception in form_input_pack function: {str(e)}")
-        #print("form_input_pack function Exception {0}".format(e))

@@ -34,10 +34,10 @@ router = APIRouter(prefix="/v1/auth", tags=['auth'])
 @router.get("/confirm/{token}", response_model=StatusMessage)
 async def confirm_email(token: str, db: AsyncSession = Depends(get_db)):
     try:
-        logger.info(f"Подтверждение токена пользователя")
+        logger.info("Подтверждение токена пользователя")
         email = confirm_token(token)
         if not email:
-            logger.warning(f"Токен пользователя просрочен или неверен")
+            logger.warning("Токен пользователя просрочен или неверен")
             raise HTTPException(
                 status_code=400,
                 detail="Invalid or expired token",
@@ -75,7 +75,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing_user = result.scalars().first()
 
     if existing_user:
-        logger.info(f"Пользователь с переданными данными уже существует")
+        logger.info("Пользователь с переданными данными уже существует")
         email_content = get_already_registered_email(
             data.email,
             login_url=f"{settings.frontend_url}/login",
@@ -100,7 +100,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.commit()
 
-    logger.info(f"Создание токена для пользователя")
+    logger.info("Создание токена для пользователя")
     token = generate_conformation_token(data.email)
 
     confirm_url = f'{settings.frontend_url}/confirm-email?token={token}'
@@ -185,16 +185,16 @@ async def reset_password(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        logger.info(f"Пользователь сбросил пароль")
+        logger.info("Пользователь сбросил пароль")
         email = confirm_token(data.token)
         if not email:
-            logger.warning(f"Токен пользователя просрочен или неверен")
+            logger.warning("Токен пользователя просрочен или неверен")
             raise HTTPException(status_code=400, detail="Недействительный или просроченный токен")
 
         result = await db.execute(select(Users).where(Users.email == email))
         user = result.scalars().first()
         if not user:
-            logger.warning(f"Пользователь не найден")
+            logger.warning("Пользователь не найден")
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
         user.password = bcrypt.hash(data.new_password)

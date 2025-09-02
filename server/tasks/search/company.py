@@ -143,7 +143,6 @@ class CompanySearchTask(BaseSearchTask):
 
         except Exception as e:
             logger.error(f"Error has occured in search by company: {str(e)}")
-            #print(e)
             self.money_to_return = self.price
             raise e
 
