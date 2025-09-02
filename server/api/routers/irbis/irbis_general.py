@@ -10,6 +10,7 @@ from server.api.schemas.irbis.irbis_general import (
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from server.api.routers.irbis.court_general import router as court_general_router
+from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
 from loguru import logger
 
 
@@ -19,6 +20,7 @@ router = APIRouter(
 )
 
 router.include_router(court_general_router)
+router.include_router(arbitration_court_router)
 
 
 @router.get("/person_info/{query_id}", response_model=IrbisPersonInfo, tags=['Irbis/Общее'])
@@ -51,8 +53,8 @@ async def get_person_info(
             inn=irbis_person.inn,
             regions=[
                 RegionInfo(
-                    code=region.subject_number,
-                    name=region.name
+                    id=region.id,
+                    name=region.name,
                 )
                 for region in regions
             ]

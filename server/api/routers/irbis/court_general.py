@@ -68,11 +68,11 @@ async def get_query_data(
                 end_date=case.end_date,
                 review=case.review,
                 region=RegionInfo(
-                    code=case.region.subject_number,
+                    id=case.region.id,
                     name=case.region.name,
                 ),
                 process_type=ProcessTypeInfo(
-                    code=case.process_type.code,
+                    id=case.process_type.id,
                     name=case.process_type.name,
                 ),
                 judge=case.judge,
@@ -90,7 +90,7 @@ async def get_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в court_general_data: {e}")
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -133,11 +133,11 @@ async def get_full_case_info(
             papers_pretty=case.papers_pretty,
             links=case.links,
             region=RegionInfo(
-                code=case.region.subject_number,
+                id=case.region.id,
                 name=case.region.name,
             ),
             process_type=ProcessTypeInfo(
-                code=case.process_type.code,
+                id=case.process_type.id,
                 name=case.process_type.name,
             ),
             match_type=MatchTypeInfo(

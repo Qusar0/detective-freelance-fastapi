@@ -1,6 +1,4 @@
-from typing import Optional, List
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.models.irbis_models import (

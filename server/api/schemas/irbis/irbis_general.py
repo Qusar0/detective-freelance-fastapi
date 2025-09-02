@@ -8,13 +8,18 @@ class MatchTypeInfo(BaseModel):
 
 
 class RegionInfo(BaseModel):
-    code: int = Field(..., description="Код региона (субъекта РФ)")
+    id: int = Field(..., description="Код региона (субъекта РФ)")
     name: str = Field(..., description="Название региона")
 
 
 class ProcessTypeInfo(BaseModel):
-    code: str = Field(..., description="Код типа процесса (A, G, U, M, O)")
+    id: int = Field(..., description="ID типа процесса")
     name: str = Field(..., description="Название типа процесса")
+
+
+class RoleTypeInfo(BaseModel):
+    id: int = Field(..., description="ID роли участника")
+    name: str = Field(..., description="Название роли участника")
 
 
 class IrbisPersonInfo(BaseModel):

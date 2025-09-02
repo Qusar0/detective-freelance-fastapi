@@ -8,6 +8,7 @@ from server.api.models.irbis_models import (
 )
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from server.api.dao.irbis.arbitration_court_case_types import ArbitrationCourtCaseTypesDAO
+from server.api.dao.irbis.person_role_type import PersonRoleTypeDAO
 
 
 class ArbitrationCourt:
@@ -78,6 +79,7 @@ class ArbitrationCourt:
         try:
             regions_map = await RegionSubjectDAO.get_regions_map(db)
             case_types_map = await ArbitrationCourtCaseTypesDAO.get_case_types_map(db)
+            person_roles_map = await PersonRoleTypeDAO.get_roles_with_short_map(db)
 
             while full_data:
                 logger.debug(f"Запрос страницы {page} для типа поиска: {search_type}")
@@ -113,7 +115,7 @@ class ArbitrationCourt:
                         case = ArbitrationCourtFullTable(
                             irbis_person_id=irbis_person_id,
                             court_name_val=case_data.get("court_name_val"),
-                            role=case_data.get("role"),
+                            role=person_roles_map.get(case_data.get("role")),
                             case_date=case_data.get("case_date"),
                             case_id=case_data.get("case_id"),
                             inn=case_data.get("inn"),

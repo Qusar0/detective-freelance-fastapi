@@ -11,7 +11,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 
-from api.models.models import Base, UserQueries
+from server.api.models.models import Base, UserQueries
 
 
 class PersonRegions(Base):
@@ -85,6 +85,8 @@ class PersonRoleType(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     short_name: Mapped[str] = mapped_column(String(1), nullable=True)
     russian_name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    arbitr_court_fulls: Mapped[List['ArbitrationCourtFullTable']] = relationship(back_populates='role')
 
 
 class IrbisPerson(Base):
@@ -162,13 +164,13 @@ class ArbitrationCourtFullTable(Base):
     )
     irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     court_name_val: Mapped[str] = mapped_column(String(128))
-    role: Mapped[str] = mapped_column(String(1))
+    role_id: Mapped[int] = mapped_column(ForeignKey('person_role_types.id', ondelete='CASCADE'), nullable=True)
     case_date: Mapped[str] = mapped_column(String(128))
     case_id: Mapped[str] = mapped_column(String(128))
     inn: Mapped[Optional[str]] = mapped_column(String(128))
     name: Mapped[str] = mapped_column(String(128))
     case_type_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('arbitr_court_case_types.id', ondelete='SET NULL'), 
+        ForeignKey('arbitr_court_case_types.id', ondelete='SET NULL'),
         nullable=True,
     )
     address_val: Mapped[str] = mapped_column(String(128))
@@ -179,6 +181,8 @@ class ArbitrationCourtFullTable(Base):
     irbis_person: Mapped['IrbisPerson'] = relationship(back_populates='arbit_court_full')
     region: Mapped['RegionSubject'] = relationship(back_populates='arbitration_court_full')
     oponents: Mapped[List['ArbitrationCourtOpponents']] = relationship(back_populates='arbitration_court_full')
+    case_type: Mapped[Optional['ArbitrationCourtCaseTypes']] = relationship(back_populates='arbitration_court_cases')
+    role: Mapped[Optional['PersonRoleType']] = relationship(back_populates='arbitr_court_fulls')
 
 
 class ArbitrationCourtOpponents(Base):
@@ -201,10 +205,6 @@ class ArbitrationCourtOpponents(Base):
 
     arbitration_court_full: Mapped['ArbitrationCourtFullTable'] = relationship(
         back_populates='oponents',
-    )
-    case_type: Mapped[Optional['ArbitrationCourtCaseTypes']] = relationship(
-        'ArbitrationCourtCaseTypes',
-        back_populates='arbitration_court_cases',
     )
 
 

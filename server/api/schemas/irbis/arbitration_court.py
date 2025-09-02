@@ -1,11 +1,7 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
-from server.api.schemas.irbis.irbis_general import (
-    RegionInfo,
-    ProcessTypeInfo,
-    MatchTypeInfo,
-)
+from server.api.schemas.irbis.irbis_general import RoleTypeInfo
 
 
 class ArbitrationCourtDataRequest(BaseModel):
@@ -24,25 +20,52 @@ class ArbitrationCourtDataRequest(BaseModel):
     )
 
 
-class ArbitrationCourtCase(BaseModel):
-    case_id: int = Field(..., description="ID дела в базе данных")
-    case_number: str = Field(..., description="Номер дела")
-    court_name: str = Field(..., description="Название суда")
-    start_date: str = Field(..., description="Дата начала дела")
-    end_date: str = Field(..., description="Дата окончания дела (или 'to date' если еще продолжается)")
-    review: int = Field(..., description="Количество аппеляций")
-    region: RegionInfo = Field(..., description="Информация о регионе")
-    process_type: ProcessTypeInfo = Field(..., description="Информация о типе процесса")
-    judge: Optional[str] = Field(None, description="ФИО судьи")
-    papers: str = Field(..., description="Категория дела из первоисточника")
-    papers_pretty: str = Field(..., description="Категория дела (эталонная)")
+class CaseTypeInfo(BaseModel):
+    id: int = Field(..., description="ID типа дела")
+    name: str = Field(..., description="Название типа дела")
 
-    @validator('start_date', 'end_date', pre=True)
+
+class ArbitrationCourtCase(BaseModel):
+    id: int = Field(..., description="ID дела в базе данных")
+    court_name: str = Field(..., description="Название суда")
+    case_date: str = Field(..., description="Дата дела")
+    name: str = Field(..., description="ФИО участника дела")
+    case_number: str = Field(..., description="Номер дела")
+    address: str = Field(..., description="Адрес")
+    search_type: str = Field(..., description="Тип поиска")
+
+    inn: Optional[str] = Field(None, description="ИНН")
+    case_type: Optional[CaseTypeInfo] = Field(None, description="Тип дела")
+    role: Optional[RoleTypeInfo] = Field(None, description="Роль в деле")
+
+    @validator('case_date', pre=True)
     def parse_date(cls, value):
+        """Парсит дату в единый формат"""
         if isinstance(value, str):
             try:
-                dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                return dt.strftime('%Y-%m-%d')
+                if 'T' in value and 'Z' in value:
+                    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    return dt.strftime('%Y-%m-%d')
+                else:
+                    dt = datetime.strptime(value, '%Y-%m-%d')
+                    return dt.strftime('%Y-%m-%d')
             except (ValueError, AttributeError):
                 return value
+        elif isinstance(value, datetime):
+            return value.strftime('%Y-%m-%d')
         return value
+
+
+class ArbitrationCourtCaseFull(BaseModel):
+    id: int = Field(..., description="ID дела в базе данных")
+    court_name: str = Field(..., description="Название суда")
+    case_date: str = Field(..., description="Дата дела")
+    name: str = Field(..., description="ФИО участника дела")
+    case_number: str = Field(..., description="Номер дела")
+    address: str = Field(..., description="Адрес")
+
+    inn: Optional[str] = Field(None, description="ИНН")
+    case_type: Optional[str] = Field(None, description="Тип дела")
+    role: Optional[str] = Field(None, description="Роль в деле")
+    region: Optional[str] = Field(None, description="Информация о регионе")
+    opponents: List[str] = Field(..., description="Опоненты дела")
