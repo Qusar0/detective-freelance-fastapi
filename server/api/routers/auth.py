@@ -68,7 +68,7 @@ async def confirm_email(token: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/register", response_model=StatusMessage)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Регистрация нового пользователя")
+    logger.info("Регистрация нового пользователя")
     result = await db.execute(
         select(Users).where(Users.email == data.email)
     )
@@ -161,7 +161,7 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
     user = result.scalars().first()
 
     if not user:
-        logger.warning(f"Пользователь не найден")
+        logger.warning("Пользователь не найден")
         return {
             "status": "success",
             "message": "Ссылка для сброса пароля отправлена на ваш email",
