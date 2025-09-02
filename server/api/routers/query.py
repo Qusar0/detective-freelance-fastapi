@@ -57,7 +57,7 @@ from server.tasks.search.number import start_search_by_num
 
 router = APIRouter(
     prefix="/queries",
-    tags=["queries"]
+    tags=["Query"]
 )
 
 

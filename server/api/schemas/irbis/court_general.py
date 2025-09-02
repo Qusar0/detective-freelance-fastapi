@@ -1,11 +1,11 @@
 from typing import List, Optional, Dict
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
-
-
-class MatchTypeInfo(BaseModel):
-    id: int = Field(..., description="ID типа совпадения")
-    name: str = Field(..., description="Название типа совпадения")
+from server.api.schemas.irbis.irbis_general import (
+    RegionInfo,
+    ProcessTypeInfo,
+    MatchTypeInfo,
+)
 
 
 class CourtGeneralFace(BaseModel):
@@ -18,16 +18,6 @@ class CourtGeneralProgress(BaseModel):
     name: str = Field(..., description="Название этапа процесса")
     progress_data: str = Field(..., description="Дата этапа процесса")
     resolution: Optional[str] = Field(None, description="Решение по этапу")
-
-
-class RegionInfo(BaseModel):
-    code: int = Field(..., description="Код региона (субъекта РФ)")
-    name: str = Field(..., description="Название региона")
-
-
-class ProcessTypeInfo(BaseModel):
-    code: str = Field(..., description="Код типа процесса (A, G, U, M, O)")
-    name: str = Field(..., description="Название типа процесса")
 
 
 class CourtGeneralCase(BaseModel):
@@ -48,13 +38,13 @@ class CourtGeneralCase(BaseModel):
         if isinstance(value, str):
             try:
                 dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                return dt.strftime('%Y-%m-%d')  # Только дата
+                return dt.strftime('%Y-%m-%d')
             except (ValueError, AttributeError):
                 return value
         return value
 
 
-class IrbisDataRequest(BaseModel):
+class CourtGeneralDataRequest(BaseModel):
     query_id: int
     page: int = Field(1, ge=1, description="Номер страницы (начинается с 1)")
     size: int = Field(20, ge=1, le=100, description="Количество элементов на странице (1-100)")
@@ -65,15 +55,6 @@ class IrbisDataRequest(BaseModel):
         None,
         description="Список категорий дел (коды: A, G, U, M, O). Если None - все категории",
     )
-
-
-class IrbisPersonInfo(BaseModel):
-    fullname: str = Field(..., description="Полное ФИО человека")
-    birth_date: Optional[str] = Field(None, description="Дата рождения в формате ДД.ММ.ГГГГ")
-    passport_series: Optional[str] = Field(None, description="Серия паспорта")
-    passport_number: Optional[str] = Field(None, description="Номер паспорта")
-    inn: Optional[str] = Field(None, description="ИНН")
-    regions: List[RegionInfo] = Field(..., description="Список выбранных регионов для поиска")
 
 
 class CourtGeneralCaseFull(BaseModel):

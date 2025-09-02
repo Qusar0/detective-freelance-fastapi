@@ -27,7 +27,7 @@ from server.api.dao.user_language import UserLanguageDAO
 
 router = APIRouter(
     prefix="/users",
-    tags=["users"]
+    tags=["Users"]
 )
 
 

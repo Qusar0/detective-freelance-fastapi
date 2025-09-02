@@ -28,7 +28,7 @@ from server.api.templates.email_message import (
 from server.api.conf.config import settings
 
 
-router = APIRouter(prefix="/v1/auth", tags=['auth'])
+router = APIRouter(prefix="/v1/auth", tags=['Auth'])
 
 
 @router.get("/confirm/{token}", response_model=StatusMessage)

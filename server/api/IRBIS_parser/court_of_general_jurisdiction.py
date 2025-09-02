@@ -154,6 +154,9 @@ class CourtGeneralJurisdiction:
         total_cases_processed = 0
 
         try:
+            regions_map = await RegionSubjectDAO.get_regions_map(db)
+            process_types_map = await ProcessTypeDAO.get_process_types_map(db)
+
             while full_data:
                 logger.debug(f"Запрос страницы {page} для match_type: {match_type.name}")
 
@@ -197,12 +200,12 @@ class CourtGeneralJurisdiction:
                         ]
 
                         region_code = header_data.get("region")
-                        region = await RegionSubjectDAO.get_region_by_code(region_code, db)
+                        region = regions_map.get(region_code)
                         if not region:
                             logger.warning(f"Регион с кодом {region_code} не найден в БД")
 
                         process_type_code = header_data.get("process_type")
-                        process_type = await ProcessTypeDAO.get_process_type_by_code(process_type_code, db)
+                        process_type = process_types_map.get(process_type_code)
                         if not process_type:
                             logger.warning(f"Тип процесса с кодом {process_type_code} не найден в БД")
 
@@ -235,8 +238,7 @@ class CourtGeneralJurisdiction:
             logger.info(
                 f"Завершена обработка для match_type: {match_type.name}, обработано дел: {total_cases_processed}",
             )
-
+            return court_gen_full
         except Exception as e:
             logger.error(f"Критическая ошибка при обработке судебных дел для {irbis_person_id}: {e}")
-
-        return court_gen_full
+            return []
