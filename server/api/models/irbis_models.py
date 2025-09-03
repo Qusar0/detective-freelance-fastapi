@@ -271,6 +271,7 @@ class BankruptcyFullTable(Base):
     region_name: Mapped[str] = mapped_column(String(128))
     information: Mapped[str] = mapped_column(String(256))
     link: Mapped[str] = mapped_column(String(256))
+    search_type: Mapped[str] = mapped_column(String(4), nullable=True)
 
     irbis_person: Mapped['IrbisPerson'] = relationship(
         'IrbisPerson',

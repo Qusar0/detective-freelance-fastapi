@@ -248,7 +248,8 @@ class IrbisSearchTask(BaseSearchTask):
                 location=item.get("location"),
                 region_name=item.get("region_name"),
                 information=item.get("information"),
-                link=item.get("link")
+                link=item.get("link"),
+                search_type='name',
             )
             for item in temp_result  # TODO: Вернуть full_data_fio + full_data_inn
         ]
