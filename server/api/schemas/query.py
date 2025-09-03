@@ -4,40 +4,40 @@ from datetime import datetime
 
 
 class DeleteQueryRequest(BaseModel):
-    query_id: int = Field(..., example="975")
+    query_id: int = Field(..., description="ID запроса", example="975")
 
 
 class ErrorResponse(BaseModel):
-    status: str = Field(..., example="error")
-    message: str = Field(..., example="Some error message")
+    status: str = Field(..., description="Код ошибки", example="error")
+    message: str = Field(..., description="Сообщение ошибки", example="Some error message")
 
 
 class SuccessResponse(BaseModel):
-    message: str = Field(..., example="Success")
+    message: str = Field(..., description="Сообщение об успехе", example="Success")
 
 
 class QueriesCountResponse(BaseModel):
-    count: int = Field(..., example=5)
+    count: int = Field(..., description="Количество ответов в 1 запросе", example=5)
 
 
 class QueryData(BaseModel):
-    query_id: int
-    query_title: str
-    query_created_at: str
-    query_status: str
-    balance: float
+    query_id: int = Field(..., description="Id запроса")
+    query_title: str = Field(..., description="Название запроса")
+    query_created_at: str = Field(..., description="Дата создания запроса")
+    query_status: str = Field(..., description="Статус запроса")
+    balance: float = Field(..., description="Баланс запроса")
 
 
 class FindByNameModel(BaseModel):
-    search_name: str
-    search_surname: str
-    search_patronymic: str
+    search_name: str = Field(..., description="Имя искомого")
+    search_surname: str = Field(..., description="Фамилия искомого")
+    search_patronymic: str = Field(..., description="Отчество искомого")
     search_plus: str
     search_minus: str
-    keywords: List[str]
+    keywords: List[str] = Field(..., description="Список ключевых слов")
     default_keywords_type: str
     search_engines: List[str]
-    languages: List[str] = Field(example=["en", "es"])
+    languages: List[str] = Field(..., description="Список языков перевода данных", example=["en", "es"])
 
 
 class SearchResponseModel(BaseModel):
@@ -61,22 +61,22 @@ class FindByEmailModel(BaseModel):
 
 
 class FindByCompanyModel(BaseModel):
-    company_name: str
-    extra_name: Optional[str]
-    location: Optional[str]
-    keywords: Optional[List[str]]
+    company_name: str = Field(..., description="Название организации")
+    extra_name: Optional[str] = Field(description="Дополнительное название организации")
+    location: Optional[str] = Field(description="Расположение организации")
+    keywords: Optional[List[str]] = Field(description="Список ключевых слов")
     default_keywords_type: Optional[str]
     search_plus: Optional[str]
     search_minus: Optional[str]
     search_engines: List[str]
-    languages: List[str] = Field(example=["en", "es"])
+    languages: List[str] = Field(..., description="Список языков перевода данных", example=["en", "es"])
 
 
 class CalculatePriceRequest(BaseModel):
-    search_patronymic: str
-    keywords: List[str]
+    search_patronymic: str = Field(..., description="Отчество искомого")
+    keywords: List[str] = Field(..., description="Список ключевых слов")
     default_keywords_type: str
-    languages: List[str] = Field(example=["en", "es"])
+    languages: List[str] = Field(..., description="Список языков перевода данных", example=["en", "es"])
 
 
 class PriceResponse(BaseModel):
@@ -92,47 +92,47 @@ class FindByIRBISModel(BaseModel):
     last_name: str = Field(..., description="Фамилия человека, которого необходимо найти")
     regions: list[int] = Field(..., description="Список регионов, по которым необходимо искать человека. "
                                                         "Максимум значений - 2")
-    second_name: Optional[str] = Field(None, description="Отчество человека, которого необходимо найти")
-    birth_date: Optional[str] = Field(None, description="Дата рождения человека, которого необходимо найти")
-    passport_series: Optional[str] = Field(None, description="Серия паспорта человека,"
+    second_name: Optional[str] = Field(description="Отчество человека, которого необходимо найти")
+    birth_date: Optional[str] = Field(description="Дата рождения человека, которого необходимо найти")
+    passport_series: Optional[str] = Field(description="Серия паспорта человека,"
                                                                      " которго необходимо найти")
-    passport_number: Optional[str] = Field(None, description="Номер паспорта человека,"
+    passport_number: Optional[str] = Field(description="Номер паспорта человека,"
                                                                      " которго необходимо найти")
-    inn: Optional[str] = Field(None, description="ИНН человека, которого необходимо найти")
+    inn: Optional[str] = Field(description="ИНН человека, которого необходимо найти")
 
 
 class QueryDataRequest(BaseModel):
-    query_id: int
+    query_id: int = Field(..., description="Id запроса")
     keyword_type_category: str
-    page: int = 1
-    size: int = 20
+    page: int = Field(1, description="Номер страницы")
+    size: int = Field(20, description="Количество записей на странице")
 
 
 class CategoryQueryDataRequest(BaseModel):
-    query_id: int
+    query_id: int = Field(..., description="Id запроса")
     keyword_type_category: str
-    size: int = 20
+    size: int = Field(20, description="Количество записей")
 
 
 class QueryDataResult(BaseModel):
-    title: Optional[str]
-    info: Optional[str]
-    url: Optional[str]
-    publication_date: Optional[str]
+    title: Optional[str] = Field(description="Название источника")
+    info: Optional[str] = Field(description="Информация из источника")
+    url: Optional[str] = Field(description="Ссылка на источник источника")
+    publication_date: Optional[str] = Field(description="Дата публикации источника")
     keyword_type_name: Optional[str]
-    keywords: Optional[List[str]]
-    resource_type: Optional[str]
+    keywords: Optional[List[str]] = Field(description="Список ключевых слов")
+    resource_type: Optional[str] = Field(description="Тип источника информации")
 
 
 class NameQueryDataResult(BaseModel):
-    title: Optional[str]
-    info: Optional[str]
-    url: Optional[str]
-    publication_date: Optional[str]
+    title: Optional[str] = Field(description="Название источника")
+    info: Optional[str] = Field(description="Информация из источника")
+    url: Optional[str] = Field(description="Ссылка на источник источника")
+    publication_date: Optional[str] = Field(description="Дата публикации источника")
     keyword_type_name: Optional[str]
-    keywords: Optional[List[str]]
-    resource_type: Optional[str]
-    is_fullname: bool
+    keywords: Optional[List[str]] = Field(description="Список ключевых слов")
+    resource_type: Optional[str] = Field(description="Тип источника информации")
+    is_fullname: bool = Field(description="Полное имя")
 
 
 class QueryDataResponse(BaseModel):
