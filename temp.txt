@@ -680,14 +680,10 @@ class PartInOrgOrganizationTable(Base):
     ogrn: Mapped[Optional[str]] = mapped_column(String(20))
     address: Mapped[Optional[str]] = mapped_column(String)
     okved: Mapped[Optional[str]] = mapped_column(String(200))
-    region_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey('region_subjects.id', ondelete='CASCADE'),
-        nullable=True,
-    )
+    region_id: Mapped[Optional[int]] = mapped_column(ForeignKey('region_subjects.id', ondelete='CASCADE'), nullable=True)
 
     part: Mapped['PartInOrgFullTable'] = relationship(back_populates='org')
     region: Mapped[Optional['RegionSubject']] = relationship(back_populates='part_in_org_organizations')
-
 
 class PartInOrgIndividualTable(Base):
     __tablename__ = 'part_in_org_individual'

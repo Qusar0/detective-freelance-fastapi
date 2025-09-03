@@ -19,7 +19,7 @@ from server.api.models.irbis_models import (
     DepositsPreviewTable, DepositsFullTable, DepositsPartiesTable, DepositsPledgeObjectTable,
     DisqualifiedPersonFullTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
-    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrgTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
@@ -60,7 +60,7 @@ class IrbisSearchTask(BaseSearchTask):
     async def _process_search(self, db: AsyncSession):
         try:
             # person_uuid = await self.person.get_person_uuid()
-            self.person_uuid = 'f1b008d9-5ed1-49f2-8be0-997817a9e48a'
+            self.person_uuid = 'ae980143-1aef-4426-a81f-c85a2c104dc4'  # 'f1b008d9-5ed1-49f2-8be0-997817a9e48a'
             if self.person_uuid:
                 if self.second_name:
                     fullname = f'{self.last_name} {self.first_name} {self.second_name}'
@@ -144,6 +144,94 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(bankruptcy_preview)
 
+        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
+        temp_result = [
+            {
+                "category_name": "Физическое лицо",
+                "birth_date": "1962-08-30T00:00:00+0100",
+                "born_place": "с. Алтуд Прохладненского р-на Кабардино-Балкарской АССР",
+                "inn": "071606963648",
+                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=560990BDF93BDF4B9B34996BE1FDBC43&attempt=1",
+                "last_name": "Абазехов",
+                "uuid": "556fb6ca-5acc-4427-89f1-eec8c84d0f84",
+                "second_name": "Часамбиевич",
+                "location": "121352, г. Москва, ул. Давыдковская, д. 3, кв. 180",
+                "region_name": "г. Москва",
+                "id": 395728,
+                "first_name": "Хадис",
+                "snils": "061-104-972 19",
+                "ogrn": 'test',
+                "information": 'test',
+            },
+            {
+                "category_name": "Физическое лицо",
+                "birth_date": "1978-03-15T00:00:00+0100",
+                "born_place": "г. Санкт-Петербург",
+                "inn": "781234567890",
+                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=1234567890ABCDEF&attempt=1",
+                "last_name": "Иванов",
+                "uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "second_name": "Петрович",
+                "location": "197022, г. Санкт-Петербург, ул. Профессора Попова, д. 5, кв. 12",
+                "region_name": "г. Санкт-Петербург",
+                "id": 395729,
+                "first_name": "Алексей",
+                "snils": "123-456-789 01",
+                "ogrn": 'test',
+                "information": 'test',
+            },
+            {
+                "category_name": "Физическое лицо",
+                "birth_date": "1985-11-22T00:00:00+0100",
+                "born_place": "г. Екатеринбург",
+                "inn": "661122334455",
+                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=ABCDEF1234567890&attempt=1",
+                "last_name": "Смирнова",
+                "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "second_name": "Олеговна",
+                "location": "620014, г. Екатеринбург, ул. Ленина, д. 24, кв. 45",
+                "region_name": "Свердловская область",
+                "id": 395730,
+                "first_name": "Ольга",
+                "snils": "234-567-890 12",
+                "ogrn": 'test',
+                "information": 'test',
+            },
+            {
+                "category_name": "Физическое лицо",
+                "birth_date": "1990-07-08T00:00:00+0100",
+                "born_place": "г. Новосибирск",
+                "inn": "540987654321",
+                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=0987654321ABCDEF&attempt=1",
+                "last_name": "Кузнецов",
+                "uuid": "09876543-21ab-cdef-1234-567890abcdef",
+                "second_name": "Сергеевич",
+                "location": "630099, г. Новосибирск, ул. Советская, д. 15, кв. 7",
+                "region_name": "Новосибирская область",
+                "id": 395731,
+                "first_name": "Дмитрий",
+                "snils": "345-678-901 23",
+                "ogrn": 'test',
+                "information": 'test',
+            },
+            {
+                "category_name": "Физическое лицо",
+                "birth_date": "1973-12-01T00:00:00+0100",
+                "born_place": "г. Казань",
+                "inn": "160123456789",
+                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=1122334455667788&attempt=1",
+                "last_name": "Петрова",
+                "uuid": "11223344-5566-7788-99aa-bbccddeeff00",
+                "second_name": "Ивановна",
+                "location": "420111, г. Казань, ул. Баумана, д. 8, кв. 33",
+                "region_name": "Республика Татарстан",
+                "id": 395732,
+                "first_name": "Мария",
+                "snils": "456-789-012 34",
+                "ogrn": 'test',
+                "information": 'test',
+            },
+        ]
         bankruptcy_full = [
             BankruptcyFullTable(
                 irbis_person_id=irbis_person_id,
@@ -162,7 +250,7 @@ class IrbisSearchTask(BaseSearchTask):
                 information=item.get("information"),
                 link=item.get("link")
             )
-            for item in full_data_fio + full_data_inn
+            for item in temp_result  # TODO: Вернуть full_data_fio + full_data_inn
         ]
         db.add_all(bankruptcy_full)
 
@@ -173,10 +261,63 @@ class IrbisSearchTask(BaseSearchTask):
         corruption_preview = CorruptionPreviewTable(irbis_person_id=irbis_person_id, count=data_preview)
         db.add(corruption_preview)
 
+        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
+        temp_result = [
+            {
+                "key": "e3a4646f-ef96-471b-86e5-b25562228a97",
+                "full_name": "Литонина Ирина Ивановна",
+                "organization": "Министерство сельского хозяйства Сахалинской области",
+                "position": "Советник департамента экономики и финансов",
+                "normative_act": "Пункт 2 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
+                "application_date": "2019-10-28",
+                "publish_date": "2019-08-07",
+                "excluded_reason": "В соответствии с подпунктом \"а\" пункта 15 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228 21 марта 2020 г. сведения подлежат исключению из реестра лиц, уволенных в связи с утратой доверия"
+            },
+            {
+                "key": "a1b2c3d4-5678-90ef-1234-567890abcdef",
+                "full_name": "Петров Алексей Владимирович",
+                "organization": "Администрация города Краснодара",
+                "position": "Начальник отдела имущественных отношений",
+                "normative_act": "Пункт 1 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
+                "application_date": "2020-03-15",
+                "publish_date": "2020-01-20",
+                "excluded_reason": "В связи с истечением срока хранения сведений в соответствии с пунктом 16 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228"
+            },
+            {
+                "key": "b2c3d4e5-6789-01fg-2345-678901abcdef",
+                "full_name": "Смирнова Ольга Дмитриевна",
+                "organization": "Министерство финансов Московской области",
+                "position": "Заместитель начальника управления бюджетного планирования",
+                "normative_act": "Пункт 3 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
+                "application_date": "2021-06-10",
+                "publish_date": "2021-04-12",
+                "excluded_reason": "На основании решения суда о восстановлении на службе от 15 мая 2022 г."
+            },
+            {
+                "key": "c3d4e5f6-7890-12gh-3456-789012abcdef",
+                "full_name": "Кузнецов Денис Сергеевич",
+                "organization": "Правительство Нижегородской области",
+                "position": "Советник губернатора по экономическим вопросам",
+                "normative_act": "Пункт 2 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
+                "application_date": "2018-11-05",
+                "publish_date": "2018-09-18",
+                "excluded_reason": "В связи со смертью гражданского служащего на основании представленных документов"
+            },
+            {
+                "key": "d4e5f6g7-8901-23hi-4567-890123abcdef",
+                "full_name": "Волкова Екатерина Александровна",
+                "organization": "Министерство здравоохранения Республики Татарстан",
+                "position": "Главный специалист отдела кадров",
+                "normative_act": "Пункт 1 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
+                "application_date": "2022-02-28",
+                "publish_date": "2022-01-10",
+                "excluded_reason": "В соответствии с подпунктом \"б\" пункта 15 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228 в связи с признанием сведений не соответствующими действительности"
+            }
+        ]
+
         corruption_full = [
             CorruptionFullTable(
                 irbis_person_id=irbis_person_id,
-                key=item.get("key"),
                 full_name=item.get("full_name"),
                 organization=item.get("organization"),
                 position=item.get("position"),
@@ -185,7 +326,7 @@ class IrbisSearchTask(BaseSearchTask):
                 publish_date=item.get("publish_date"),
                 excluded_reason=item.get("excluded_reason"),
             )
-            for item in full_data
+            for item in temp_result  # TODO: Вернуть full_data
         ]
         db.add_all(corruption_full)
 
@@ -301,11 +442,88 @@ class IrbisSearchTask(BaseSearchTask):
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):
         full_data = await DisqualifiedPersons.get_full_data(self.person_uuid, 1, 50)
 
+        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
+        temp_result = [
+            {
+                "start_date_disq": "2018-09-25T00:00:00+0200",
+                "reestr_key": "194000029739",
+                "birth_date": "1984-08-02T00:00:00+0200",
+                "office": "ДИРЕКТОР",
+                "fio": "АБАКУМОВ АНДРЕЙ ВЛАДИМИРОВИЧ",
+                "article": "Ч.5 СТ. 14.25 КОАП РФ",
+                "end_date_disq": "2019-09-24T00:00:00+0200",
+                "bornplace": "РОССИЯ, Г. ТОЛЬЯТТИ САМАРСКАЯ ОБЛ.",
+                "fio_judge": "БУКОВСКИЙ Р Г",
+                "office_judge": "МИРОВОЙ СУДЬЯ",
+                "id": 20298,
+                "legal_name": "ООО \"ТРАНСГРУПП\"",
+                "department": "ИФНС ПО КАЛУЖСКОЙ ОБЛАСТИ",
+            },
+            {
+                "start_date_disq": "2020-01-15T00:00:00+0200",
+                "reestr_key": "195000045621",
+                "birth_date": "1979-03-12T00:00:00+0200",
+                "office": "ГЛАВНЫЙ БУХГАЛТЕР",
+                "fio": "ПЕТРОВА ЕЛЕНА ИГОРЕВНА",
+                "article": "Ч.3 СТ. 14.25 КОАП РФ",
+                "end_date_disq": "2022-01-14T00:00:00+0200",
+                "bornplace": "РОССИЯ, Г. МОСКВА",
+                "fio_judge": "ИВАНОВА М С",
+                "office_judge": "МИРОВОЙ СУДЬЯ",
+                "id": 20299,
+                "legal_name": "ООО \"ФИНАНСЫ И КРЕДИТ\"",
+                "department": "ИФНС ПО Г. МОСКВЕ",
+            },
+            {
+                "start_date_disq": "2019-05-10T00:00:00+0200",
+                "reestr_key": "193000038492",
+                "birth_date": "1988-11-25T00:00:00+0200",
+                "office": "ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР",
+                "fio": "СИДОРОВ ДМИТРИЙ АЛЕКСАНДРОВИЧ",
+                "article": "Ч.4 СТ. 14.25 КОАП РФ",
+                "end_date_disq": "2021-05-09T00:00:00+0200",
+                "bornplace": "РОССИЯ, Г. САНКТ-ПЕТЕРБУРГ",
+                "fio_judge": "ПЕТРОВ А В",
+                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
+                "id": 20300,
+                "legal_name": "ЗАО \"СТРОЙИНВЕСТ\"",
+                "department": "ИФНС ПО САНКТ-ПЕТЕРБУРГУ",
+            },
+            {
+                "start_date_disq": "2021-03-08T00:00:00+0200",
+                "reestr_key": "196000052783",
+                "birth_date": "1991-07-18T00:00:00+0200",
+                "office": "КОММЕРЧЕСКИЙ ДИРЕКТОР",
+                "fio": "КОЗЛОВА АНАСТАСИЯ СЕРГЕЕВНА",
+                "article": "Ч.2 СТ. 14.25 КОАП РФ",
+                "end_date_disq": "2023-03-07T00:00:00+0200",
+                "bornplace": "РОССИЯ, Г. ЕКАТЕРИНБУРГ СВЕРДЛОВСКАЯ ОБЛ.",
+                "fio_judge": "СМИРНОВ К Д",
+                "office_judge": "МИРОВОЙ СУДЬЯ",
+                "id": 20301,
+                "legal_name": "ООО \"УРАЛПРОМТОРГ\"",
+                "department": "ИФНС ПО СВЕРДЛОВСКОЙ ОБЛАСТИ",
+            },
+            {
+                "start_date_disq": "2022-07-20T00:00:00+0200",
+                "reestr_key": "197000061894",
+                "birth_date": "1982-12-05T00:00:00+0200",
+                "office": "ГЕНЕРАЛЬНЫЙ ДИРЕКТОР",
+                "fio": "НИКИТИН ИВАН ВАСИЛЬЕВИЧ",
+                "article": "Ч.5 СТ. 14.25 КОАП РФ",
+                "end_date_disq": "2024-07-19T00:00:00+0200",
+                "bornplace": "РОССИЯ, Г. НОВОСИБИРСК НОВОСИБИРСКАЯ ОБЛ.",
+                "fio_judge": "ФЕДОРОВА О Л",
+                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
+                "id": 20302,
+                "legal_name": "АО \"СИБИРСКИЕ ТЕХНОЛОГИИ\"",
+                "department": "ИФНС ПО НОВОСИБИРСКОЙ ОБЛАСТИ",
+            }
+        ]
+
         disqualified_full = [
             DisqualifiedPersonFullTable(
                 irbis_person_id=irbis_person_id,
-                response_id=item.get("id"),
-                reestr_key=item.get("reestr_key"),
                 birth_date=item.get("birth_date"),
                 fio=item.get("fio"),
                 article=item.get("article"),
@@ -318,7 +536,7 @@ class IrbisSearchTask(BaseSearchTask):
                 office=item.get("office"),
                 department=item.get("department"),
             )
-            for item in full_data
+            for item in temp_result  # TODO: Вернуть full_data
         ]
         db.add_all(disqualified_full)
 
@@ -350,7 +568,6 @@ class IrbisSearchTask(BaseSearchTask):
                 end_cause=item.get("end_cause"),
                 pristav=item.get("pristav"),
                 pristav_phones=item.get("pristav_phones"),
-                response_id=item.get("id")
             )
             for item in data_full
         ]
@@ -396,12 +613,26 @@ class IrbisSearchTask(BaseSearchTask):
             org_data = entry.get("org_data")
             org_obj = None
             if org_data:
-                org_obj = PartInOrgOrgTable(
+                address: dict = org_data.get('address_obj')
+                region_id = None
+                full_address = None
+
+                if address:
+                    region_id = int(address.get('region_code'))
+                    full_address = address.get('full_address')
+
+                okved = org_data.get('okved')
+                okved_name = None
+                if okved:
+                    okved_name = okved.get('name')
+
+                org_obj = PartInOrgOrganizationTable(
                     name=org_data.get("name", ""),
                     inn=org_data.get("inn", ""),
                     ogrn=org_data.get("ogrn"),
-                    adress=org_data.get("adress", ""),
-                    okved=org_data.get("okved"),
+                    address=full_address,
+                    okved=okved_name,
+                    region_id=region_id,
                 )
 
             individual_data = entry.get("individual_data")
@@ -424,9 +655,6 @@ class IrbisSearchTask(BaseSearchTask):
 
             obj = PartInOrgFullTable(
                 irbis_person_id=irbis_person_id,
-                filter_type=entry.get("filter_type", ""),
-                count=entry.get("count", 0),
-                part_type=entry.get("part_type", ""),
                 org=org_obj,
                 individual=individual_obj,
             )
@@ -445,14 +673,12 @@ class IrbisSearchTask(BaseSearchTask):
             currency = money.get("currency", {})
 
             money_name = currency.get("name", "")
-            money_code = currency.get("code", 0)
             money_value = money.get("value", 0.0)
 
             arrear_obj = TaxArrearsFullTable(
                 irbis_person_id=irbis_person_id,
                 provider=provider,
                 money_name=money_name,
-                money_code=money_code,
                 money_value=money_value,
             )
 
@@ -460,11 +686,9 @@ class IrbisSearchTask(BaseSearchTask):
             for field in info_fields:
                 field_obj = TaxArrearsFieldTable(
                     type="info",
-                    field_id=field.get("id", ""),
                     field_name=field.get("name", ""),
-                    field_type=field.get("fieldType", ""),
                     value=field.get("value", ""),
-                    arrear=arrear_obj,
+                    tax_arrear=arrear_obj,
                 )
                 arrear_obj.fields.append(field_obj)
 
@@ -472,11 +696,9 @@ class IrbisSearchTask(BaseSearchTask):
             for field in payment_fields:
                 field_obj = TaxArrearsFieldTable(
                     type="payment",
-                    field_id=field.get("id", ""),
                     field_name=field.get("name", ""),
-                    field_type=field.get("fieldType", ""),
                     value=field.get("value", ""),
-                    arrear=arrear_obj,
+                    tax_arrear=arrear_obj,
                 )
                 arrear_obj.fields.append(field_obj)
 
