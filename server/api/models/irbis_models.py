@@ -125,8 +125,8 @@ class IrbisPerson(Base):
     court_gen_preview: Mapped[List['CourtGeneralJurPreviewTable']] = relationship(back_populates='irbis_person')
     court_gen_categorial: Mapped[List['CourtGeneralJurCategoricalTable']] = relationship(back_populates='irbis_person')
     court_gen_full: Mapped[List['CourtGeneralJurFullTable']] = relationship(back_populates='irbis_person')
-    deposits_preview: Mapped[List['DepositsPreviewTable']] = relationship(back_populates='irbis_person')
-    deposits_full: Mapped[List['DepositsFullTable']] = relationship(back_populates='irbis_person')
+    pledges_preview: Mapped[List['PledgesPreviewTable']] = relationship(back_populates='irbis_person')
+    pledges_full: Mapped[List['PledgeFullTable']] = relationship(back_populates='irbis_person')
     disqualified_preview: Mapped[List['DisqualifiedPersonPreviewTable']] = relationship(back_populates='irbis_person')
     disqualified_full: Mapped[List['DisqualifiedPersonFullTable']] = relationship(back_populates='irbis_person')
     fssp_preview: Mapped[List['FSSPPreviewTable']] = relationship(back_populates='irbis_person')
@@ -430,8 +430,8 @@ class CourtGeneralProgressTable(Base):
     case: Mapped['CourtGeneralJurFullTable'] = relationship(back_populates='progress')
 
 
-class DepositsPreviewTable(Base):
-    __tablename__ = 'deposits_preview'
+class PledgesPreviewTable(Base):
+    __tablename__ = 'pledges_preview'
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -445,12 +445,12 @@ class DepositsPreviewTable(Base):
 
     irbis_person: Mapped['IrbisPerson'] = relationship(
         'IrbisPerson',
-        back_populates='deposits_preview',
+        back_populates='pledges_preview',
     )
 
 
-class DepositsFullTable(Base):
-    __tablename__ = 'deposits_full'
+class PledgeFullTable(Base):
+    __tablename__ = 'pledges_full'
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -458,59 +458,57 @@ class DepositsFullTable(Base):
         autoincrement=True
     )
     irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
-    pledge_count: Mapped[int] = mapped_column(Integer)
-    pledge_type: Mapped[str] = mapped_column(String(128))
-    response_id: Mapped[int] = mapped_column(Integer)
+    reg_date: Mapped[Optional[str]] = mapped_column(String(40))
+    pledge_reestr_number: Mapped[Optional[str]] = mapped_column(String(20))
+    pledge_type: Mapped[Optional[str]] = mapped_column(String(100))
 
     # Relationships
-    parties: Mapped[List['DepositsPartiesTable']] = relationship(
-        back_populates='deposit',
+    parties: Mapped[List['PledgePartiesTable']] = relationship(
+        back_populates='pledge',
         cascade='all, delete-orphan',
     )
-    pledges: Mapped[List['DepositsPledgeObjectTable']] = relationship(
-        back_populates='deposit',
+    pledges: Mapped[List['PledgeObjectTable']] = relationship(
+        back_populates='pledge',
         cascade='all, delete-orphan',
     )
     irbis_person: Mapped['IrbisPerson'] = relationship(
         'IrbisPerson',
-        back_populates='deposits_full',
+        back_populates='pledges_full',
     )
 
 
-class DepositsPartiesTable(Base):
-    __tablename__ = 'deposits_parties'
+class PledgePartiesTable(Base):
+    __tablename__ = 'pledge_parties'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    deposit_id: Mapped[int] = mapped_column(ForeignKey('deposits_full.id', ondelete='CASCADE'))
+    pledge_id: Mapped[int] = mapped_column(ForeignKey('pledges_full.id', ondelete='CASCADE'))
 
     # Общие поля
     name: Mapped[str] = mapped_column(String)
-    external_id: Mapped[int] = mapped_column(Integer)
     type: Mapped[str] = mapped_column(String(16))  # 'pledger' | 'pledgee'
     subtype: Mapped[str] = mapped_column(String(16))  # 'people' | 'org'
 
     # Только для subtype = 'people'
-    birth_date: Mapped[str] = mapped_column(String(128))
+    birth_date: Mapped[Optional[str]] = mapped_column(String(128))
 
     # Только для subtype = 'org'
     inn: Mapped[Optional[str]] = mapped_column(String(20))
     ogrn: Mapped[Optional[str]] = mapped_column(String(20))
 
-    deposit: Mapped['DepositsFullTable'] = relationship(back_populates='parties')
+    pledge: Mapped['PledgeFullTable'] = relationship(back_populates='parties')
 
 
-class DepositsPledgeObjectTable(Base):
-    __tablename__ = 'deposits_pledges'
+class PledgeObjectTable(Base):
+    __tablename__ = 'pledge_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    deposit_id: Mapped[int] = mapped_column(ForeignKey('deposits_full.id', ondelete='CASCADE'))
+    pledge_id: Mapped[int] = mapped_column(ForeignKey('pledges_full.id', ondelete='CASCADE'))
 
-    pledge_id_name: Mapped[str] = mapped_column(String(128))
-    pledge_id: Mapped[str] = mapped_column(String(512))
+    pledge_num_name: Mapped[str] = mapped_column(String(128))
+    pledge_num: Mapped[str] = mapped_column(String(512))
     pledge_type: Mapped[str] = mapped_column(String(512))
-    external_id: Mapped[int] = mapped_column(Integer)
 
-    deposit: Mapped['DepositsFullTable'] = relationship(back_populates='pledges')
+    pledge: Mapped['PledgeFullTable'] = relationship(back_populates='pledges')
 
 
 class DisqualifiedPersonPreviewTable(Base):
@@ -770,7 +768,6 @@ class TerrorListFullTable(Base):
         autoincrement=True
     )
     irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
-    response_id: Mapped[str] = mapped_column(String(512))
     fio: Mapped[str] = mapped_column(String(512))
     birth_date: Mapped[str] = mapped_column(String(128))
     birth_place: Mapped[str] = mapped_column(String(512))
