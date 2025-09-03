@@ -1,7 +1,6 @@
 import datetime
 import decimal
 from typing import List, Optional
-
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -341,6 +340,7 @@ class UserQueries(Base):
         cascade='all, delete-orphan',
     )
     events: Mapped['Events'] = relationship('Events', back_populates='query')
+    irbis_person: Mapped['IrbisPerson'] = relationship('IrbisPerson', back_populates='query')  # noqa: F821
 
     def __str__(self):
         return f"Запрос ({self.query_id})"

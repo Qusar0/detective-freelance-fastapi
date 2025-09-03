@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 import aiofiles
 from pathlib import Path
 from fastapi import HTTPException
@@ -16,7 +16,7 @@ class FileStorageService:
                 await f.write(data)
             return str(file_path)
         except Exception as e:
-            logging.error(f"Failed to save query data to file: {e}")
+            logger.error(f"Failed to save query data to file: {e}")
             raise HTTPException(status_code=500, detail="Failed to save query data")
 
     @staticmethod
@@ -28,7 +28,7 @@ class FileStorageService:
             async with aiofiles.open(path, 'r', encoding='utf-8') as f:
                 return await f.read()
         except Exception as e:
-            logging.error(f"Failed to read query data from file: {e}")
+            logger.error(f"Failed to read query data from file: {e}")
             raise HTTPException(status_code=500, detail="Failed to read query data")
 
     @staticmethod
@@ -38,5 +38,9 @@ class FileStorageService:
             if path.exists():
                 path.unlink()
         except Exception as e:
-            logging.error(f"Failed to delete query data file: {e}")
+            logger.error(f"Failed to delete query data file: {e}")
             raise HTTPException(status_code=500, detail="Failed to delete query data")
+
+
+def get_file_storage() -> FileStorageService:
+    return FileStorageService()

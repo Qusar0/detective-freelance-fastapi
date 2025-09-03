@@ -1,5 +1,5 @@
 from typing import List, Dict
-import logging
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -24,5 +24,5 @@ class QueryTranslationLanguagesDAO(BaseDAO):
             )
             return [{"code": code, "name": name} for code, name in result.all()]
         except SQLAlchemyError as e:
-            logging.error(f"Ошибка получения языков поиска: {e}")
+            logger.error(f"Ошибка получения языков поиска: {e}")
             raise

@@ -1,11 +1,11 @@
-import logging
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import delete
-from datetime import datetime
 from typing import List, Union
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
@@ -15,7 +15,6 @@ from server.api.models.models import (
     UserQueries,
     Events,
     TextData,
-    QueriesBalance,
     Language,
 )
 from server.api.schemas.query import (
@@ -31,6 +30,7 @@ from server.api.schemas.query import (
     FindByIRBISModel,
     QueryDataResponse,
     QueryDataRequest,
+    CategoryQueryDataRequest,
     GenerarQueryDataResponse,
     QueryDataResult,
     NameQueryDataResponse,
@@ -46,7 +46,7 @@ from server.api.dao.query_translation_languages import QueryTranslationLanguages
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.query_keyword_stats import QueryKeywordStatsDAO
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import FileStorageService, get_file_storage
 from server.api.services.text import translate_name_fields, translate_company_fields
 from server.tasks.search.company import start_search_by_company
 from server.tasks.search.email import start_search_by_email
@@ -57,7 +57,7 @@ from server.tasks.search.number import start_search_by_num
 
 router = APIRouter(
     prefix="/queries",
-    tags=["queries"]
+    tags=["Query"]
 )
 
 
@@ -66,11 +66,15 @@ async def delete_query(
     query_id: int = Query(..., description="ID запроса для удаления"),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
-    file_storage: FileStorageService = Depends(),
+    file_storage: FileStorageService = Depends(get_file_storage),
 ):
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
+
+        user_query = await UserQueriesDAO.get_query_by_id(user_id, query_id, db)
+        if not user_query:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         text_data_result = await db.execute(
             select(TextData)
@@ -80,14 +84,6 @@ async def delete_query(
 
         if text_data and text_data.file_path:
             await file_storage.delete_query_data(text_data.file_path)
-
-        user_query = await UserQueriesDAO.get_query_by_id(
-            user_id,
-            query_id,
-            db,
-        )
-        if not user_query:
-            raise HTTPException(status_code=404, detail=f"Query {query_id} not found or doesn't belong to user")
 
         await db.execute(
             delete(TextData)
@@ -100,9 +96,17 @@ async def delete_query(
         await db.delete(user_query)
         await db.commit()
         return {"message": "Success"}
-    except Exception as e:
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
         await db.rollback()
-        logging.error(f"Delete error for query {query_id}: {str(e)}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        await db.rollback()
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.error(f"Ошибка удаления query {query_id}: {str(e)}")
+        await db.rollback()
         raise HTTPException(status_code=500, detail="Database operation failed")
 
 
@@ -117,12 +121,20 @@ async def queries_count(
         user_id = int(Authorize.get_jwt_subject())
 
         result = await db.execute(
-            select(UserQueries).where(UserQueries.user_id == user_id, UserQueries.query_category == query_category)
+            select(UserQueries)
+            .where(
+                UserQueries.user_id == user_id,
+                UserQueries.query_category == query_category,
+                UserQueries.deleted_at == None  # noqa: E711
+            )
         )
         count = len(result.fetchall())
         return {"count": count}
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to count queries: {e}")
+        logger.error(f"Failed to count queries: {e}")
         raise HTTPException(status_code=500, detail="Failed to count queries")
 
 
@@ -137,37 +149,26 @@ async def send_query_data(
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
 
-        user_queries = await UserQueriesDAO.get_queries_page([user_id, query_category], page, db=db)
+        user_queries = await UserQueriesDAO.get_queries_page(user_id, query_category, page, db=db)
 
         result_list = []
-        query_ids = [str(q.query_id) for q in user_queries]
 
         for q in user_queries:
-            result_list.append({
-                "query_id": q.query_id,
-                "user_id": q.user_id,
-                "query_title": q.query_title,
-                "query_unix_date": q.query_unix_date.strftime('%Y/%m/%d %H:%M:%S'),
-                "query_created_at": q.query_created_at.strftime('%Y/%m/%d %H:%M:%S'),
-                "query_status": q.query_status
-            })
-
-        query_ids = [int(qid) for qid in query_ids]
-
-        balances_result = await db.execute(
-            select(QueriesBalance)
-            .where(QueriesBalance.query_id.in_(query_ids))
-        )
-
-        balances = balances_result.scalars().all()
-        balance_map = {row.query_id: float(row.balance) for row in balances}
-
-        for item in result_list:
-            item["balance"] = balance_map.get(int(item["query_id"]), 0)
-
+            result_list.append(
+                QueryData(
+                    query_id=q.query_id,
+                    query_title=q.query_title,
+                    query_created_at=q.query_created_at.strftime('%Y/%m/%d %H:%M:%S'),
+                    query_status=q.query_status,
+                    balance=q.queries_balances.balance,
+                ),
+            )
         return result_list
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to get query data: {e}")
+        logger.error(f"Failed to get query data: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve query data")
 
 
@@ -208,20 +209,8 @@ async def find_by_name(
             languages,
         )
 
-        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
-
         query_title = f"{original_data['surname']} {original_data['name']} {original_data['patronymic']}"
-        user_query = UserQueries(
-            user_id=user_id,
-            query_unix_date=query_created_at,
-            query_created_at=datetime.now(),
-            query_title=query_title,
-            query_status="pending",
-            query_category="name"
-        )
-
-        db.add(user_query)
-        await db.commit()
+        user_query_id = await UserQueriesDAO.save_user_query(user_id, query_title, 'name', db)
 
         search_filters = (
             translated_data["name"],
@@ -231,7 +220,7 @@ async def find_by_name(
             translated_data["minus"],
             translated_data["keywords"],
             default_keywords_type,
-            user_query.query_id,
+            user_query_id,
             price,
             search_engines,
             languages
@@ -239,22 +228,16 @@ async def find_by_name(
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await BalanceHistoryDAO.save_payment_to_history(
-            price,
-            user_query.query_id,
-            db,
-        )
-        await QueriesBalanceDAO.save_query_balance(
-            user_query.query_id,
-            price,
-            db,
-        )
+        await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+        await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
-        return None
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/find_by_number")
@@ -275,44 +258,23 @@ async def find_by_number(
 
         price = calculate_num_price(methods_type)
 
-        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
-
-        query_title = search_number
-        user_query = UserQueries(
-            user_id=user_id,
-            query_unix_date=query_created_at,
-            query_created_at=datetime.now(),
-            query_title=query_title,
-            query_status="pending",
-            query_category="number"
-        )
-
-        db.add(user_query)
-        await db.commit()
-        await db.refresh(user_query)
+        user_query_id = await UserQueriesDAO.save_user_query(user_id, search_number, 'number', db)
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await BalanceHistoryDAO.save_payment_to_history(
-            price,
-            user_query.query_id,
-            db,
-        )
-        await QueriesBalanceDAO.save_query_balance(
-            user_query.query_id,
-            price,
-            db,
-        )
+        await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+        await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_num.apply_async(
-            args=(search_number, methods_type, user_query.query_id, price),
+            args=(search_number, methods_type, user_query_id, price),
             queue='num_tasks'
         )
-        return None
-
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/find_by_email")
@@ -333,43 +295,23 @@ async def find_by_email(
 
         price = calculate_email_price(methods_type)
 
-        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
-
-        query_title = search_email
-        user_query = UserQueries(
-            user_id=user_id,
-            query_unix_date=query_created_at,
-            query_created_at=datetime.now(),
-            query_title=query_title,
-            query_status="pending",
-            query_category="email"
-        )
-
-        db.add(user_query)
-        await db.commit()
+        user_query_id = await UserQueriesDAO.save_user_query(user_id, search_email, 'email', db)
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await BalanceHistoryDAO.save_payment_to_history(
-            price,
-            user_query.query_id,
-            db,
-        )
-        await QueriesBalanceDAO.save_query_balance(
-            user_query.query_id,
-            price,
-            db,
-        )
+        await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+        await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_email.apply_async(
-            args=(search_email, methods_type, user_query.query_id, price),
+            args=(search_email, methods_type, user_query_id, price),
             queue='email_tasks',
         )
-        return None
-
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/find_by_company")
@@ -399,32 +341,20 @@ async def find_by_company(
         translated_data = await translate_company_fields(original_data, languages)
 
         channel = await generate_sse_message_type(user_id=user_id, db=db)
-
         price = 10
-        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
 
         query_title = original_data['company_name']
-        user_query = UserQueries(
-            user_id=user_id,
-            query_unix_date=query_created_at,
-            query_created_at=datetime.now(),
-            query_title=query_title,
-            query_status="pending",
-            query_category="company"
-        )
-
-        db.add(user_query)
-        await db.commit()
+        user_query_id = await UserQueriesDAO.save_user_query(user_id, query_title, 'company', db)
 
         search_filters = (
-            original_data['company_name'],
+            query_title,
             original_data['extra_name'],
             translated_data['location'],
             translated_data['keywords'],
             default_keywords_type,
             translated_data['plus'],
             translated_data['minus'],
-            user_query.query_id,
+            user_query_id,
             price,
             search_engines,
             languages
@@ -432,22 +362,16 @@ async def find_by_company(
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await BalanceHistoryDAO.save_payment_to_history(
-            price,
-            user_query.query_id,
-            db,
-        )
-        await QueriesBalanceDAO.save_query_balance(
-            user_query.query_id,
-            price,
-            db,
-        )
+        await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+        await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
-        return None
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/find_by_irbis")
@@ -462,25 +386,14 @@ async def find_by_irbis(
         user_id = int(Authorize.get_jwt_subject())
 
         channel = await generate_sse_message_type(user_id=user_id, db=db)
-
-        price = 10
-        query_created_at = datetime.strptime('1980/01/01 00:00:00', '%Y/%m/%d %H:%M:%S')
+        price = 100
 
         query_title = " ".join([request_data.first_name.strip(), request_data.second_name.strip()])
-        user_query = UserQueries(
-            user_id=user_id,
-            query_unix_date=query_created_at,
-            query_created_at=datetime.now(),
-            query_title=query_title,
-            query_status="pending",
-            query_category="irbis"
-        )
 
-        db.add(user_query)
-        await db.commit()
+        user_query_id = await UserQueriesDAO.save_user_query(user_id, query_title, 'irbis', db)
 
         search_filters = {
-            "query_id": user_query.query_id,
+            "query_id": user_query_id,
             "price": price,
             "first_name": request_data.first_name,
             "last_name": request_data.last_name,
@@ -494,21 +407,16 @@ async def find_by_irbis(
 
         await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
 
-        await BalanceHistoryDAO.save_payment_to_history(
-            price,
-            user_query.query_id,
-            db,
-        )
-        await QueriesBalanceDAO.save_query_balance(
-            user_query.query_id,
-            price,
-            db,
-        )
+        await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+        await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
+
         start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
-        return None
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Failed to process the query: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Failed to process the query: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/calculate_price", response_model=PriceResponse)
@@ -527,9 +435,12 @@ async def calculate_price(
             data.languages,
         )
         return {"price": price}
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.warning(f"Invalid input: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.warning(f"Invalid input: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/download_query", response_class=PlainTextResponse)
@@ -537,16 +448,12 @@ async def download_query(
     data: DownloadQueryRequest,
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
-    file_storage: FileStorageService = Depends(),
+    file_storage: FileStorageService = Depends(get_file_storage),
 ):
     try:
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
-    except Exception as e:
-        logging.warning(f"JWT auth failed: {e}")
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
-    try:
         query_id = data.query_id
         query = await UserQueriesDAO.get_query_by_id(
             user_id,
@@ -554,7 +461,7 @@ async def download_query(
             db,
         )
         if not query:
-            raise HTTPException(status_code=404, detail="This user hasn't such a query")
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         text_result = await db.execute(
             select(TextData.file_path)
@@ -568,10 +475,15 @@ async def download_query(
         query_text = await file_storage.get_query_data(file_path)
 
         return PlainTextResponse(content=query_text, media_type='text/plain; charset=UTF-8')
-
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Download query failed: {e}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+        logger.error(f"Ошибка при скачивании запроса: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.get("/available_languages")
@@ -590,12 +502,18 @@ async def get_available_languages(
         translated = {russian_name: code for russian_name, code in languages}
 
         return translated
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Не удалось получить языки: {e}")
+        logger.error(f"Не удалось получить языки: {e}")
         raise HTTPException(status_code=500, detail="Ошибка получения языков")
 
 
-@router.post("/query_data", response_model=Union[NameQueryDataResponse, QueryDataResponse])
+@router.post("/query_data", response_model=List[Union[NameQueryDataResult, QueryDataResult]])
 async def get_query_data(
     request_data: QueryDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -613,21 +531,6 @@ async def get_query_data(
         )
         if not query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
-
-        total = await QueriesDataDAO.get_query_data_count(
-            query_id=request_data.query_id,
-            keyword_type_category=request_data.keyword_type_category,
-            db=db
-        )
-
-        if total == 0:
-            return QueryDataResponse(
-                data=[],
-                total=0,
-                page=request_data.page,
-                size=request_data.size,
-                total_pages=0
-            )
 
         query_data = await QueriesDataDAO.get_paginated_query_data(
             query_id=request_data.query_id,
@@ -675,14 +578,58 @@ async def get_query_data(
                 )
 
             results.append(query_data)
+        return results
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Произошла ошибка при получении данных запроса",
+        )
+
+
+@router.post("/category_query_data", response_model=Union[NameQueryDataResponse, QueryDataResponse])
+async def get_category_query_data(
+    request_data: CategoryQueryDataRequest = Body(...),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает данные о выполненном запросе с фильтрацией по категориям."""
+    try:
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+
+        query = await UserQueriesDAO.get_query_by_id(
+            user_id,
+            request_data.query_id,
+            db,
+        )
+        if not query:
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        total = await QueriesDataDAO.get_query_data_count(
+            query_id=request_data.query_id,
+            keyword_type_category=request_data.keyword_type_category,
+            db=db
+        )
+
+        if total == 0:
+            return QueryDataResponse(
+                total=0,
+                size=request_data.size,
+                total_pages=0
+            )
 
         total_pages = (total + request_data.size - 1) // request_data.size
 
         if query.query_category != 'name':
             result = QueryDataResponse(
-                data=results,
                 total=total,
-                page=request_data.page,
                 size=request_data.size,
                 total_pages=total_pages
             )
@@ -693,17 +640,20 @@ async def get_query_data(
                 db,
             )
             result = NameQueryDataResponse(
-                data=results,
                 total=total,
                 fullname_count=fullname_count,
-                page=request_data.page,
                 size=request_data.size,
                 total_pages=total_pages
             )
         return result
-
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -745,8 +695,14 @@ async def get_general_query_data(
             keyword_stats=keyword_stats,
             free_words=free_words,
         )
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logging.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
+        logger.error(f"Ошибка при получении данных запроса {query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",

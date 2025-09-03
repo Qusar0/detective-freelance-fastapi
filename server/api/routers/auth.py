@@ -1,4 +1,4 @@
-import logging
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -28,7 +28,7 @@ from server.api.templates.email_message import (
 from server.api.conf.config import settings
 
 
-router = APIRouter(prefix="/v1/auth", tags=['auth'])
+router = APIRouter(prefix="/v1/auth", tags=['Auth'])
 
 
 @router.get("/confirm/{token}", response_model=StatusMessage)
@@ -59,7 +59,7 @@ async def confirm_email(token: str, db: AsyncSession = Depends(get_db)):
         return {"status": "success", "message": "Email confirmed successfully"}
 
     except Exception as e:
-        logging.error(f"Error confirming email: {str(e)}")
+        logger.error(f"Error confirming email: {str(e)}")
         raise HTTPException(status_code=422, detail="Invalid input")
 
 
@@ -190,5 +190,5 @@ async def reset_password(
         return {"status": "success", "message": "Пароль успешно изменён"}
 
     except Exception as e:
-        logging.error(f"Ошибка при сбросе пароля: {str(e)}")
+        logger.error(f"Ошибка при сбросе пароля: {str(e)}")
         raise HTTPException(status_code=422, detail="Неверный ввод")

@@ -1,19 +1,13 @@
-import asyncio
 import datetime
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from threading import Lock
-from celery import shared_task
-from sqlalchemy import select
 
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.telegram_notifications import TelegramNorificationsDAO
 from server.api.dao.balance_history import BalanceHistoryDAO
-from server.api.models.models import TextData
 from server.api.scripts.sse_manager import generate_sse_message_type, send_sse_notification
-from server.api.services.file_storage import FileStorageService
 from server.bots.notification_bot import send_notification
-from server.api.conf.config import settings
 from server.api.database.database import async_session
 
 
@@ -46,10 +40,6 @@ class BaseSearchTask(ABC):
                 print(e)
                 await self._handle_error(user_query, db)
             finally:
-                delete_query_task.apply_async(
-                    args=[user_query.query_id],
-                    countdown=settings.query_delete_delay_seconds
-                )
                 await self._update_balances(db)
 
     @abstractmethod
@@ -113,33 +103,3 @@ class BaseSearchTask(ABC):
 
             with open(filename, "a", encoding="utf-8") as f:
                 f.write("\n".join(stats_text) + "\n\n")
-
-
-@shared_task
-def delete_query_task(query_id):
-    import logging
-    logging.info(f"Celery: Попытка удалить query {query_id}")
-
-    async def _delete():
-        try:
-            async with async_session() as db:
-                file_storage = FileStorageService()
-                result = await db.execute(select(TextData).where(TextData.query_id == query_id))
-                text_data = result.scalars().first()
-                if text_data and text_data.file_path:
-                    try:
-                        await file_storage.delete_query_data(text_data.file_path)
-                        logging.info(f"Файл {text_data.file_path} успешно удалён.")
-                    except Exception as e:
-                        logging.error(f"Ошибка при удалении файла {text_data.file_path}: {e}")
-                await UserQueriesDAO.delete_query_by_id(query_id, db)
-        except Exception as e:
-            logging.error(f"Celery: Ошибка при удалении query {query_id}: {e}")
-
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop = asyncio.get_event_loop()
-    loop.run_until_complete(_delete())
