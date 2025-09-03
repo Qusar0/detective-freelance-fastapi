@@ -1,3 +1,4 @@
+from loguru import logger
 import re
 
 from server.tasks.celery_config import SEARCH_ENGINES
@@ -72,4 +73,4 @@ def form_input_pack(
 
         input_pack.append((url, keyword, original_keyword, keyword_type, name_case))
     except Exception as e:
-        print("form_input_pack function Exception {0}".format(e))
+        logger.warning(f"Ошибка в функции form_input_pack: {str(e)}")
