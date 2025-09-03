@@ -102,7 +102,7 @@ class EmailSearchTask(BaseSearchTask):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            logger.error(f"Failed to save raw results: {e}")
+            logger.error(f"Не удалось сохранить необработанный результат: {e}")
             self.logger.log_error(f"Failed to save raw results: {e}")
             raise
 
@@ -142,7 +142,7 @@ class EmailSearchTask(BaseSearchTask):
                 if attempt < max_attempts:
                     await asyncio.sleep(retry_delay)
         else:
-            logger.error(f"Google request fail: {url}")
+            logger.error(f"Google запрос полностью провален: {url}")
             self.logger.log_error(f"Google запрос полностью провален: {url}")
             update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 
@@ -181,7 +181,7 @@ class EmailSearchTask(BaseSearchTask):
                     if attempt < max_attempts:
                         await asyncio.sleep(retry_delay)
             else:
-                logger.error(f"Yandex request fail: {url}")
+                logger.error(f"Yandex запрос полностью провален: {url}")
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 

@@ -38,7 +38,7 @@ class BaseSearchTask(ABC):
                 await self._process_search(db)
                 await self._handle_success(user_query, db)
             except Exception as e:
-                logger.error(f"Error has occurred in task: {str(e)}")
+                logger.error(f"В задаче celery возникла ошибка: {str(e)}")
                 await self._handle_error(user_query, db)
             finally:
                 await self._update_balances(db)

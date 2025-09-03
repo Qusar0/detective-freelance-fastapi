@@ -1,4 +1,5 @@
 from email.message import EmailMessage
+from loguru import logger
 
 from aiosmtplib import send
 from itsdangerous import URLSafeTimedSerializer
@@ -47,6 +48,7 @@ def confirm_token(token, expiration=3600):
             max_age=expiration
         )
     except Exception:
+        logger.warning("Ошибка в подтверждении токена")
         return False
     return email
 

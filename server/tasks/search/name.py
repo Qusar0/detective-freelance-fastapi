@@ -98,7 +98,7 @@ class NameSearchTask(BaseSearchTask):
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
-            logger.error(f"Error has occured in search by name: {str(e)}")
+            logger.error(f"Возникла ошибка в поиске по имени: {str(e)}")
             self.money_to_return = self.price
             raise e
 
@@ -298,10 +298,10 @@ class NameSearchTask(BaseSearchTask):
                     )
                     db.add(query_data_keyword)
             await db.commit()
-            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+            logger.info(f"Сохраненные необработанные данные для запроса {self.query_id} - {len(raw_data)} записей")
 
         except Exception as e:
-            logger.error(f"Failed to save raw results: {e}")
+            logger.error(f"Не удалось сохранить необработанные данные: {e}")
             await db.rollback()
             raise
 

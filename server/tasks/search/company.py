@@ -142,7 +142,7 @@ class CompanySearchTask(BaseSearchTask):
             await write_urls(urls, "company")
 
         except Exception as e:
-            logger.error(f"Error has occured in search by company: {str(e)}")
+            logger.error(f"Возникла ошибка в поиске по компании: {str(e)}")
             self.money_to_return = self.price
             raise e
 
@@ -240,10 +240,10 @@ class CompanySearchTask(BaseSearchTask):
                     )
                     db.add(query_data_keyword)
             await db.commit()
-            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
+            logger.info(f"Сохраненные необработанные данные для запроса {self.query_id} - {len(raw_data)} записей")
 
         except Exception as e:
-            logger.error(f"Failed to save raw results: {e}")
+            logger.error(f"Не удалось сохранить необработанные данные: {e}")
             await db.rollback()
             raise
 
