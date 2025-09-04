@@ -5,7 +5,7 @@ from server.api.IRBIS_parser.bankruptcy import Bankruptcy
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 from server.api.IRBIS_parser.corruption import Corruption
 from server.api.IRBIS_parser.court_of_general_jurisdiction import CourtGeneralJurisdiction
-from server.api.IRBIS_parser.deposits import Deposits
+from server.api.IRBIS_parser.pledgess import Pledges
 from server.api.IRBIS_parser.disqualified_persons import DisqualifiedPersons
 from server.api.IRBIS_parser.fssp import FSSP
 from server.api.IRBIS_parser.ml_index import MLIndex
@@ -84,7 +84,7 @@ class IrbisSearchTask(BaseSearchTask):
                 await self._bankruptcy_data(irbis_person_id, db),
                 await self._corruption_data(irbis_person_id, db),
                 await self._court_of_gen_jur_data(irbis_person_id, db),
-                await self._deposits_data(irbis_person_id, db),
+                await self._pledges_data(irbis_person_id, db),
                 await self._disqualified_pers_data(irbis_person_id, db),
                 await self._fssp_data(irbis_person_id, db),
                 await self._ml_index_data(irbis_person_id, db),
@@ -389,11 +389,11 @@ class IrbisSearchTask(BaseSearchTask):
             court_gen_full.extend(found_data)
         db.add_all(court_gen_full)
 
-    async def _deposits_data(self, irbis_person_id: int, db: AsyncSession):
-        data_preview = await Deposits.get_data_preview(self.person_uuid)
-        full_data = await Deposits.get_full_data(self.person_uuid, 1, 100)
+    async def _pledges_data(self, irbis_person_id: int, db: AsyncSession):
+        data_preview = await Pledges.get_data_preview(self.person_uuid)
+        full_data = await Pledges.get_full_data(self.person_uuid, 1, 100)
 
-        deposits_preview = [
+        pledges_preview = [
             PledgesPreviewTable(
                 irbis_person_id=irbis_person_id,
                 pledge_count=item.get("pledge_count"),
@@ -402,7 +402,7 @@ class IrbisSearchTask(BaseSearchTask):
             )
             for item in data_preview
         ]
-        db.add_all(deposits_preview)
+        db.add_all(pledges_preview)
 
         # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
         temp_result = [
@@ -568,11 +568,11 @@ class IrbisSearchTask(BaseSearchTask):
             }
         ]
 
-        deposits_full = []
-        for deposit_info in temp_result:  # TODO: Вернуть full_data:
+        pledges_full = []
+        for pledge_info in temp_result:  # TODO: Вернуть full_data:
             all_pledge_parties = []
             for pledge_type in {'pledgers', 'pledgees'}:
-                info = deposit_info.get(pledge_type)
+                info = pledge_info.get(pledge_type)
                 if info:
                     for role_type in {'orgs', 'peoples'}:
                         parties = [
@@ -594,19 +594,19 @@ class IrbisSearchTask(BaseSearchTask):
                     pledge_num=pledge.get("pledge_id", ""),
                     pledge_type=pledge.get("pledge_type", ""),
                 )
-                for pledge in deposit_info.get("pledges", [])
+                for pledge in pledge_info.get("pledges", [])
             ]
 
             obj = PledgeFullTable(
                 irbis_person_id=irbis_person_id,
-                reg_date=deposit_info.get('reg_date'),
-                pledge_reestr_number=deposit_info.get('pledge_number'),
-                pledge_type=deposit_info.get("pledge_type"),
+                reg_date=pledge_info.get('reg_date'),
+                pledge_reestr_number=pledge_info.get('pledge_number'),
+                pledge_type=pledge_info.get("pledge_type"),
                 parties=all_pledge_parties,
                 pledges=pledges,
             )
-            deposits_full.append(obj)
-        db.add_all(deposits_full)
+            pledges_full.append(obj)
+        db.add_all(pledges_full)
 
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):
         full_data = await DisqualifiedPersons.get_full_data(self.person_uuid, 1, 50)

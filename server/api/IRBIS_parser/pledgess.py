@@ -3,7 +3,7 @@ from typing import Optional
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 
 
-class Deposits:
+class Pledges:
     @staticmethod
     async def get_data_preview(person_uuid: str):
         """
