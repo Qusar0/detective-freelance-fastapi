@@ -134,8 +134,24 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _bankruptcy_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_name, data_preview_inn = await Bankruptcy.get_data_preview(self.person_uuid)
-        full_data_fio = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'name')
-        full_data_inn = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'inn')
+
+        full_data_fio = []
+        page = 1
+        while True:
+            data = await Bankruptcy.get_full_data(self.person_uuid, page, 50, 'name')
+            if not data:
+                break
+            full_data_fio.extend(data)
+            page += 1
+
+        full_data_inn = []
+        page = 1
+        while True:
+            data = await Bankruptcy.get_full_data(self.person_uuid, page, 50, 'inn')
+            if not data:
+                break
+            full_data_inn.extend(data)
+            page += 1
 
         bankruptcy_preview = BankruptcyPreviewTable(
             irbis_person_id=irbis_person_id,
@@ -254,6 +270,7 @@ class IrbisSearchTask(BaseSearchTask):
             for item in temp_result  # TODO: Вернуть full_data_fio + full_data_inn
         ]
         db.add_all(bankruptcy_full)
+
 
     async def _corruption_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Corruption.get_data_preview(self.person_uuid)
