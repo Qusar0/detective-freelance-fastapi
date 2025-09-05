@@ -30,24 +30,11 @@ class BankruptcyDAO(BaseDAO):
                 BankruptcyFullTable.irbis_person_id == irbis_person_id
             )
 
-            if search_type == "name":
+            if search_type:
                 query = query.where(
-                    (BankruptcyFullTable.first_name != None) &
-                    (BankruptcyFullTable.first_name != '') |
-                    (BankruptcyFullTable.second_name != None) &
-                    (BankruptcyFullTable.second_name != '') |
-                    (BankruptcyFullTable.last_name != None) &
-                    (BankruptcyFullTable.last_name != '')
-                )
-            elif search_type == "inn":
-                query = query.where(
-                    (BankruptcyFullTable.inn != None) &
-                    (BankruptcyFullTable.inn != '')
-                )
-            elif search_type == "all":
-                pass  # Без фильтра - все записи
+                    (BankruptcyFullTable.search_type == search_type))
             else:
-                logger.warning(f"Неизвестный search_type: {search_type}")
+                logger.warning("Нет поля search_type")
                 return []
 
             # Пагинация

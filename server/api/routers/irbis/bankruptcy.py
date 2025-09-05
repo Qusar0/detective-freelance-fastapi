@@ -18,16 +18,16 @@ from loguru import logger
 router = APIRouter(prefix="/bankruptcy", tags=["Irbis/Банкротства"])
 
 
-@router.post("/data", response_model=Optional[List[BankruptcyDataCase]])
+@router.post("/data", response_model=List[BankruptcyDataCase])
 async def get_query_data(
     request_data: BankruptcyDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о делах общий юрисдикции по выполненному запросу."""
+    """Получает данные о ,банкротствах по выполненному запросу."""
     try:
         logger.info(
-            f"Запрос court_general_data для query_id: {request_data.query_id}, "
+            f"Запрос bankruptcy_data для query_id: {request_data.query_id}, "
             f"page: {request_data.page}, size: {request_data.size}, "
             f"search_type: {request_data.search_type}, "
         )
@@ -74,14 +74,15 @@ async def get_query_data(
     except Exception as e:
         logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
-    
+
+
 @router.get("/case_full/{case_id}", response_model=BankruptcyCaseFull)
 async def get_full_case_info(
     case_id: int,
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает полную информацию о судебном деле по ID дела."""
+    """Получает полную информацию о банкротсвах по ID."""
     try:
         logger.info(f"Запрос полной информации по делу ID: {case_id}")
 
