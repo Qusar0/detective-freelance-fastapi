@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload, defer
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.models.irbis_models import (
@@ -19,7 +19,7 @@ class BankruptcyDAO(BaseDAO):
         irbis_person_id: int,
         page: int,
         size: int,
-        search_type: str, 
+        search_type: str,
         db: AsyncSession
     ):
         """Фильтрация и пагинация судебных дел по полю search_type."""
@@ -31,8 +31,7 @@ class BankruptcyDAO(BaseDAO):
             )
 
             if search_type:
-                query = query.where(
-                    (BankruptcyFullTable.search_type == search_type))
+                query = query.where((BankruptcyFullTable.search_type == search_type))
             else:
                 logger.warning("Нет поля search_type")
                 return []

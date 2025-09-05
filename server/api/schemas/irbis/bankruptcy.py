@@ -1,13 +1,12 @@
-from typing import List, Optional, Dict
+from typing import Optional
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
-
 
 
 class BankruptcyDataCase(BaseModel):
     id: int = Field(..., description="ID дела в базе данных")
     first_name: str = Field(..., description="Имя")
-    second_name: str = Field(..., description="Фамилия") 
+    second_name: str = Field(..., description="Фамилия")
     last_name: str = Field(..., description="Отчество")
     category_name: str = Field(..., description="Категория дела")
     birth_date: str = Field(..., description="Дата рождения")

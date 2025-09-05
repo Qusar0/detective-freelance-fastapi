@@ -14,7 +14,7 @@ from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
-    BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
+    CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     PledgesPreviewTable, PledgeFullTable, PledgePartiesTable, PledgeObjectTable,
     DisqualifiedPersonFullTable,
