@@ -14,7 +14,7 @@ from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
-    BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
+    CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     PledgesPreviewTable, PledgeFullTable, PledgePartiesTable, PledgeObjectTable,
     DisqualifiedPersonFullTable,
@@ -134,8 +134,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _bankruptcy_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_name, data_preview_inn = await Bankruptcy.get_data_preview(self.person_uuid)
-        full_data_fio = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'name')
-        full_data_inn = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'inn')
 
         bankruptcy_preview = BankruptcyPreviewTable(
             irbis_person_id=irbis_person_id,
@@ -144,115 +142,14 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(bankruptcy_preview)
 
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "category_name": "Физическое лицо",
-                "birth_date": "1962-08-30T00:00:00+0100",
-                "born_place": "с. Алтуд Прохладненского р-на Кабардино-Балкарской АССР",
-                "inn": "071606963648",
-                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=560990BDF93BDF4B9B34996BE1FDBC43&attempt=1",
-                "last_name": "Абазехов",
-                "uuid": "556fb6ca-5acc-4427-89f1-eec8c84d0f84",
-                "second_name": "Часамбиевич",
-                "location": "121352, г. Москва, ул. Давыдковская, д. 3, кв. 180",
-                "region_name": "г. Москва",
-                "id": 395728,
-                "first_name": "Хадис",
-                "snils": "061-104-972 19",
-                "ogrn": 'test',
-                "information": 'test',
-            },
-            {
-                "category_name": "Физическое лицо",
-                "birth_date": "1978-03-15T00:00:00+0100",
-                "born_place": "г. Санкт-Петербург",
-                "inn": "781234567890",
-                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=1234567890ABCDEF&attempt=1",
-                "last_name": "Иванов",
-                "uuid": "123e4567-e89b-12d3-a456-426614174000",
-                "second_name": "Петрович",
-                "location": "197022, г. Санкт-Петербург, ул. Профессора Попова, д. 5, кв. 12",
-                "region_name": "г. Санкт-Петербург",
-                "id": 395729,
-                "first_name": "Алексей",
-                "snils": "123-456-789 01",
-                "ogrn": 'test',
-                "information": 'test',
-            },
-            {
-                "category_name": "Физическое лицо",
-                "birth_date": "1985-11-22T00:00:00+0100",
-                "born_place": "г. Екатеринбург",
-                "inn": "661122334455",
-                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=ABCDEF1234567890&attempt=1",
-                "last_name": "Смирнова",
-                "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                "second_name": "Олеговна",
-                "location": "620014, г. Екатеринбург, ул. Ленина, д. 24, кв. 45",
-                "region_name": "Свердловская область",
-                "id": 395730,
-                "first_name": "Ольга",
-                "snils": "234-567-890 12",
-                "ogrn": 'test',
-                "information": 'test',
-            },
-            {
-                "category_name": "Физическое лицо",
-                "birth_date": "1990-07-08T00:00:00+0100",
-                "born_place": "г. Новосибирск",
-                "inn": "540987654321",
-                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=0987654321ABCDEF&attempt=1",
-                "last_name": "Кузнецов",
-                "uuid": "09876543-21ab-cdef-1234-567890abcdef",
-                "second_name": "Сергеевич",
-                "location": "630099, г. Новосибирск, ул. Советская, д. 15, кв. 7",
-                "region_name": "Новосибирская область",
-                "id": 395731,
-                "first_name": "Дмитрий",
-                "snils": "345-678-901 23",
-                "ogrn": 'test',
-                "information": 'test',
-            },
-            {
-                "category_name": "Физическое лицо",
-                "birth_date": "1973-12-01T00:00:00+0100",
-                "born_place": "г. Казань",
-                "inn": "160123456789",
-                "link": "http://old.bankrot.fedresurs.ru/PrivatePersonCard.aspx?ID=1122334455667788&attempt=1",
-                "last_name": "Петрова",
-                "uuid": "11223344-5566-7788-99aa-bbccddeeff00",
-                "second_name": "Ивановна",
-                "location": "420111, г. Казань, ул. Баумана, д. 8, кв. 33",
-                "region_name": "Республика Татарстан",
-                "id": 395732,
-                "first_name": "Мария",
-                "snils": "456-789-012 34",
-                "ogrn": 'test',
-                "information": 'test',
-            },
-        ]
-        bankruptcy_full = [
-            BankruptcyFullTable(
-                irbis_person_id=irbis_person_id,
-                first_name=item.get("first_name"),
-                second_name=item.get("second_name"),
-                last_name=item.get("last_name"),
-                birth_date=item.get("birth_date"),
-                born_place=item.get("born_place"),
-                inn=item.get("inn"),
-                ogrn=item.get("ogrn"),
-                snils=item.get("snils"),
-                old_name=item.get("old_name"),
-                category_name=item.get("category_name"),
-                location=item.get("location"),
-                region_name=item.get("region_name"),
-                information=item.get("information"),
-                link=item.get("link"),
-                search_type='name',
+        bankruptcy_full = []
+        for search_type in {'name', 'inn'}:
+            found_data = await Bankruptcy._process_bankruptcy_data(
+                irbis_person_id,
+                self.person_uuid,
+                search_type,
             )
-            for item in temp_result  # TODO: Вернуть full_data_fio + full_data_inn
-        ]
+            bankruptcy_full.extend(found_data)
         db.add_all(bankruptcy_full)
 
     async def _corruption_data(self, irbis_person_id: int, db: AsyncSession):
