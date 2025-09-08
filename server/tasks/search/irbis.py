@@ -257,10 +257,20 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _corruption_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Corruption.get_data_preview(self.person_uuid)
-        full_data = await Corruption.get_full_data(self.person_uuid, 1, 50)
+#       full_data = await Corruption.get_full_data(self.person_uuid, 1, 50)
 
-        corruption_preview = CorruptionPreviewTable(irbis_person_id=irbis_person_id, count=data_preview)
+        corruption_preview = CorruptionPreviewTable(
+            irbis_person_id=irbis_person_id, 
+            count=data_preview,
+            )
         db.add(corruption_preview)
+
+        corruption_full = []
+        corruption_full = await Corruption._process_corruption_data(
+            irbis_person_id, 
+            self.person_uuid,
+            )
+        db.add_all(corruption_full)
 
         # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
         temp_result = [
