@@ -90,14 +90,12 @@ class DownloadQueryRequest(BaseModel):
 class FindByIRBISModel(BaseModel):
     first_name: str = Field(..., description="Имя человека, которого необходимо найти")
     last_name: str = Field(..., description="Фамилия человека, которого необходимо найти")
-    regions: list[int] = Field(..., description="Список регионов, по которым необходимо искать человека. "
-                                                        "Максимум значений - 2")
+    regions: list[int] = Field(..., description="Список регионов, по которым необходимо искать человека. Максимум "
+                                                "значений - 2")
     second_name: Optional[str] = Field(description="Отчество человека, которого необходимо найти")
     birth_date: Optional[str] = Field(description="Дата рождения человека, которого необходимо найти")
-    passport_series: Optional[str] = Field(description="Серия паспорта человека,"
-                                                                     " которго необходимо найти")
-    passport_number: Optional[str] = Field(description="Номер паспорта человека,"
-                                                                     " которго необходимо найти")
+    passport_series: Optional[str] = Field(description="Серия паспорта человека, которго необходимо найти")
+    passport_number: Optional[str] = Field(description="Номер паспорта человека, которго необходимо найти")
     inn: Optional[str] = Field(description="ИНН человека, которого необходимо найти")
 
 
