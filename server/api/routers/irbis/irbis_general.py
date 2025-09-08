@@ -24,6 +24,7 @@ router.include_router(court_general_router)
 router.include_router(arbitration_court_router)
 router.include_router(corruption_router)
 
+
 @router.get("/person_info/{query_id}", response_model=IrbisPersonInfo, tags=['Irbis/Общее'])
 async def get_person_info(
     query_id: int,

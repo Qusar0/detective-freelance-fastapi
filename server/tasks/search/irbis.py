@@ -260,16 +260,16 @@ class IrbisSearchTask(BaseSearchTask):
 #       full_data = await Corruption.get_full_data(self.person_uuid, 1, 50)
 
         corruption_preview = CorruptionPreviewTable(
-            irbis_person_id=irbis_person_id, 
+            irbis_person_id=irbis_person_id,
             count=data_preview,
-            )
+        )
         db.add(corruption_preview)
 
         corruption_full = []
         corruption_full = await Corruption._process_corruption_data(
-            irbis_person_id, 
+            irbis_person_id,
             self.person_uuid,
-            )
+        )
         db.add_all(corruption_full)
 
         # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
