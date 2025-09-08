@@ -18,10 +18,31 @@ from server.api.schemas.irbis.court_general import (
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.court_general_jur import CourtGeneralJurDAO
+from server.api.dao.irbis.process_type import ProcessTypeDAO
 from loguru import logger
 
 
 router = APIRouter(prefix="/court_general", tags=["Irbis/Суды общей юрисдикции"])
+
+
+@router.get('/process_types', response_model=List[ProcessTypeInfo])
+async def get_process_types(db: AsyncSession = Depends(get_db)):
+    """Получает данные о типах судебных процессов."""
+    try:
+        process_types = await ProcessTypeDAO.find_all(db)
+        return [
+            ProcessTypeInfo(
+                code=process_type.code,
+                name=process_type.name,
+            )
+            for process_type in process_types
+        ]
+    except HTTPException as e:
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.post("/data", response_model=Optional[List[CourtGeneralCase]])
@@ -72,7 +93,7 @@ async def get_query_data(
                     name=case.region.name,
                 ),
                 process_type=ProcessTypeInfo(
-                    id=case.process_type.id,
+                    code=case.process_type.code,
                     name=case.process_type.name,
                 ),
                 judge=case.judge,
@@ -84,7 +105,7 @@ async def get_query_data(
         return cases
 
     except HTTPException as e:
-        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
@@ -137,7 +158,7 @@ async def get_full_case_info(
                 name=case.region.name,
             ),
             process_type=ProcessTypeInfo(
-                id=case.process_type.id,
+                code=case.process_type.code,
                 name=case.process_type.name,
             ),
             match_type=MatchTypeInfo(
@@ -166,11 +187,11 @@ async def get_full_case_info(
         return case_full
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
