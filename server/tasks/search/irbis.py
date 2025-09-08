@@ -28,6 +28,7 @@ from server.tasks.celery_config import get_event_loop
 from server.logger import SearchLogger
 from server.api.dao.irbis.match_type import MatchTypeDAO
 from server.api.dao.irbis.person_regions import PersonRegionsDAO
+from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -684,7 +685,8 @@ class IrbisSearchTask(BaseSearchTask):
                 full_address = None
 
                 if address:
-                    region_id = int(address.get('region_code'))
+                    region_code = int(address.get('region_code'))
+                    region_id = await RegionSubjectDAO.get_region_by_code(region_code, db)
                     full_address = address.get('full_address')
 
                 okved = org_data.get('okved')

@@ -13,7 +13,7 @@ class RegionInfo(BaseModel):
 
 
 class ProcessTypeInfo(BaseModel):
-    id: int = Field(..., description="ID типа процесса")
+    code: str = Field(..., description="Код типа процесса")
     name: str = Field(..., description="Название типа процесса")
 
 
