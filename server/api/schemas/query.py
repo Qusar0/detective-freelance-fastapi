@@ -136,16 +136,16 @@ class NameQueryDataResult(BaseModel):
 
 
 class QueryDataResponse(BaseModel):
-    total: int
-    size: int
-    total_pages: int
+    total: int = Field(..., description="Количество информации по категории")
+    size: int = Field(..., description="Количество запрашиваемой информации")
+    total_pages: int = Field(..., description="Количество страниц")
 
 
 class NameQueryDataResponse(BaseModel):
-    total: int
-    fullname_count: int
-    size: int
-    total_pages: int
+    total: int = Field(..., description="Количество информации по категории")
+    fullname_count: int = Field(..., description="Количество записей с полным именем")
+    size: int = Field(..., description="Количество запрашиваемой информации")
+    total_pages: int = Field(..., description="Количество страниц")
 
 
 class FoundInfo(BaseModel):
@@ -175,8 +175,8 @@ class NumberInfo(BaseModel):
 
 
 class LanguageResponse(BaseModel):
-    code: str
-    name: str
+    code: str = Field(..., description="Код языка")
+    name: str = Field(..., description="Название языка")
 
 
 class CategoryResponse(BaseModel):
@@ -185,10 +185,10 @@ class CategoryResponse(BaseModel):
 
 
 class GenerarQueryDataResponse(BaseModel):
-    query_id: int
-    query_title: str
-    languages: List[LanguageResponse]
-    categories: List[CategoryResponse]
+    query_id: int = Field(..., description="Id запроса")
+    query_title: str = Field(..., description="Название запроса")
+    languages: List[LanguageResponse] = Field(..., description="Список языков перевода")
+    categories: List[CategoryResponse] = Field(..., description="Список категорий поиска")
     plus_words: List[str]
     minus_words: List[str]
     keyword_stats: Dict[str, int]
