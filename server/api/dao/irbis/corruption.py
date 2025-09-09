@@ -20,8 +20,9 @@ class CorruptionDAO(BaseDAO):
     ) -> List[CorruptionFullTable]:
         """Возвращает список ORM-объектов CorruptionFullTable (без преобразования)."""
         try:
-            logger.debug(f"""DAO: Получение corruption list для 
-                         irbis_person_id={irbis_person_id} page={page} size={size}""")
+            logger.debug(
+                f"DAO: Получение corruption list для irbis_person_id={irbis_person_id} page={page} size={size}",
+            )
             offset = (page - 1) * size
 
             query = (

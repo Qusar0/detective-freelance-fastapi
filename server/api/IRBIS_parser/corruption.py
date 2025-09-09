@@ -1,7 +1,6 @@
 from typing import Optional
 
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
-
 from server.api.models.irbis_models import CorruptionFullTable
 
 
