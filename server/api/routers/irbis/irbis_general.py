@@ -13,6 +13,7 @@ from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from server.api.routers.irbis.court_general import router as court_general_router
 from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
 from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
+from server.api.routers.irbis.pledgess import router as pledgess_router
 from loguru import logger
 
 
@@ -24,6 +25,7 @@ router = APIRouter(
 router.include_router(court_general_router)
 router.include_router(arbitration_court_router)
 router.include_router(bankruptcy_router)
+router.include_router(pledgess_router)
 
 
 @router.get("/regions", response_model=List[RegionInfo], tags=['Irbis/Общее'])
