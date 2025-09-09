@@ -25,162 +25,162 @@ services:
     depends_on:
       - redis
 
-  # celery_num:
+  celery_num:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q num_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/num.log
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - TASK=number
+    depends_on:
+      - redis
+      - web
+
+  celery_telegram:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q telegram_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/telegram.log
+      - TASK=telegram
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  celery_irbis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q irbis_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/irbis.log
+      - TASK=irbis
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  celery_name:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q name_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/name.log
+      - TASK=name
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  celery_email:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q email_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/email.log
+      - TASK=email
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  celery_company:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A server.tasks.celery_app worker --pool solo -Q company_tasks --loglevel=INFO
+    working_dir: /app/server
+    volumes:
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    environment:
+      - LOG_FILE=logs/company.log
+      - TASK=company
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+
+  query_cleanup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python cleanup_old_queries.py
+    volumes:
+      - .:/app
+      - ./server:/app/server
+      - tdlib_data:/app/server/api/scripts/tdlib_sources
+      - db_data:/app/server/api/scripts/BotDB
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - web
+
+  # telegram_bot:
   #   build:
   #     context: .
   #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q num_tasks --loglevel=INFO
+  #   command: python3 bots/notification_bot.py
   #   working_dir: /app/server
   #   volumes:
   #     - ./server:/app/server
   #     - tdlib_data:/app/server/api/scripts/tdlib_sources
   #     - db_data:/app/server/api/scripts/BotDB
   #   environment:
-  #     - LOG_FILE=logs/num.log
   #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #     - TASK=number
   #   depends_on:
   #     - redis
   #     - web
 
-  # celery_telegram:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q telegram_tasks --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - LOG_FILE=logs/telegram.log
-  #     - TASK=telegram
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # celery_irbis:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q irbis_tasks --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - LOG_FILE=logs/irbis.log
-  #     - TASK=irbis
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # celery_name:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q name_tasks --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - LOG_FILE=logs/name.log
-  #     - TASK=name
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # celery_email:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q email_tasks --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - LOG_FILE=logs/email.log
-  #     - TASK=email
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # celery_company:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: celery -A server.tasks.celery_app worker --pool solo -Q company_tasks --loglevel=INFO
-  #   working_dir: /app/server
-  #   volumes:
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   environment:
-  #     - LOG_FILE=logs/company.log
-  #     - TASK=company
-  #     - CELERY_BROKER_URL=redis://redis:6379/0
-  #     - CELERY_RESULT_BACKEND=redis://redis:6379/0
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # query_cleanup:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   command: python cleanup_old_queries.py
-  #   volumes:
-  #     - .:/app
-  #     - ./server:/app/server
-  #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  #     - db_data:/app/server/api/scripts/BotDB
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - redis
-  #     - web
-
-  # # telegram_bot:
-  # #   build:
-  # #     context: .
-  # #     dockerfile: Dockerfile
-  # #   command: python3 bots/notification_bot.py
-  # #   working_dir: /app/server
-  # #   volumes:
-  # #     - ./server:/app/server
-  # #     - tdlib_data:/app/server/api/scripts/tdlib_sources
-  # #     - db_data:/app/server/api/scripts/BotDB
-  # #   environment:
-  # #     - CELERY_BROKER_URL=redis://redis:6379/0
-  # #   depends_on:
-  # #     - redis
-  # #     - web
-
-  # db_backup:
-  #   image: postgres:14-alpine
-  #   env_file: ./server/.env
-  #   volumes:
-  #     - ./backups:/backups
-  #     - ./backup_script.sh:/backup_script.sh
-  #   command: >
-  #     sh -c 'ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime &&
-  #           echo "0 3 * * * /backup_script.sh" > /etc/crontabs/root &&
-  #           crond -f'
-  #   restart: unless-stopped
+  db_backup:
+    image: postgres:14-alpine
+    env_file: ./server/.env
+    volumes:
+      - ./backups:/backups
+      - ./backup_script.sh:/backup_script.sh
+    command: >
+      sh -c 'ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime &&
+            echo "0 3 * * * /backup_script.sh" > /etc/crontabs/root &&
+            crond -f'
+    restart: unless-stopped
 
 volumes:
   redis_data:
