@@ -134,3 +134,32 @@ backups/
 query_data/
 url_logs/
 logs/
+
+# Sphinx документация
+docs/build/
+docs/source/modules/generated/
+
+# Кэш и временные файлы Sphinx
+docs/.doctrees/
+.doctrees/
+*.doctree
+*.pickle
+
+# Кэш Python
+docs/__pycache__/
+docs/source/__pycache__/
+docs/source/modules/__pycache__/
+
+# Файлы редакторов
+docs/.vscode/
+docs/.idea/
+docs/*.swp
+docs/*.swo
+docs/.DS_Store
+
+# Резервные копии
+docs/*.bak
+docs/*.backup
+
+# Environment specific
+docs/conf.pyc

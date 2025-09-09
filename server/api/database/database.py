@@ -14,5 +14,13 @@ async_session = async_sessionmaker(
 
 
 async def get_db():
+    """Асинхронный генератор для получения сессии базы данных.
+    
+    Используется как dependency в FastAPI для внедрения сессии БД
+    в обработчики запросов.
+    
+    Yields:
+        AsyncSession: Асинхронная сессия SQLAlchemy для работы с БД
+    """
     async with async_session() as session:
         yield session

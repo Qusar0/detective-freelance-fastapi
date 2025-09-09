@@ -2,7 +2,7 @@ import datetime
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from threading import Lock
-
+from loguru import logger
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.telegram_notifications import TelegramNorificationsDAO
 from server.api.dao.balance_history import BalanceHistoryDAO
@@ -28,16 +28,17 @@ class BaseSearchTask(ABC):
     async def execute(self):
         async with async_session() as db:
             user_query = await UserQueriesDAO.get_user_query(self.query_id, db)
-            if user_query.query_status == "done":
-                return
+            if user_query:
+                if user_query.query_status == "done":
+                    return
 
-            self.user_id = user_query.user_id
+                self.user_id = user_query.user_id
 
             try:
                 await self._process_search(db)
                 await self._handle_success(user_query, db)
             except Exception as e:
-                print(e)
+                logger.error(f"Ошибка при выполнении задачи: {e}")
                 await self._handle_error(user_query, db)
             finally:
                 await self._update_balances(db)

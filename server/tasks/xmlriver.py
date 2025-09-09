@@ -3,7 +3,7 @@ import xmltodict
 import os
 import re
 import time
-from typing import List, Union, Optional, Dict, Any, Set
+from typing import List, Union, Optional, Dict, Any, Set, Tuple
 from urllib.parse import urlparse
 import requests
 import threading
@@ -17,16 +17,29 @@ from server.api.schemas.query import FoundInfo, NumberInfo
 
 
 def do_request_to_xmlriver(
-    input_data,
-    all_found_data,
-    prohibited_sites,
-    urls,
-    request_stats,
-    stats_lock,
+    input_data: Tuple[str, str, str, str, str],
+    all_found_data: List[Union[FoundInfo, NumberInfo]],
+    prohibited_sites: List[str],
+    urls: List[str],
+    request_stats: Dict[str, Union[int, Dict[str, int]]],
+    stats_lock: threading.Lock,
     search_logger: SearchLogger,
-    existing_urls,
-    results_container,
+    existing_urls: Set[str],
+    results_container: Dict[str, Dict[str, Any]],
 ):
+    """Отправляет запросы сервису XMLRiver.
+
+    Args:
+        input_data (Tuple[str, str, str, str, str]): Входные данные (url, keyword, original_keyword, keyword_type, name_case)
+        all_found_data (List[Union[FoundInfo, NumberInfo]]): Данные для составления статичного отчета
+        prohibited_sites (List[str]): Список запрещенных сайтов
+        urls (List[str]): Список url для обработки
+        request_stats (Dict[str, Union[int, Dict[str, int]]]): Статистика выполнения запросов
+        stats_lock (threading.Lock): Локер для обеспечения целостности данных
+        search_logger (SearchLogger): Логгер для отслеживания ошибок запросов
+        existing_urls (Set[str]): Множество отработанных url
+        results_container (Dict[str, Dict[str, Any]]): Словарь хранящий данные в формате url: Информация
+    """
     url, keyword, original_keyword, keyword_type, name_case = input_data
     max_attempts = 5
     retry_delay = 2

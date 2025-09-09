@@ -1,3 +1,13 @@
+"""
+Главный модуль приложения Detective Freelance FastAPI.
+
+Содержит:
+    - Создание FastAPI приложения
+    - Настройку middleware
+    - Подключение роутеров
+    - Обработчики событий
+"""
+
 import asyncio
 from loguru import logger
 from fastapi import FastAPI
@@ -38,6 +48,7 @@ app.include_router(sse_router, prefix='/api')
 
 @app.on_event("startup")
 async def startup_event():
+    """Запускает слушатель Redis при начале работы."""
     asyncio.create_task(redis_listener())
     logger.info('Сервер запущен')
 
