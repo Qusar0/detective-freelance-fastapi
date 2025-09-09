@@ -7,10 +7,12 @@ from server.api.schemas.irbis.irbis_general import (
     RegionInfo,
     IrbisPersonInfo,
 )
+from typing import List
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from server.api.routers.irbis.court_general import router as court_general_router
 from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
+from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
 from server.api.routers.irbis.corruption import router as corruption_router
 from loguru import logger
 
@@ -22,7 +24,28 @@ router = APIRouter(
 
 router.include_router(court_general_router)
 router.include_router(arbitration_court_router)
+router.include_router(bankruptcy_router)
 router.include_router(corruption_router)
+
+
+@router.get("/regions", response_model=List[RegionInfo], tags=['Irbis/Общее'])
+async def get_regions(db: AsyncSession = Depends(get_db)):
+    """Получает информацию о всех регионах РФ."""
+    try:
+        regions = await RegionSubjectDAO.find_all(db)
+        return [
+            RegionInfo(
+                id=region.subject_number,
+                name=region.name,
+            )
+            for region in regions
+        ]
+    except HTTPException as e:
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
 @router.get("/person_info/{query_id}", response_model=IrbisPersonInfo, tags=['Irbis/Общее'])
@@ -66,11 +89,11 @@ async def get_person_info(
         return person_info
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в get_person_info: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_person_info: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

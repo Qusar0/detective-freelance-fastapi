@@ -88,7 +88,7 @@ class DownloadQueryRequest(BaseModel):
 class FindByIRBISModel(BaseModel):
     first_name: str
     last_name: str
-    regions: list[int]
+    regions: List[int]
     second_name: Optional[str]
     birth_date: Optional[str]
     passport_series: Optional[str]
