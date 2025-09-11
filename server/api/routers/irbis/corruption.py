@@ -53,22 +53,22 @@ async def get_query_data(
             CorruptionDataCase(
                 id=case.id,
                 full_name=case.full_name,
-                organization=getattr(case, "organization"),
-                position=getattr(case, "position"),
-                application_date=getattr(case, "application_date"),
+                organization=case.organization,
+                position=case.position,
+                application_date=case.application_date,
             )
             for case in results
         ]
         return cases
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в corruption_data: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в: {e}")
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -91,7 +91,6 @@ async def get_full_case_info(
             logger.warning(f"corruption case id={case_id} не найден")
             raise HTTPException(status_code=404, detail="Дело не найдено")
 
-        # Проверка владельца запроса
         owner_id = None
         try:
             owner_id = case.irbis_person.query.user_id
@@ -104,25 +103,24 @@ async def get_full_case_info(
             )
             raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        # Преобразуем ORM-объект в Pydantic модель
         case_full = CorruptionCaseFull(
             id=case.id,
             full_name=case.full_name,
-            organization=getattr(case, "organization", None),
-            position=getattr(case, "position", None),
-            normative_act=getattr(case, "normative_act", None),
-            application_date=getattr(case, "application_date", None),
-            publish_date=getattr(case, "publish_date", None),
-            excluded_reason=getattr(case, "excluded_reason", None),
+            organization=case.organization,
+            position=case.position,
+            normative_act=case.normative_act,
+            application_date=case.application_date,
+            publish_date=case.publish_date,
+            excluded_reason=case.excluded_reason,
         )
         return case_full
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
