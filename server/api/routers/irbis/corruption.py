@@ -49,27 +49,26 @@ async def get_query_data(
             db=db,
         )
 
-        # Преобразуем ORM-объекты в Pydantic модели
         cases = [
             CorruptionDataCase(
                 id=case.id,
                 full_name=case.full_name,
-                organization=getattr(case, "organization", None),
-                position=getattr(case, "position", None),
-                application_date=getattr(case, "application_date", None),
+                organization=getattr(case, "organization"),
+                position=getattr(case, "position"),
+                application_date=getattr(case, "application_date"),
             )
             for case in results
         ]
         return cases
 
     except HTTPException as e:
-        logger.warning(f"HTTP ошибка в /corruption/data: {e.detail if hasattr(e, 'detail') else str(e)}")
-        raise
+        logger.warning(f"HTTPException в corruption_data: {e.detail}, статус: {e.status_code}")
+        raise e
     except MissingTokenError:
-        logger.error("Отсутствует токен авторизации при /corruption/data")
-        raise HTTPException(status_code=401, detail="Требуется авторизация")
+        logger.error("Неавторизованный пользователь")
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в /corruption/data: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка в: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -119,11 +118,11 @@ async def get_full_case_info(
         return case_full
 
     except HTTPException as e:
-        logger.warning(f"HTTP ошибка в /corruption/case_full/{case_id}: {e.detail if hasattr(e, 'detail') else str(e)}")
-        raise
+        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        raise e
     except MissingTokenError:
-        logger.error("Отсутствует токен авторизации при /corruption/case_full")
-        raise HTTPException(status_code=401, detail="Требуется авторизация")
+        logger.error("Неавторизованный пользователь")
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в /corruption/case_full/{case_id}: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
