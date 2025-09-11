@@ -62,7 +62,7 @@ services:
     depends_on:
       - redis
       - web
-  
+
   celery_irbis:
     build:
       context: .
@@ -177,7 +177,7 @@ services:
       - ./backups:/backups
       - ./backup_script.sh:/backup_script.sh
     command: >
-      sh -c 'ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime && 
+      sh -c 'ln -sf /usr/share/zoneinfo/Europe/Moscow /etc/localtime &&
             echo "0 3 * * * /backup_script.sh" > /etc/crontabs/root &&
             crond -f'
     restart: unless-stopped
