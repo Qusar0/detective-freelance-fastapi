@@ -66,7 +66,7 @@ async def get_query_data(
         return cases
 
     except HTTPException as e:
-        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
