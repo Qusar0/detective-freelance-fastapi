@@ -17,7 +17,7 @@ from server.api.models.irbis_models import (
     CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     PledgesPreviewTable,
-    DisqualifiedPersonFullTable,
+    DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
     TerrorListFullTable, IrbisPerson,
@@ -309,105 +309,19 @@ class IrbisSearchTask(BaseSearchTask):
         db.add_all(pledges_full)
 
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):
-        full_data = await DisqualifiedPersons.get_full_data(self.person_uuid, 1, 50)
+        data_preview_count = await DisqualifiedPersons.get_data_preview(self.person_uuid)
 
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "start_date_disq": "2018-09-25T00:00:00+0200",
-                "reestr_key": "194000029739",
-                "birth_date": "1984-08-02T00:00:00+0200",
-                "office": "ДИРЕКТОР",
-                "fio": "АБАКУМОВ АНДРЕЙ ВЛАДИМИРОВИЧ",
-                "article": "Ч.5 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2019-09-24T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. ТОЛЬЯТТИ САМАРСКАЯ ОБЛ.",
-                "fio_judge": "БУКОВСКИЙ Р Г",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20298,
-                "legal_name": "ООО \"ТРАНСГРУПП\"",
-                "department": "ИФНС ПО КАЛУЖСКОЙ ОБЛАСТИ",
-            },
-            {
-                "start_date_disq": "2020-01-15T00:00:00+0200",
-                "reestr_key": "195000045621",
-                "birth_date": "1979-03-12T00:00:00+0200",
-                "office": "ГЛАВНЫЙ БУХГАЛТЕР",
-                "fio": "ПЕТРОВА ЕЛЕНА ИГОРЕВНА",
-                "article": "Ч.3 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2022-01-14T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. МОСКВА",
-                "fio_judge": "ИВАНОВА М С",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20299,
-                "legal_name": "ООО \"ФИНАНСЫ И КРЕДИТ\"",
-                "department": "ИФНС ПО Г. МОСКВЕ",
-            },
-            {
-                "start_date_disq": "2019-05-10T00:00:00+0200",
-                "reestr_key": "193000038492",
-                "birth_date": "1988-11-25T00:00:00+0200",
-                "office": "ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР",
-                "fio": "СИДОРОВ ДМИТРИЙ АЛЕКСАНДРОВИЧ",
-                "article": "Ч.4 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2021-05-09T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. САНКТ-ПЕТЕРБУРГ",
-                "fio_judge": "ПЕТРОВ А В",
-                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
-                "id": 20300,
-                "legal_name": "ЗАО \"СТРОЙИНВЕСТ\"",
-                "department": "ИФНС ПО САНКТ-ПЕТЕРБУРГУ",
-            },
-            {
-                "start_date_disq": "2021-03-08T00:00:00+0200",
-                "reestr_key": "196000052783",
-                "birth_date": "1991-07-18T00:00:00+0200",
-                "office": "КОММЕРЧЕСКИЙ ДИРЕКТОР",
-                "fio": "КОЗЛОВА АНАСТАСИЯ СЕРГЕЕВНА",
-                "article": "Ч.2 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2023-03-07T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. ЕКАТЕРИНБУРГ СВЕРДЛОВСКАЯ ОБЛ.",
-                "fio_judge": "СМИРНОВ К Д",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20301,
-                "legal_name": "ООО \"УРАЛПРОМТОРГ\"",
-                "department": "ИФНС ПО СВЕРДЛОВСКОЙ ОБЛАСТИ",
-            },
-            {
-                "start_date_disq": "2022-07-20T00:00:00+0200",
-                "reestr_key": "197000061894",
-                "birth_date": "1982-12-05T00:00:00+0200",
-                "office": "ГЕНЕРАЛЬНЫЙ ДИРЕКТОР",
-                "fio": "НИКИТИН ИВАН ВАСИЛЬЕВИЧ",
-                "article": "Ч.5 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2024-07-19T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. НОВОСИБИРСК НОВОСИБИРСКАЯ ОБЛ.",
-                "fio_judge": "ФЕДОРОВА О Л",
-                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
-                "id": 20302,
-                "legal_name": "АО \"СИБИРСКИЕ ТЕХНОЛОГИИ\"",
-                "department": "ИФНС ПО НОВОСИБИРСКОЙ ОБЛАСТИ",
-            }
-        ]
+        disq_pers_preview = DisqualifiedPersonPreviewTable(
+            irbis_person_id=irbis_person_id,
+            count=data_preview_count
+        )
+        db.add(disq_pers_preview)
 
-        disqualified_full = [
-            DisqualifiedPersonFullTable(
-                irbis_person_id=irbis_person_id,
-                birth_date=item.get("birth_date"),
-                fio=item.get("fio"),
-                article=item.get("article"),
-                start_date_disq=item.get("start_date_disq"),
-                end_date_disq=item.get("end_date_disq"),
-                bornplace=item.get("bornplace"),
-                fio_judge=item.get("fio_judge"),
-                office_judge=item.get("office_judge"),
-                legal_name=item.get("legal_name"),
-                office=item.get("office"),
-                department=item.get("department"),
-            )
-            for item in temp_result  # TODO: Вернуть full_data
-        ]
-        db.add_all(disqualified_full)
+        disqualified_pers_full = await DisqualifiedPersons._process_bankruptcy_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
+        db.add_all(disqualified_pers_full)
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
