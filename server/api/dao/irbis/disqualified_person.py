@@ -28,7 +28,6 @@ class DisqualifiedPersonDAO(BaseDAO):
                 DisqualifiedPersonFullTable.irbis_person_id == irbis_person_id
             )
 
-            # Пагинация
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
 

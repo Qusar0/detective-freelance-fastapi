@@ -17,7 +17,7 @@ from server.api.models.irbis_models import (
     CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     PledgesPreviewTable, PledgeFullTable, PledgePartiesTable, PledgeObjectTable,
-    DisqualifiedPersonFullTable, DisqualifiedPersonPreviewTable,
+    DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
     TerrorListFullTable, IrbisPerson,
@@ -515,13 +515,12 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(disq_pers_preview)
 
-        bankruptcy_full = []
-        found_data = await DisqualifiedPersons._process_bankruptcy_data(
+        disqualified_pers_full = []
+        disqualified_pers_full.extend(await DisqualifiedPersons._process_bankruptcy_data(
             irbis_person_id,
             self.person_uuid,
-        )
-        bankruptcy_full.extend(found_data)
-        db.add_all(bankruptcy_full)
+        ))
+        db.add_all(disqualified_pers_full)
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
