@@ -515,11 +515,10 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(disq_pers_preview)
 
-        disqualified_pers_full = []
-        disqualified_pers_full.extend(await DisqualifiedPersons._process_bankruptcy_data(
+        disqualified_pers_full = await DisqualifiedPersons._process_bankruptcy_data(
             irbis_person_id,
             self.person_uuid,
-        ))
+        )
         db.add_all(disqualified_pers_full)
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
