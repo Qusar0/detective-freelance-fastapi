@@ -23,7 +23,7 @@ class ProhibitedSitesDAO(BaseDAO):
             combined_sites = list(set(sites_from_db + user_prohibited_sites))
             return combined_sites
         except (SQLAlchemyError, Exception) as e:
-            logger.error(f"Ошибка при добавлении сайтов: {e}", exc_info=True)
+            logger.error(f"Ошибка при добавлении сайтов: {e}")
             return user_prohibited_sites
 
     @classmethod
@@ -38,5 +38,5 @@ class ProhibitedSitesDAO(BaseDAO):
             return sites
 
         except (SQLAlchemyError, Exception) as e:
-            logger.error(f"Ошибка при получении запрещенных сайтов для телефонов: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении запрещенных сайтов для телефонов: {e}")
             return []

@@ -586,7 +586,7 @@ async def get_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -653,7 +653,7 @@ async def get_category_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",

@@ -57,7 +57,7 @@ class Pledges:
         return full_data
 
     @staticmethod
-    async def _process_pledgess_data(self, irbis_person_id: int, person_uuid: str):
+    async def _process_pledgess_data(irbis_person_id: int, person_uuid: str):
         """Обработка данных о банкротстве с пагинацией"""
         full_data = []
         page = 1
@@ -70,7 +70,7 @@ class Pledges:
             page += 1
 
         pledges_full = []
-        for pledge_info in full_data:
+        for pledge_info in data:
             all_pledge_parties = []
             for pledge_type in {'pledgers', 'pledgees'}:
                 info = pledge_info.get(pledge_type)

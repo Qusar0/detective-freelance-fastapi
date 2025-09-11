@@ -44,7 +44,7 @@ async def get_regions(db: AsyncSession = Depends(get_db)):
         logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -95,5 +95,5 @@ async def get_person_info(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

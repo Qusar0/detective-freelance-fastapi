@@ -488,7 +488,8 @@ class IrbisSearchTask(BaseSearchTask):
 
                 if address:
                     region_code = int(address.get('region_code'))
-                    region_id = await RegionSubjectDAO.get_region_by_code(region_code, db)
+                    region = await RegionSubjectDAO.get_region_by_code(region_code, db)
+                    region_id = region.id if region else None
                     full_address = address.get('full_address')
 
                 okved = org_data.get('okved')
