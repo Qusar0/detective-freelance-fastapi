@@ -16,8 +16,8 @@ from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
     CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
-    PledgesPreviewTable, PledgeFullTable, PledgePartiesTable, PledgeObjectTable,
-    DisqualifiedPersonFullTable,
+    PledgesPreviewTable,
+    DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
     TerrorListFullTable, IrbisPerson,
@@ -297,7 +297,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _pledges_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Pledges.get_data_preview(self.person_uuid)
-        full_data = await Pledges.get_full_data(self.person_uuid, 1, 100)
 
         pledges_preview = [
             PledgesPreviewTable(
@@ -310,310 +309,27 @@ class IrbisSearchTask(BaseSearchTask):
         ]
         db.add_all(pledges_preview)
 
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "reg_date": "2018-04-03T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Михаил Васильевич Воронин",
-                            "id": 972975,
-                            "birth_date": "1969-05-26T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2018-002-172651-117",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АКЦИОНЕРНОЕ ОБЩЕСТВО \"ВЛАДБИЗНЕСБАНК\"",
-                            "id": 1488583
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356883,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "X7LHSRGAN59375885"
-                    }
-                ],
-                "id": 1260975,
-                "pledge_type": "Движимое имущество",
-                "uuid": "7090b6c9-a3d5-47d7-95b3-ae031950b9ac"
-            },
-            {
-                "reg_date": "2019-06-15T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Елена Игоревна Петрова",
-                            "id": 972976,
-                            "birth_date": "1985-12-14T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2019-003-184532-218",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "ПАО \"СБЕРБАНК\"",
-                            "id": 1488584
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356884,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "Z94CB41BAGR323004"
-                    }
-                ],
-                "id": 1260976,
-                "pledge_type": "Движимое имущество",
-                "uuid": "8191c7da-b4e6-58e8-06c4-bf142061cad0"
-            },
-            {
-                "reg_date": "2020-02-28T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Алексей Дмитриевич Смирнов",
-                            "id": 972977,
-                            "birth_date": "1978-03-22T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2020-001-195743-319",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АО \"АЛЬФА-БАНК\"",
-                            "id": 1488585
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356885,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "XW8ZZZ61ZJG260432"
-                    }
-                ],
-                "id": 1260977,
-                "pledge_type": "Движимое имущество",
-                "uuid": "92a2d8eb-c5f7-69f9-17d5-ce253172dbe1"
-            },
-            {
-                "reg_date": "2021-08-12T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Ольга Сергеевна Козлова",
-                            "id": 972978,
-                            "birth_date": "1992-07-08T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2021-004-206854-420",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "ПАО \"ВТБ\"",
-                            "id": 1488586
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356886,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "KMHJT81VPFU028765"
-                    }
-                ],
-                "id": 1260978,
-                "pledge_type": "Движимое имущество",
-                "uuid": "a3b3e9fc-d6g8-70fa-28e6-df364283ecf2"
-            },
-            {
-                "reg_date": "2022-11-05T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Денис Владимирович Никитин",
-                            "id": 972979,
-                            "birth_date": "1983-09-30T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2022-005-217965-521",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АО \"РОССЕЛЬХОЗБАНК\"",
-                            "id": 1488587
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356887,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "WAUZZZ8K9NA012345"
-                    }
-                ],
-                "id": 1260979,
-                "pledge_type": "Движимое имущество",
-                "uuid": "b4c4f0gd-e7h9-81gb-39f7-eg475394fdg3"
-            }
-        ]
-
         pledges_full = []
-        for pledge_info in temp_result:  # TODO: Вернуть full_data:
-            all_pledge_parties = []
-            for pledge_type in {'pledgers', 'pledgees'}:
-                info = pledge_info.get(pledge_type)
-                if info:
-                    for role_type in {'orgs', 'peoples'}:
-                        parties = [
-                            PledgePartiesTable(
-                                name=party.get("name", ""),
-                                type=pledge_type,
-                                subtype=role_type,
-                                birth_date=party.get("birth_date"),
-                                inn=party.get("inn"),
-                                ogrn=party.get("ogrn")
-                            )
-                            for party in info.get(role_type, [])
-                        ]
-                        all_pledge_parties.extend(parties)
-
-            pledges = [
-                PledgeObjectTable(
-                    pledge_num_name=pledge.get("pledge_id_name", ""),
-                    pledge_num=pledge.get("pledge_id", ""),
-                    pledge_type=pledge.get("pledge_type", ""),
-                )
-                for pledge in pledge_info.get("pledges", [])
-            ]
-
-            obj = PledgeFullTable(
-                irbis_person_id=irbis_person_id,
-                reg_date=pledge_info.get('reg_date'),
-                pledge_reestr_number=pledge_info.get('pledge_number'),
-                pledge_type=pledge_info.get("pledge_type"),
-                parties=all_pledge_parties,
-                pledges=pledges,
-            )
-            pledges_full.append(obj)
+        pledges_full.extend(await Pledges._process_pledgess_data(
+            irbis_person_id,
+            self.person_uuid,
+        ))
         db.add_all(pledges_full)
 
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):
-        full_data = await DisqualifiedPersons.get_full_data(self.person_uuid, 1, 50)
+        data_preview_count = await DisqualifiedPersons.get_data_preview(self.person_uuid)
 
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "start_date_disq": "2018-09-25T00:00:00+0200",
-                "reestr_key": "194000029739",
-                "birth_date": "1984-08-02T00:00:00+0200",
-                "office": "ДИРЕКТОР",
-                "fio": "АБАКУМОВ АНДРЕЙ ВЛАДИМИРОВИЧ",
-                "article": "Ч.5 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2019-09-24T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. ТОЛЬЯТТИ САМАРСКАЯ ОБЛ.",
-                "fio_judge": "БУКОВСКИЙ Р Г",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20298,
-                "legal_name": "ООО \"ТРАНСГРУПП\"",
-                "department": "ИФНС ПО КАЛУЖСКОЙ ОБЛАСТИ",
-            },
-            {
-                "start_date_disq": "2020-01-15T00:00:00+0200",
-                "reestr_key": "195000045621",
-                "birth_date": "1979-03-12T00:00:00+0200",
-                "office": "ГЛАВНЫЙ БУХГАЛТЕР",
-                "fio": "ПЕТРОВА ЕЛЕНА ИГОРЕВНА",
-                "article": "Ч.3 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2022-01-14T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. МОСКВА",
-                "fio_judge": "ИВАНОВА М С",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20299,
-                "legal_name": "ООО \"ФИНАНСЫ И КРЕДИТ\"",
-                "department": "ИФНС ПО Г. МОСКВЕ",
-            },
-            {
-                "start_date_disq": "2019-05-10T00:00:00+0200",
-                "reestr_key": "193000038492",
-                "birth_date": "1988-11-25T00:00:00+0200",
-                "office": "ИСПОЛНИТЕЛЬНЫЙ ДИРЕКТОР",
-                "fio": "СИДОРОВ ДМИТРИЙ АЛЕКСАНДРОВИЧ",
-                "article": "Ч.4 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2021-05-09T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. САНКТ-ПЕТЕРБУРГ",
-                "fio_judge": "ПЕТРОВ А В",
-                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
-                "id": 20300,
-                "legal_name": "ЗАО \"СТРОЙИНВЕСТ\"",
-                "department": "ИФНС ПО САНКТ-ПЕТЕРБУРГУ",
-            },
-            {
-                "start_date_disq": "2021-03-08T00:00:00+0200",
-                "reestr_key": "196000052783",
-                "birth_date": "1991-07-18T00:00:00+0200",
-                "office": "КОММЕРЧЕСКИЙ ДИРЕКТОР",
-                "fio": "КОЗЛОВА АНАСТАСИЯ СЕРГЕЕВНА",
-                "article": "Ч.2 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2023-03-07T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. ЕКАТЕРИНБУРГ СВЕРДЛОВСКАЯ ОБЛ.",
-                "fio_judge": "СМИРНОВ К Д",
-                "office_judge": "МИРОВОЙ СУДЬЯ",
-                "id": 20301,
-                "legal_name": "ООО \"УРАЛПРОМТОРГ\"",
-                "department": "ИФНС ПО СВЕРДЛОВСКОЙ ОБЛАСТИ",
-            },
-            {
-                "start_date_disq": "2022-07-20T00:00:00+0200",
-                "reestr_key": "197000061894",
-                "birth_date": "1982-12-05T00:00:00+0200",
-                "office": "ГЕНЕРАЛЬНЫЙ ДИРЕКТОР",
-                "fio": "НИКИТИН ИВАН ВАСИЛЬЕВИЧ",
-                "article": "Ч.5 СТ. 14.25 КОАП РФ",
-                "end_date_disq": "2024-07-19T00:00:00+0200",
-                "bornplace": "РОССИЯ, Г. НОВОСИБИРСК НОВОСИБИРСКАЯ ОБЛ.",
-                "fio_judge": "ФЕДОРОВА О Л",
-                "office_judge": "АРБИТРАЖНЫЙ СУДЬЯ",
-                "id": 20302,
-                "legal_name": "АО \"СИБИРСКИЕ ТЕХНОЛОГИИ\"",
-                "department": "ИФНС ПО НОВОСИБИРСКОЙ ОБЛАСТИ",
-            }
-        ]
+        disq_pers_preview = DisqualifiedPersonPreviewTable(
+            irbis_person_id=irbis_person_id,
+            count=data_preview_count
+        )
+        db.add(disq_pers_preview)
 
-        disqualified_full = [
-            DisqualifiedPersonFullTable(
-                irbis_person_id=irbis_person_id,
-                birth_date=item.get("birth_date"),
-                fio=item.get("fio"),
-                article=item.get("article"),
-                start_date_disq=item.get("start_date_disq"),
-                end_date_disq=item.get("end_date_disq"),
-                bornplace=item.get("bornplace"),
-                fio_judge=item.get("fio_judge"),
-                office_judge=item.get("office_judge"),
-                legal_name=item.get("legal_name"),
-                office=item.get("office"),
-                department=item.get("department"),
-            )
-            for item in temp_result  # TODO: Вернуть full_data
-        ]
-        db.add_all(disqualified_full)
+        disqualified_pers_full = await DisqualifiedPersons._process_bankruptcy_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
+        db.add_all(disqualified_pers_full)
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
@@ -694,7 +410,8 @@ class IrbisSearchTask(BaseSearchTask):
 
                 if address:
                     region_code = int(address.get('region_code'))
-                    region_id = await RegionSubjectDAO.get_region_by_code(region_code, db)
+                    region = await RegionSubjectDAO.get_region_by_code(region_code, db)
+                    region_id = region.id if region else None
                     full_address = address.get('full_address')
 
                 okved = org_data.get('okved')

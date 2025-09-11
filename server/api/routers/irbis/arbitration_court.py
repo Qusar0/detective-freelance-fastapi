@@ -137,5 +137,5 @@ async def get_full_case_info(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

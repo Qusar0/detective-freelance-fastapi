@@ -32,7 +32,7 @@ class IrbisPersonDAO(BaseDAO):
 
             return irbis_person
         except (SQLAlchemyError, Exception) as e:
-            logger.error(f"Ошибка при получении person uuid: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении person uuid: {e}")
             await db.rollback()
             return None
 
@@ -44,5 +44,5 @@ class IrbisPersonDAO(BaseDAO):
             pass
 
         except Exception as e:
-            logger.error(f"Ошибка при получении статистики запроса: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении статистики запроса: {e}")
             await db.rollback()

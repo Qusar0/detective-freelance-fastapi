@@ -5,31 +5,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from server.api.database.database import get_db
 
-from server.api.schemas.irbis.bankruptcy import (
-    BankruptcyDataRequest,
-    BankruptcyCaseFull,
-    BankruptcyDataCase,
+from server.api.schemas.irbis.disqualified_person import (
+    DisqDataRequest,
+    DisqCaseFull,
+    DisqDataCase,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
-from server.api.dao.irbis.bankruptcy import BankruptcyDAO
+from server.api.dao.irbis.disqualified_person import DisqualifiedPersonDAO
 from loguru import logger
 
 
-router = APIRouter(prefix="/bankruptcy", tags=["Irbis/Банкротства"])
+router = APIRouter(prefix="/disqualified_person", tags=["Irbis/Дисквалифицированные лица"])
 
 
-@router.post("/data", response_model=List[BankruptcyDataCase])
+@router.post("/data", response_model=List[DisqDataCase])
 async def get_query_data(
-    request_data: BankruptcyDataRequest = Body(...),
+    request_data: DisqDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     """Получает данные о ,банкротствах по выполненному запросу."""
     try:
         logger.info(
-            f"Запрос bankruptcy_data для query_id: {request_data.query_id}, "
-            f"page: {request_data.page}, size: {request_data.size}, "
-            f"search_type: {request_data.search_type}, "
+            f"Запрос disqualified_person_data для query_id: {request_data.query_id}, "
+            f"page: {request_data.page}, size: {request_data.size}"
         )
 
         Authorize.jwt_required()
@@ -43,30 +42,28 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results = await BankruptcyDAO.get_paginated_data(
+        results = await DisqualifiedPersonDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
-            search_type=request_data.search_type,
             db=db,
         )
         cases = [
-            BankruptcyDataCase(
+            DisqDataCase(
                 id=case.id,
-                first_name=case.first_name,
-                second_name=case.second_name,
-                last_name=case.last_name,
-                category_name=case.category_name,
-                birth_date=case.birth_date,
-                born_place=case.born_place,
-                region_name=case.region_name
+                fio=case.fio,
+                start_date_disq=case.start_date_disq,
+                end_date_disq=case.end_date_disq,
+                article=case.article,
+                legal_name=case.legal_name,
+                office=case.office,
             )
             for case in results
         ]
         return cases
 
     except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
@@ -76,7 +73,7 @@ async def get_query_data(
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.get("/case_full/{case_id}", response_model=BankruptcyCaseFull)
+@router.get("/case_full/{case_id}", response_model=DisqCaseFull)
 async def get_full_case_info(
     case_id: int,
     Authorize: AuthJWT = Depends(),
@@ -90,7 +87,7 @@ async def get_full_case_info(
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        case = await BankruptcyDAO.get_full_case_by_id(case_id, db)
+        case = await DisqualifiedPersonDAO.get_full_case_by_id(case_id, db)
         if not case:
             logger.warning(f"Дело {case_id} не найдено")
             raise HTTPException(status_code=404, detail="Дело не найдено")
@@ -102,22 +99,19 @@ async def get_full_case_info(
             )
             raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        case_full = BankruptcyCaseFull(
+        case_full = DisqCaseFull(
             id=case.id,
-            first_name=case.first_name,
-            second_name=case.second_name,
-            last_name=case.last_name,
             birth_date=case.birth_date,
-            born_place=case.born_place,
-            inn=case.inn,
-            ogrn=case.ogrn,
-            snils=case.snils,
-            old_name=case.old_name,
-            category_name=case.category_name,
-            location=case.location,
-            region_name=case.region_name,
-            information=case.information,
-            link=case.link
+            fio=case.fio,
+            article=case.article,
+            start_date_disq=case.start_date_disq,
+            end_date_disq=case.end_date_disq,
+            bornplace=case.bornplace,
+            fio_judge=case.fio_judge,
+            office_judge=case.office_judge,
+            legal_name=case.legal_name,
+            office=case.office,
+            department=case.department
         )
 
         logger.success(f"Успешно возвращена полная информация по делу {case_id}")
@@ -130,5 +124,5 @@ async def get_full_case_info(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}")
+        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

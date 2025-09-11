@@ -47,7 +47,7 @@ class BankruptcyDAO(BaseDAO):
             return results
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при фильтрации: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при фильтрации: {e}")
             raise
 
     @staticmethod
@@ -69,5 +69,5 @@ class BankruptcyDAO(BaseDAO):
             return case
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}")
             raise
