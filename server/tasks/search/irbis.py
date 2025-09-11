@@ -16,7 +16,7 @@ from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
     CorruptionPreviewTable, CorruptionFullTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
-    PledgesPreviewTable, PledgeFullTable, PledgePartiesTable, PledgeObjectTable,
+    PledgesPreviewTable,
     DisqualifiedPersonFullTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
@@ -289,7 +289,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _pledges_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Pledges.get_data_preview(self.person_uuid)
-        full_data = await Pledges.get_full_data(self.person_uuid, 1, 100)
 
         pledges_preview = [
             PledgesPreviewTable(
@@ -302,208 +301,11 @@ class IrbisSearchTask(BaseSearchTask):
         ]
         db.add_all(pledges_preview)
 
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "reg_date": "2018-04-03T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Михаил Васильевич Воронин",
-                            "id": 972975,
-                            "birth_date": "1969-05-26T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2018-002-172651-117",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АКЦИОНЕРНОЕ ОБЩЕСТВО \"ВЛАДБИЗНЕСБАНК\"",
-                            "id": 1488583
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356883,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "X7LHSRGAN59375885"
-                    }
-                ],
-                "id": 1260975,
-                "pledge_type": "Движимое имущество",
-                "uuid": "7090b6c9-a3d5-47d7-95b3-ae031950b9ac"
-            },
-            {
-                "reg_date": "2019-06-15T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Елена Игоревна Петрова",
-                            "id": 972976,
-                            "birth_date": "1985-12-14T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2019-003-184532-218",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "ПАО \"СБЕРБАНК\"",
-                            "id": 1488584
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356884,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "Z94CB41BAGR323004"
-                    }
-                ],
-                "id": 1260976,
-                "pledge_type": "Движимое имущество",
-                "uuid": "8191c7da-b4e6-58e8-06c4-bf142061cad0"
-            },
-            {
-                "reg_date": "2020-02-28T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Алексей Дмитриевич Смирнов",
-                            "id": 972977,
-                            "birth_date": "1978-03-22T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2020-001-195743-319",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АО \"АЛЬФА-БАНК\"",
-                            "id": 1488585
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356885,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "XW8ZZZ61ZJG260432"
-                    }
-                ],
-                "id": 1260977,
-                "pledge_type": "Движимое имущество",
-                "uuid": "92a2d8eb-c5f7-69f9-17d5-ce253172dbe1"
-            },
-            {
-                "reg_date": "2021-08-12T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Ольга Сергеевна Козлова",
-                            "id": 972978,
-                            "birth_date": "1992-07-08T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2021-004-206854-420",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "ПАО \"ВТБ\"",
-                            "id": 1488586
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356886,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "KMHJT81VPFU028765"
-                    }
-                ],
-                "id": 1260978,
-                "pledge_type": "Движимое имущество",
-                "uuid": "a3b3e9fc-d6g8-70fa-28e6-df364283ecf2"
-            },
-            {
-                "reg_date": "2022-11-05T00:00:00+0200",
-                "pledgers": {
-                    "peoples": [
-                        {
-                            "name": "Денис Владимирович Никитин",
-                            "id": 972979,
-                            "birth_date": "1983-09-30T00:00:00+0100"
-                        }
-                    ]
-                },
-                "pledge_number": "2022-005-217965-521",
-                "pledgees": {
-                    "orgs": [
-                        {
-                            "name": "АО \"РОССЕЛЬХОЗБАНК\"",
-                            "id": 1488587
-                        }
-                    ]
-                },
-                "pledges": [
-                    {
-                        "pledge_id_name": "VIN",
-                        "id": 9356887,
-                        "pledge_type": "Транспортное средство",
-                        "pledge_id": "WAUZZZ8K9NA012345"
-                    }
-                ],
-                "id": 1260979,
-                "pledge_type": "Движимое имущество",
-                "uuid": "b4c4f0gd-e7h9-81gb-39f7-eg475394fdg3"
-            }
-        ]
-
         pledges_full = []
-        for pledge_info in temp_result:  # TODO: Вернуть full_data:
-            all_pledge_parties = []
-            for pledge_type in {'pledgers', 'pledgees'}:
-                info = pledge_info.get(pledge_type)
-                if info:
-                    for role_type in {'orgs', 'peoples'}:
-                        parties = [
-                            PledgePartiesTable(
-                                name=party.get("name", ""),
-                                type=pledge_type,
-                                subtype=role_type,
-                                birth_date=party.get("birth_date"),
-                                inn=party.get("inn"),
-                                ogrn=party.get("ogrn")
-                            )
-                            for party in info.get(role_type, [])
-                        ]
-                        all_pledge_parties.extend(parties)
-
-            pledges = [
-                PledgeObjectTable(
-                    pledge_num_name=pledge.get("pledge_id_name", ""),
-                    pledge_num=pledge.get("pledge_id", ""),
-                    pledge_type=pledge.get("pledge_type", ""),
-                )
-                for pledge in pledge_info.get("pledges", [])
-            ]
-
-            obj = PledgeFullTable(
-                irbis_person_id=irbis_person_id,
-                reg_date=pledge_info.get('reg_date'),
-                pledge_reestr_number=pledge_info.get('pledge_number'),
-                pledge_type=pledge_info.get("pledge_type"),
-                parties=all_pledge_parties,
-                pledges=pledges,
-            )
-            pledges_full.append(obj)
+        pledges_full.extend(await Pledges._process_pledgess_data(
+            irbis_person_id,
+            self.person_uuid,
+        ))
         db.add_all(pledges_full)
 
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):

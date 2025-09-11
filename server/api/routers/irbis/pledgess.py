@@ -123,17 +123,23 @@ async def get_full_case_info(
             pledge_reestr_number=case.pledge_reestr_number,
             pledge_type=case.pledge_type,
 
-            parties=[
+            pledgers=[
                 PledgePartiesSchema(
-                    id=party.id,
                     name=party.name,
-                    type=party.type,
-                    subtype=party.subtype,
                     birth_date=party.birth_date,
                     inn=party.inn,
                     ogrn=party.ogrn,
                 )
-                for party in case.parties
+                for party in case.parties if party.type == 'pledgers'
+            ],
+            pledgees=[
+                PledgePartiesSchema(
+                    name=party.name,
+                    type=party.type,
+                    inn=party.inn,
+                    ogrn=party.ogrn,
+                )
+                for party in case.parties if party.type == 'pledgees'
             ],
             pledges=[
                 PledgeObjectSchema(

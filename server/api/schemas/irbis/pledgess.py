@@ -39,17 +39,13 @@ class PledgessDataRequest(BaseModel):
 
 
 class PledgePartiesSchema(BaseModel):
-    id: int = Field(..., description="Уникальный идентификатор стороны в базе данных")
     name: str = Field(..., description="Наименование стороны (физическое или юридическое лицо)")
-    type: str = Field(..., description="Тип стороны (залогодатель, залогодержатель и т.д.)")
-    subtype: str = Field(..., description="Подтип стороны (физическое лицо, юридическое лицо и т.д.)")
     birth_date: Optional[str] = Field(None, description="Дата рождения (для физических лиц)")
     inn: Optional[str] = Field(None, description="ИНН стороны")
     ogrn: Optional[str] = Field(None, description="ОГРН/ОГРНИП (для юридических лиц и ИП)")
 
 
 class PledgeObjectSchema(BaseModel):
-    id: int = Field(..., description="Уникальный идентификатор предмета залога в базе данных")
     pledge_num_name: str = Field(..., description="Наименование номера записи о залоге")
     pledge_num: str = Field(..., description="Номер записи о залоге")
     pledge_type: str = Field(..., description="Тип предмета залога (недвижимость, транспорт и т.д.)")
@@ -61,5 +57,6 @@ class PledgessCaseFull(BaseModel):
     pledge_reestr_number: str = Field(..., description="Реестровый номер записи о залоге")
     pledge_type: str = Field(..., description="Тип залогового дела")
 
-    parties: List[PledgePartiesSchema] = Field(..., description="Список участников залогового дела")
+    pledgers: List[PledgePartiesSchema] = Field(..., description="Заемщики")
+    pledgees: List[PledgePartiesSchema] = Field(..., description="Организации")
     pledges: List[PledgeObjectSchema] = Field(..., description="Список предметов залога по делу")
