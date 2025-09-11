@@ -21,7 +21,7 @@ class RegionSubjectDAO(BaseDAO):
             regions_map = {region.subject_number: region for region in regions}
             return regions_map
         except Exception as e:
-            logger.error(f"Ошибка при получении регионов: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении регионов: {e}")
             return {}
 
     @classmethod
@@ -41,7 +41,7 @@ class RegionSubjectDAO(BaseDAO):
             return region
 
         except Exception as e:
-            logger.error(f"Ошибка при получении региона по коду {region_code}: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении региона по коду {region_code}: {e}")
 
     @classmethod
     async def get_person_regions(cls, person_id: int, db: AsyncSession):
@@ -55,5 +55,5 @@ class RegionSubjectDAO(BaseDAO):
             regions = result.scalars().all()
             return regions
         except Exception as e:
-            logger.error(f"Ошибка при получении регионов для person_id {person_id}: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении регионов для person_id {person_id}: {e}")
             return []

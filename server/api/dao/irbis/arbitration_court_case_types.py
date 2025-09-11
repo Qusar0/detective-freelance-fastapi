@@ -23,5 +23,5 @@ class ArbitrationCourtCaseTypesDAO(BaseDAO):
             case_type_map = {case_type.code: case_type for case_type in case_types}
             return case_type_map
         except Exception as e:
-            logger.error(f"Ошибка при получении типов дел: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении типов дел: {e}")
             return {}

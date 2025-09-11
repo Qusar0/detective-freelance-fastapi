@@ -14,6 +14,7 @@ from server.api.routers.irbis.court_general import router as court_general_route
 from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
 from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
 from server.api.routers.irbis.disqualified_person import router as disqualified_person_router
+from server.api.routers.irbis.pledgess import router as pledgess_router
 from loguru import logger
 
 
@@ -26,6 +27,7 @@ router.include_router(court_general_router)
 router.include_router(arbitration_court_router)
 router.include_router(bankruptcy_router)
 router.include_router(disqualified_person_router)
+router.include_router(pledgess_router)
 
 
 @router.get("/regions", response_model=List[RegionInfo], tags=['Irbis/Общее'])
@@ -44,7 +46,7 @@ async def get_regions(db: AsyncSession = Depends(get_db)):
         logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
@@ -95,5 +97,5 @@ async def get_person_info(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

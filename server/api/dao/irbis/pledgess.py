@@ -4,66 +4,64 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.models.irbis_models import (
-    BankruptcyFullTable,
-    IrbisPerson,
+    PledgeFullTable,
+    IrbisPerson
 )
 from server.api.dao.base import BaseDAO
 from loguru import logger
 
 
-class BankruptcyDAO(BaseDAO):
-    model = BankruptcyFullTable
+class PledgessDAO(BaseDAO):
+    model = PledgeFullTable
 
     @staticmethod
     async def get_paginated_data(
         irbis_person_id: int,
         page: int,
         size: int,
-        search_type: str,
         db: AsyncSession
     ):
-        """Фильтрация и пагинация судебных дел по полю search_type."""
+        """Фильтрация и пагинация с подгрузкой связанных данных."""
         try:
-            logger.debug(f"DAO: Фильтрация по полю search_type: {search_type}")
 
-            query = select(BankruptcyFullTable).where(
-                BankruptcyFullTable.irbis_person_id == irbis_person_id
+            query = select(PledgeFullTable).where(
+                PledgeFullTable.irbis_person_id == irbis_person_id
             )
-
-            if search_type:
-                query = query.where((BankruptcyFullTable.search_type == search_type))
-            else:
-                logger.warning("Нет поля search_type")
-                return []
-
-            # Пагинация
+            
+            query = query.options(
+                selectinload(PledgeFullTable.parties),
+                selectinload(PledgeFullTable.pledges)
+            )
+            
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
 
             result = await db.execute(query)
             results = result.scalars().all()
-
-            logger.debug(f"DAO: Найдено {len(results)} записей для search_type = '{search_type}'")
+            
+            logger.debug(f"DAO: Найдено {len(results)} записей")
             return results
-
         except Exception as e:
-            logger.error(f"DAO: Ошибка при фильтрации: {e}")
+            logger.error(f"DAO: Ошибка при получении данных: {e}")
             raise
 
     @staticmethod
     async def get_full_case_by_id(
         case_id: int,
         db: AsyncSession
-    ) -> Optional[BankruptcyFullTable]:
+    ) -> Optional[PledgeFullTable]:
         """Получение полной информации о деле по ID с связанными данными."""
         try:
             logger.debug(f"DAO: Получение полной информации по делу ID: {case_id}")
-            query = select(BankruptcyFullTable).options(
-                selectinload(BankruptcyFullTable.irbis_person).selectinload(IrbisPerson.query)
+            query = select(PledgeFullTable).options(
+                selectinload(PledgeFullTable.irbis_person).selectinload(IrbisPerson.query)
             ).where(
-                BankruptcyFullTable.id == case_id
+                PledgeFullTable.id == case_id
             )
-
+            query = query.options(
+                selectinload(PledgeFullTable.parties),
+                selectinload(PledgeFullTable.pledges)
+            )
             result = await db.execute(query)
             case = result.scalar_one_or_none()
             return case
