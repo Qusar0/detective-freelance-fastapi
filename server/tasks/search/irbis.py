@@ -325,7 +325,7 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(disq_pers_preview)
 
-        disqualified_pers_full = await DisqualifiedPersons._process_bankruptcy_data(
+        disqualified_pers_full = await DisqualifiedPersons._process_disqualified_data(
             irbis_person_id,
             self.person_uuid,
         )
