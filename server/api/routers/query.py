@@ -388,7 +388,7 @@ async def find_by_irbis(
         channel = await generate_sse_message_type(user_id=user_id, db=db)
         price = 100
 
-        query_title = " ".join([request_data.first_name.strip(), request_data.second_name.strip()])
+        query_title = " ".join([request_data.first_name.strip(), request_data.last_name.strip()])
 
         user_query_id = await UserQueriesDAO.save_user_query(user_id, query_title, 'irbis', db)
 
