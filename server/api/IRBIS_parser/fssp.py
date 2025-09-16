@@ -1,7 +1,7 @@
 from typing import Optional
 
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
-
+from server.api.models.irbis_models import FSSPFullTable
 
 class FSSP:
     @staticmethod
@@ -50,3 +50,32 @@ class FSSP:
             full_data = response["result"]
 
         return full_data
+    
+    @staticmethod
+    async def _process_fssp_data(irbis_person_id: int, person_uuid: str):
+        """Обработка данных ФССП с пагинацией"""
+        full_data = []
+        page = 1
+
+        while True:
+            data = await FSSP.get_full_data(person_uuid, page, 50)
+            if not data:
+                break
+            full_data.extend(data)
+            page += 1
+
+        return [
+            FSSPFullTable(
+                irbis_person_id=irbis_person_id,
+                ip=item.get("ip"),
+                fio=item.get("fio"),
+                rosp=item.get("rosp"),
+                type_ip=item.get("type_ip"),
+                summ=item.get("summ"),
+                rekv=item.get("rekv"),
+                end_cause=item.get("end_cause"),
+                pristav=item.get("pristav"),
+                pristav_phones=item.get("pristav_phones")
+            )
+            for item in full_data
+        ]

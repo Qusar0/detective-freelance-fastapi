@@ -333,7 +333,7 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
-        data_full = await FSSP.get_full_data(self.person_uuid, 1, 50)
+        #data_full = await FSSP.get_full_data(self.person_uuid, 1, 50)
 
         fssp_preview = [
             FSSPPreviewTable(
@@ -347,21 +347,10 @@ class IrbisSearchTask(BaseSearchTask):
         ]
         db.add_all(fssp_preview)
 
-        fssp_full = [
-            FSSPFullTable(
-                irbis_person_id=irbis_person_id,
-                ip=item.get("ip"),
-                fio=item.get("fio"),
-                rosp=item.get("rosp"),
-                type_ip=item.get("type_ip"),
-                summ=item.get("summ"),
-                rekv=item.get("rekv"),
-                end_cause=item.get("end_cause"),
-                pristav=item.get("pristav"),
-                pristav_phones=item.get("pristav_phones"),
-            )
-            for item in data_full
-        ]
+        fssp_full = await FSSP._process_fssp_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
         db.add_all(fssp_full)
 
     async def _ml_index_data(self, irbis_person_id: int, db: AsyncSession):
