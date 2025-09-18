@@ -26,7 +26,7 @@ async def get_query_data(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о делах общий юрисдикции по выполненному запросу."""
+    """Получает данные об участии в организациях по выполненному запросу."""
     try:
         logger.info(
             f"Запрос part_in_org_data для query_id: {request_data.query_id}, "
@@ -78,7 +78,7 @@ async def get_full_case_info(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает полную информацию о судебном деле по ID дела."""
+    """Получает полную информацию об участии в организациях по ID дела."""
     try:
         logger.info(f"Запрос полной информации по делу ID: {case_id}")
 
@@ -86,7 +86,7 @@ async def get_full_case_info(
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        case = await PartInOrgDAO.get_full_case_by_id(case_id, db)
+        case = await PartInOrgDAO.get_full_participation_by_id(case_id, db)
         if not case:
             logger.warning(f"Дело {case_id} не найдено")
             raise HTTPException(status_code=404, detail="Дело не найдено")

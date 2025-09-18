@@ -19,7 +19,7 @@ from server.api.models.irbis_models import (
     PledgesPreviewTable,
     DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
-    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    PartInOrgPreviewTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
@@ -400,7 +400,8 @@ class IrbisSearchTask(BaseSearchTask):
         part_in_org_full = []
         part_in_org_full.extend(await ParticipationOrganization._process_pledgess_data(
             irbis_person_id,
-            self.person_uuid
+            self.person_uuid,
+            db
         ))
         db.add_all(part_in_org_full)
 

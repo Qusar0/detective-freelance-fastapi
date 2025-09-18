@@ -28,19 +28,19 @@ class PartInOrgDAO(BaseDAO):
             query = select(PartInOrgFullTable).where(
                 PartInOrgFullTable.irbis_person_id == irbis_person_id
             )
-            
+
             query = query.options(
                 selectinload(PartInOrgFullTable.org),
                 selectinload(PartInOrgFullTable.individual)
             )
-            
+
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
 
             result = await db.execute(query)
 
             results = result.scalars().all()
-            
+
             logger.debug(f"DAO: Найдено {len(results)} записей")
             return results
         except Exception as e:
@@ -48,7 +48,7 @@ class PartInOrgDAO(BaseDAO):
             raise
 
     @staticmethod
-    async def get_full_case_by_id(
+    async def get_full_participation_by_id(
         case_id: int,
         db: AsyncSession
     ) -> Optional[PartInOrgFullTable]:

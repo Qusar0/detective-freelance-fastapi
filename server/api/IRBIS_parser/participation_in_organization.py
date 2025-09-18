@@ -8,6 +8,7 @@ from server.api.models.irbis_models import (
     PartInOrgRoleTable,
 )
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ParticipationOrganization:
@@ -37,7 +38,7 @@ class ParticipationOrganization:
         return all_regions, selected_regions
 
     @staticmethod
-    async def get_full_data(person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
+    async def get_full_data(person_uuid: str, page: int, rows: int, search_type: str, db: AsyncSession):  # noqa: WPS615
         """
         Получение данных об участии физического лица в организациях и ИП.
 
@@ -60,15 +61,15 @@ class ParticipationOrganization:
         if response is not None:
             full_data = response["result"]
         return full_data
-    
+
     @staticmethod
-    async def _process_pledgess_data(irbis_person_id: int, person_uuid: str):
+    async def _process_pledgess_data(irbis_person_id: int, person_uuid: str, db: AsyncSession):
         """Обработка данных о банкротстве с пагинацией"""
         full_data = []
         page = 1
 
         while True:
-            data = await ParticipationOrganization.get_full_data(person_uuid, page, 50)
+            data = await ParticipationOrganization.get_full_data(person_uuid, page, 50, db)
             if not data:
                 break
             full_data.extend(data)
@@ -121,12 +122,12 @@ class ParticipationOrganization:
                     roles=roles_objs,
                 )
 
-            obj = PartInOrgFullTable(
+            full_entry = PartInOrgFullTable(
                 irbis_person_id=irbis_person_id,
                 org=org_obj,
                 individual=individual_obj,
             )
 
-            part_in_org_full.append(obj)
+            part_in_org_full.append(full_entry)
 
         return part_in_org_full

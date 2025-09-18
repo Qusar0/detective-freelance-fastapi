@@ -1,13 +1,13 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
 
 
-class PledgessGeneralPledgees(BaseModel):#таблица pledge_parties
+class PledgessGeneralPledgees(BaseModel):  # таблица pledge_parties
     name: str = Field(..., description="Название заемщика/Занимателя")
 
 
-class PledgessGeneralPledges(BaseModel):#таблица pledge_items
+class PledgessGeneralPledges(BaseModel):  # таблица pledge_items
     pledge_type: str = Field(..., description="Тип залога")
     pledge_num: str = Field(..., description="Номер залога")
 

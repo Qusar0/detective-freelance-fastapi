@@ -24,7 +24,7 @@ async def get_query_data(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о ,банкротствах по выполненному запросу."""
+    """Получает данные о дисквалифицированных лицах по выполненному запросу."""
     try:
         logger.info(
             f"Запрос disqualified_person_data для query_id: {request_data.query_id}, "
@@ -81,7 +81,7 @@ async def get_full_case_info(
 ):
     """Получает полную информацию о банкротсвах по ID."""
     try:
-        logger.info(f"Запрос полной информации по делу ID: {case_id}")
+        logger.info(f"Запрос полной информации о дисквалифицированных лицах по ID: {case_id}")
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
