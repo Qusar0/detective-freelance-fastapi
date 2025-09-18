@@ -499,7 +499,7 @@ class IrbisSearchTask(BaseSearchTask):
         db.add_all(tax_areas_full)
 
     async def _terror_list_data(self, irbis_person_id: int, db: AsyncSession):
-        full_data = await TerrorList.get_full_data(self.person_uuid, 1, 50)
+        # full_data = await TerrorList.get_full_data(self.person_uuid, 1, 50)
 
         # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
         temp_result = [

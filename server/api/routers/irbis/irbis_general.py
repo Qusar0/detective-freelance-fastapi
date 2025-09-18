@@ -16,6 +16,7 @@ from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
 from server.api.routers.irbis.disqualified_person import router as disqualified_person_router
 from server.api.routers.irbis.pledgess import router as pledgess_router
 from server.api.routers.irbis.corruption import router as corruption_router
+from server.api.routers.irbis.tax_arrears import router as tax_arrears_router
 from loguru import logger
 
 
@@ -30,6 +31,7 @@ router.include_router(bankruptcy_router)
 router.include_router(disqualified_person_router)
 router.include_router(pledgess_router)
 router.include_router(corruption_router)
+router.include_router(tax_arrears_router)
 
 
 @router.get("/regions", response_model=List[RegionInfo], tags=['Irbis/Общее'])
