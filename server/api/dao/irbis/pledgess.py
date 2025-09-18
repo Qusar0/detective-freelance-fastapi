@@ -27,7 +27,7 @@ class PledgessDAO(BaseDAO):
             query = select(PledgeFullTable).where(
                 PledgeFullTable.irbis_person_id == irbis_person_id
             )
- 
+
             query = query.options(
                 selectinload(PledgeFullTable.parties),
                 selectinload(PledgeFullTable.pledges)
