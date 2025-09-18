@@ -1,11 +1,10 @@
 from typing import Optional
-from pydantic import BaseModel, validator, Field
-from datetime import datetime
+from pydantic import BaseModel, Field
 
 
 class FSSPDataCase(BaseModel):
-    """Краткая информация о деле (список)."""
-    id: int = Field(..., description="ID записи в базе данных")
+    """Краткая информация о деле ФССП (список)."""
+    id: int = Field(..., description="ID записи ФССП в базе данных")
     fio: str = Field(..., description="ФИО")
     type_ip: str = Field(..., description="Тип испольнительного производства")
     summ: float = Field(..., description="Сумма")
@@ -24,10 +23,10 @@ class FSSPCaseFull(BaseModel):
     id: int = Field(..., description="ID записи")
     ip: str = Field(..., description="Испольнительное производство")
     fio: str = Field(..., description="ФИО")
-    rosp: str = Field(..., description="Районный отдел судебных приставов")
+    rosp: str = Field(None, description="Районный отдел судебных приставов")
     type_ip: str = Field(..., description="Тип испольнительного производства")
-    summ: float = Field(..., description="Сумма")
-    rekv: str = Field(..., description="Реквизиты")
-    end_cause: str = Field(..., description="Конечная причина")
-    pristav: str = Field(..., description="Пристав")
+    summ: float = Field(..., description="Сумма задолженности")
+    rekv: str = Field(None, description="Реквизиты")
+    end_cause: str = Field(None, description="Конечная причина")
+    pristav: str = Field(None, description="Пристав")
     pristav_phones: Optional[str] = Field(..., description="Телефон приставов")

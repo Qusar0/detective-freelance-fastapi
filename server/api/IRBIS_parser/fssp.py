@@ -3,6 +3,7 @@ from typing import Optional
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 from server.api.models.irbis_models import FSSPFullTable
 
+
 class FSSP:
     @staticmethod
     async def get_data_preview(person_uuid: str):
@@ -50,7 +51,7 @@ class FSSP:
             full_data = response["result"]
 
         return full_data
-    
+
     @staticmethod
     async def _process_fssp_data(irbis_person_id: int, person_uuid: str):
         """Обработка данных ФССП с пагинацией"""

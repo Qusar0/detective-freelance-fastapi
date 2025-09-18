@@ -18,7 +18,7 @@ from server.api.models.irbis_models import (
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
     PledgesPreviewTable,
     DisqualifiedPersonPreviewTable,
-    FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
+    FSSPPreviewTable, MLIndexFullTable,
     PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
@@ -333,7 +333,7 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
-        #data_full = await FSSP.get_full_data(self.person_uuid, 1, 50)
+        # data_full = await FSSP.get_full_data(self.person_uuid, 1, 50)
 
         fssp_preview = [
             FSSPPreviewTable(

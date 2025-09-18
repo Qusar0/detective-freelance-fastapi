@@ -18,7 +18,7 @@ class FSSPDAO(BaseDAO):
         size: int,
         db: AsyncSession
     ) -> List[FSSPFullTable]:
-        """Возвращает список ORM-объектов FSSPFullTable (без преобразования)."""
+        """Возвращает список записей ФССП по персоне с пагинацией"""
         try:
             logger.debug(
                 f"DAO: Получение fssp list для irbis_person_id={irbis_person_id} page={page} size={size}",
