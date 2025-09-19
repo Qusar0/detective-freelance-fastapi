@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,9 +7,14 @@ from server.api.schemas.irbis.irbis_general import (
     RegionInfo,
     IrbisPersonInfo,
 )
+from server.api.schemas.irbis.statistic import (
+    StatisticDataRequest,
+    StatisticGeneralCase
+)
 from typing import List
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
+from server.api.dao.irbis.statistic import StatisticsDAO
 from server.api.routers.irbis.court_general import router as court_general_router
 from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
 from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
@@ -97,6 +102,55 @@ async def get_person_info(
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+
+
+@router.post("/statistic", response_model=StatisticGeneralCase)
+async def get_query_data(
+    request_data: StatisticDataRequest = Body(...),
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает статистику по о выполненному запросу."""
+    try:
+        logger.info(
+            f"Запрос statistic для query_id: {request_data.query_id}"
+        )
+
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+        logger.debug(f"Аутентифицированный пользователь: {user_id}")
+
+        irbis_person = await IrbisPersonDAO.get_irbis_person(user_id, request_data.query_id, db)
+        if not irbis_person:
+            logger.warning(f"Запрос не найден для пользователя {user_id}, query_id: {request_data.query_id}")
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        logger.debug(f"Найден irbis_person: {irbis_person.id}")
+
+        results = await StatisticsDAO.get_all_counts(
+            query_id=irbis_person.id,
+            db=db,
+        )
+
+        case = StatisticGeneralCase(
+                arbitration_court=results['arbitration_court'],
+                bankruptcy=results['bankruptcy'],
+                corruption=results['corruption'],
+                court_general=results['court_general'],
+                disqualified_person=results['disqualified_person'],
+                pledgess=results['pledgess'],
+            )
+        return case
+
+    except HTTPException as e:
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Неожиданная ошибка: {e}")
