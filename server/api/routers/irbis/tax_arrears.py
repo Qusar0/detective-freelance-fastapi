@@ -53,8 +53,11 @@ async def get_query_data(
                 provider=case.provider,
                 money_name=case.money_name,
                 value=case.money_value,
-                info=[f.value for f in case.fields if f.type=='info'],
-                payment=[PaymentItemCase(name = f.field_name, value = f.value) for f in case.fields if f.type=='payment'],
+                info=[f.value for f in case.fields if f.type == 'info'],
+                payment=[
+                    PaymentItemCase(name=f.field_name, value=f.value)
+                    for f in case.fields if f.type == 'payment'
+                ],
             )
             for case in results
         ]
