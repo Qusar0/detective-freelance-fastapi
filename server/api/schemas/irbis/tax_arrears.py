@@ -1,10 +1,6 @@
-from typing import List
+from typing import List, Optional
 from decimal import Decimal
 from pydantic import BaseModel, Field
-
-
-class InfoItemCase(BaseModel):
-    value: str = Field(..., description="Причина задолженности")
 
 
 class PaymentItemCase(BaseModel):
@@ -16,8 +12,8 @@ class TaxArrearsDataCase(BaseModel):
     provider: str = Field(..., description="Провайдер")
     money_name: str = Field(..., description="Валюта")
     value: Decimal = Field(..., description="Сумма задолженности")
-    info: List[InfoItemCase] = Field(None, description="Информация о задолженностях")
-    payment: List[PaymentItemCase] = Field(None, description="Информация о реквизитах")
+    info: Optional[List[str]] = Field(default=None, description="Информация о задолженности")
+    payment: List[PaymentItemCase] | None = Field(default=None, description="Информация о реквизитах")
 
 
 class TaxArrearsDataRequest(BaseModel):

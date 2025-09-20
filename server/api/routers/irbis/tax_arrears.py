@@ -25,10 +25,10 @@ async def get_query_data(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает список дел коррупции по выполненному запросу (пагинация)."""
+    """Получает список дел налоговых задолженностей по выполненному запросу (пагинация)."""
     try:
         logger.info(
-            f"Запрос corruption_data для query_id: {request_data.query_id}, "
+            f"Запрос tax_arrears_data для query_id: {request_data.query_id}, "
             f"page: {request_data.page}, size: {request_data.size}"
         )
 
@@ -54,7 +54,7 @@ async def get_query_data(
                 provider=case.provider,
                 money_name=case.money_name,
                 value=case.money_value,
-                info=[InfoItemCase(value=f.value) for f in case.fields if f.type=='info'],
+                info=[f.value for f in case.fields if f.type=='info'],
                 payment=[PaymentItemCase(name=f.field_name, value=f.value) for f in case.fields if f.type=='payment'],
             )
             for case in results

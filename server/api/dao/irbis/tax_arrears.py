@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ class TaxArrearsDAO(BaseDAO):
             logger.debug(
                 f"DAO: Получение задолженностей для irbis_person_id={irbis_person_id} page={page} size={size}",
             )
-            offset = (page - 1) * size
+            offset = max((page - 1) * size,0)
 
             query = (
                 select(TaxArrearsFullTable)
