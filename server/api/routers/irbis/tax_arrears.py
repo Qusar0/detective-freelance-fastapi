@@ -8,7 +8,6 @@ from server.api.database.database import get_db
 from server.api.schemas.irbis.tax_arrears import (
     TaxArrearsDataRequest,
     TaxArrearsDataCase,
-    InfoItemCase,
     PaymentItemCase
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
@@ -55,7 +54,7 @@ async def get_query_data(
                 money_name=case.money_name,
                 value=case.money_value,
                 info=[f.value for f in case.fields if f.type=='info'],
-                payment=[PaymentItemCase(name=f.field_name, value=f.value) for f in case.fields if f.type=='payment'],
+                payment=[PaymentItemCase(name = f.field_name, value = f.value) for f in case.fields if f.type=='payment'],
             )
             for case in results
         ]

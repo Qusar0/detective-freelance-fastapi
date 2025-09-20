@@ -23,7 +23,7 @@ class TaxArrearsDAO(BaseDAO):
             logger.debug(
                 f"DAO: Получение задолженностей для irbis_person_id={irbis_person_id} page={page} size={size}",
             )
-            offset = max((page - 1) * size,0)
+            offset = max((page - 1) * size, 0)
 
             query = (
                 select(TaxArrearsFullTable)
