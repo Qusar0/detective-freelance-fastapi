@@ -8,6 +8,13 @@ from server.api.models.models import UserBalances
 from server.api.scripts.sse_manager import publish_event
 
 
+class InsufficientFundsError(Exception):
+    def __init__(self, current_balance: float, required_amount: float):
+        self.current_balance = current_balance
+        self.required_amount = required_amount
+        super().__init__(f"Недостаточно средств. Баланс: {current_balance}, требуется: {required_amount}")
+
+
 class UserBalancesDAO(BaseDAO):
     model = UserBalances
 
@@ -27,6 +34,12 @@ class UserBalancesDAO(BaseDAO):
                 user_balance.balance + (-amount),
                 2,
             )
+
+            if user_balance.balance < amount:
+                raise InsufficientFundsError(
+                    current_balance=user_balance.balance,
+                    required_amount=amount
+                )
 
             await db.commit()
 
