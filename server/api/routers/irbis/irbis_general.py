@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,6 @@ from server.api.schemas.irbis.irbis_general import (
     IrbisPersonInfo,
 )
 from server.api.schemas.irbis.statistic import (
-    StatisticDataRequest,
     StatisticGeneralCase
 )
 from typing import List
@@ -108,42 +107,42 @@ async def get_person_info(
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.post("/statistic", response_model=StatisticGeneralCase)
+@router.get("/statistic/{query_id}", response_model=StatisticGeneralCase, tags=['Irbis/Общее'])
 async def get_query_data(
-    request_data: StatisticDataRequest = Body(...),
+    query_id: int,
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает статистику по о выполненному запросу."""
+    """Получает статистику по выполненному запросу."""
     try:
         logger.info(
-            f"Запрос statistic для query_id: {request_data.query_id}"
+            f"Запрос statistic для query_id: {query_id}"
         )
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        irbis_person = await IrbisPersonDAO.get_irbis_person(user_id, request_data.query_id, db)
+        irbis_person = await IrbisPersonDAO.get_irbis_person(user_id, query_id, db)
         if not irbis_person:
-            logger.warning(f"Запрос не найден для пользователя {user_id}, query_id: {request_data.query_id}")
+            logger.warning(f"Запрос не найден для пользователя {user_id}, query_id: {query_id}")
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
         results = await StatisticsDAO.get_all_counts(
-            query_id=irbis_person.id,
+            person_id=irbis_person.id,
             db=db,
         )
 
         case = StatisticGeneralCase(
-                arbitration_court=results['arbitration_court'],
-                bankruptcy=results['bankruptcy'],
-                corruption=results['corruption'],
-                court_general=results['court_general'],
-                disqualified_person=results['disqualified_person'],
-                pledgess=results['pledgess'],
-            )
+            arbitration_court=results['arbitration_court_full'],
+            bankruptcy=results['bankruptcy_full'],
+            corruption=results['corruption_full'],
+            court_general=results['court_general_full'],
+            disqualified_person=results['disqualified_person_full'],
+            pledgess=results['pledgess_full'],
+        )
         return case
 
     except HTTPException as e:

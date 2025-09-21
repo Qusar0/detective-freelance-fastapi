@@ -9,7 +9,3 @@ class StatisticGeneralCase(BaseModel):
     court_general: Optional[int] = Field(..., description="Количество записей из судов общей юрисдикции")
     disqualified_person: Optional[int] = Field(..., description="Количество записей о дисквалификации")
     pledgess: Optional[int] = Field(..., description="Количество записей о залогах")
-
-
-class StatisticDataRequest(BaseModel):
-    query_id: int

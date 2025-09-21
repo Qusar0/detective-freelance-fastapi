@@ -17,34 +17,31 @@ from loguru import logger
 
 class StatisticsDAO(BaseDAO):
 
-    # Определяем все таблицы для статистики
     TABLE_MAPPING = {
-        "arbitration_court": ArbitrationCourtFullTable,
-        "bankruptcy": BankruptcyFullTable,
-        "corruption": CorruptionFullTable,
-        "court_general": CourtGeneralJurFullTable,
-        "disqualified_person": DisqualifiedPersonFullTable,
-        "pledgess": PledgeFullTable,
+        "arbitration_court_full": ArbitrationCourtFullTable,
+        "bankruptcy_full": BankruptcyFullTable,
+        "corruption_full": CorruptionFullTable,
+        "court_general_full": CourtGeneralJurFullTable,
+        "disqualified_person_full": DisqualifiedPersonFullTable,
+        "pledgess_full": PledgeFullTable,
     }
 
     @staticmethod
     async def get_all_counts(
-        query_id: int,
+        person_id: int,
         db: AsyncSession
     ) -> Dict[str, int]:
         """Получить количество записей по всем таблицам за один вызов."""
         try:
 
-            tasks = []
-            for table_name, table in StatisticsDAO.TABLE_MAPPING.items():
-                task = StatisticsDAO._get_count_for_table(table, query_id, db)
-                tasks.append((table_name, task))
-
             results = {}
-            for table_name, task in tasks:
-                results[table_name] = await task
 
-            logger.info(f"DAO: Получены данные для ID {query_id}")
+            for table_name, table in StatisticsDAO.TABLE_MAPPING.items():
+                results[table_name] = await StatisticsDAO._get_count_for_table(
+                    table, person_id, db
+                )
+
+            logger.info(f"DAO: Получена статистика по irbis_person_id={person_id}")
             return results
 
         except Exception as e:
