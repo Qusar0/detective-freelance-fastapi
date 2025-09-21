@@ -49,6 +49,11 @@ class UserBalancesDAO(BaseDAO):
             }
 
             await publish_event(channel, event_data)
+        except InsufficientFundsError:
+            raise InsufficientFundsError(
+                    current_balance=user_balance.balance,
+                    required_amount=amount
+                )
         except (SQLAlchemyError, Exception) as e:
             logger.error(f"Ошибка при списании с баланса: {e}")
             await db.rollback()
