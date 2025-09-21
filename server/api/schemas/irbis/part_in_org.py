@@ -38,4 +38,4 @@ class PartInOrgCaseFull(BaseModel):
     case_id: int = Field(..., description="Уникальный идентификатор дела")
 
     org_data: Optional[OrgObjectSchema] = Field(None, description="Данные об организации-участнике дела")
-    individual_data: Optional[IndividualObjectSchema] = Field(None, description="Данные о физическом лице-участнике дела")
+    individual: Optional[IndividualObjectSchema] = Field(None, description="Данные физлица-участника дела")
