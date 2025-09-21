@@ -7,15 +7,21 @@ from server.api.schemas.irbis.irbis_general import (
     RegionInfo,
     IrbisPersonInfo,
 )
+from server.api.schemas.irbis.statistic import (
+    StatisticGeneralCase
+)
 from typing import List
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.region_subjects import RegionSubjectDAO
+from server.api.dao.irbis.statistic import StatisticsDAO
 from server.api.routers.irbis.court_general import router as court_general_router
 from server.api.routers.irbis.arbitration_court import router as arbitration_court_router
 from server.api.routers.irbis.bankruptcy import router as bankruptcy_router
 from server.api.routers.irbis.disqualified_person import router as disqualified_person_router
 from server.api.routers.irbis.pledgess import router as pledgess_router
 from server.api.routers.irbis.corruption import router as corruption_router
+from server.api.routers.irbis.fssp import router as fssp_router
+from server.api.routers.irbis.part_on_org import router as part_on_org_router
 from loguru import logger
 
 
@@ -30,6 +36,8 @@ router.include_router(bankruptcy_router)
 router.include_router(disqualified_person_router)
 router.include_router(pledgess_router)
 router.include_router(corruption_router)
+router.include_router(part_on_org_router)
+router.include_router(fssp_router)
 
 
 @router.get("/regions", response_model=List[RegionInfo], tags=['Irbis/Общее'])
@@ -97,6 +105,55 @@ async def get_person_info(
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
+        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}")
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+
+
+@router.get("/statistic/{query_id}", response_model=StatisticGeneralCase, tags=['Irbis/Общее'])
+async def get_query_data(
+    query_id: int,
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получает статистику по выполненному запросу."""
+    try:
+        logger.info(
+            f"Запрос statistic для query_id: {query_id}"
+        )
+
+        Authorize.jwt_required()
+        user_id = int(Authorize.get_jwt_subject())
+        logger.debug(f"Аутентифицированный пользователь: {user_id}")
+
+        irbis_person = await IrbisPersonDAO.get_irbis_person(user_id, query_id, db)
+        if not irbis_person:
+            logger.warning(f"Запрос не найден для пользователя {user_id}, query_id: {query_id}")
+            raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
+
+        logger.debug(f"Найден irbis_person: {irbis_person.id}")
+
+        results = await StatisticsDAO.get_all_counts(
+            person_id=irbis_person.id,
+            db=db,
+        )
+
+        case = StatisticGeneralCase(
+            arbitration_court=results['arbitration_court_full'],
+            bankruptcy=results['bankruptcy_full'],
+            corruption=results['corruption_full'],
+            court_general=results['court_general_full'],
+            disqualified_person=results['disqualified_person_full'],
+            pledgess=results['pledgess_full'],
+        )
+        return case
+
+    except HTTPException as e:
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
+        raise e
+    except MissingTokenError:
+        logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Неожиданная ошибка: {e}")

@@ -27,7 +27,7 @@ async def get_query_data(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о делах общий юрисдикции по выполненному запросу."""
+    """Получает данные о залогах по выполненному запросу."""
     try:
         logger.info(
             f"Запрос court_general_data для query_id: {request_data.query_id}, "
@@ -99,7 +99,7 @@ async def get_full_case_info(
 ):
     """Получает полную информацию о судебном деле по ID дела."""
     try:
-        logger.info(f"Запрос полной информации по делу ID: {case_id}")
+        logger.info(f"Запрос полной информации о залогах по делу ID: {case_id}")
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())

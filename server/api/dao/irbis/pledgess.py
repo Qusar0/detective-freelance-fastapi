@@ -27,18 +27,18 @@ class PledgessDAO(BaseDAO):
             query = select(PledgeFullTable).where(
                 PledgeFullTable.irbis_person_id == irbis_person_id
             )
-            
+
             query = query.options(
                 selectinload(PledgeFullTable.parties),
                 selectinload(PledgeFullTable.pledges)
             )
-            
+
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
 
             result = await db.execute(query)
             results = result.scalars().all()
-            
+
             logger.debug(f"DAO: Найдено {len(results)} записей")
             return results
         except Exception as e:

@@ -3,31 +3,31 @@ from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-from server.api.database.database import get_db
 
-from server.api.schemas.irbis.disqualified_person import (
-    DisqDataRequest,
-    DisqCaseFull,
-    DisqDataCase,
+from server.api.database.database import get_db
+from server.api.schemas.irbis.fssp import (
+    FSSPDataRequest,
+    FSSPCaseFull,
+    FSSPDataCase,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
-from server.api.dao.irbis.disqualified_person import DisqualifiedPersonDAO
+from server.api.dao.irbis.fssp import FSSPDAO
 from loguru import logger
 
 
-router = APIRouter(prefix="/disqualified_person", tags=["Irbis/Дисквалифицированные лица"])
+router = APIRouter(prefix="/fssp", tags=["Irbis/FSSP"])
 
 
-@router.post("/data", response_model=List[DisqDataCase])
+@router.post("/data", response_model=List[FSSPDataCase])
 async def get_query_data(
-    request_data: DisqDataRequest = Body(...),
+    request_data: FSSPDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о дисквалифицированных лицах по выполненному запросу."""
+    """Получает список дел ФССП по выполненному запросу (пагинация)."""
     try:
         logger.info(
-            f"Запрос disqualified_person_data для query_id: {request_data.query_id}, "
+            f"Запрос fssp_data для query_id: {request_data.query_id}, "
             f"page: {request_data.page}, size: {request_data.size}"
         )
 
@@ -42,87 +42,87 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results = await DisqualifiedPersonDAO.get_paginated_data(
+        results = await FSSPDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
             db=db,
         )
+
         cases = [
-            DisqDataCase(
+            FSSPDataCase(
                 id=case.id,
                 fio=case.fio,
-                start_date_disq=case.start_date_disq,
-                end_date_disq=case.end_date_disq,
-                article=case.article,
-                legal_name=case.legal_name,
-                office=case.office,
+                type_ip=case.type_ip,
+                summ=case.summ,
+                end_cause=case.end_cause,
             )
             for case in results
         ]
         return cases
 
     except HTTPException as e:
-        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
+        logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
         logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.get("/case_full/{case_id}", response_model=DisqCaseFull)
+@router.get("/case_full/{case_id}", response_model=FSSPCaseFull)
 async def get_full_case_info(
     case_id: int,
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает полную информацию о банкротсвах по ID."""
+    """Получает полную информацию по fssp делу и проверяет доступ."""
     try:
-        logger.info(f"Запрос полной информации о дисквалифицированных лицах по ID: {case_id}")
+        logger.info(f"Запрос полной информации о fssp деле id={case_id}")
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        case = await DisqualifiedPersonDAO.get_full_case_by_id(case_id, db)
+        case = await FSSPDAO.get_full_case_by_id(case_id, db)
         if not case:
-            logger.warning(f"Дело {case_id} не найдено")
+            logger.warning(f"fssp case id={case_id} не найден")
             raise HTTPException(status_code=404, detail="Дело не найдено")
 
-        if case.irbis_person.query.user_id != user_id:
+        owner_id = None
+        try:
+            owner_id = case.irbis_person.query.user_id
+        except Exception:
+            owner_id = None
+
+        if owner_id is not None and owner_id != user_id:
             logger.warning(
-                f"Попытка доступа к делу {case_id} пользователем {user_id}. "
-                f"Владелец запроса: {case.irbis_person.query.user_id}"
+                f"Попытка доступа к делу {case_id} пользователем {user_id}. Владелец запроса: {owner_id}"
             )
             raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        case_full = DisqCaseFull(
+        case_full = FSSPCaseFull(
             id=case.id,
-            birth_date=case.birth_date,
+            ip=case.ip,
             fio=case.fio,
-            article=case.article,
-            start_date_disq=case.start_date_disq,
-            end_date_disq=case.end_date_disq,
-            bornplace=case.bornplace,
-            fio_judge=case.fio_judge,
-            office_judge=case.office_judge,
-            legal_name=case.legal_name,
-            office=case.office,
-            department=case.department
+            rosp=case.rosp,
+            type_ip=case.type_ip,
+            summ=case.summ,
+            rekv=case.rekv,
+            end_cause=case.end_cause,
+            pristav=case.pristav,
+            pristav_phones=case.pristav_phones,
         )
-
-        logger.success(f"Успешно возвращена полная информация по делу {case_id}")
         return case_full
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
+        logger.error("Неавторизованный пользователь")
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
+        logger.error(f"Неожиданная ошибка: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

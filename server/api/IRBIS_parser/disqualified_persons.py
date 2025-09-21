@@ -54,7 +54,7 @@ class DisqualifiedPersons:
         return full_data
 
     @staticmethod
-    async def _process_disqualified_data(irbis_person_id: int, person_uuid: str):
+    async def _process_bankruptcy_data(irbis_person_id: int, person_uuid: str):
         """Обработка данных о банкротстве с пагинацией"""
         full_data = []
         page = 1
