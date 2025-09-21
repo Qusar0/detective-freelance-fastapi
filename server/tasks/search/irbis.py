@@ -19,7 +19,7 @@ from server.api.models.irbis_models import (
     PledgesPreviewTable,
     DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
-    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    PartInOrgPreviewTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
@@ -28,7 +28,6 @@ from server.tasks.celery_config import get_event_loop
 from server.logger import SearchLogger
 from server.api.dao.irbis.match_type import MatchTypeDAO
 from server.api.dao.irbis.person_regions import PersonRegionsDAO
-from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -378,7 +377,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _part_in_org_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_all, data_preview_selected = await ParticipationOrganization.get_data_preview(self.person_uuid)
-        full_data = await ParticipationOrganization.get_full_data(self.person_uuid, 1, 50, 'all')
 
         part_in_org_preview = []
         for item in data_preview_all:
@@ -400,59 +398,11 @@ class IrbisSearchTask(BaseSearchTask):
         db.add_all(part_in_org_preview)
 
         part_in_org_full = []
-        for entry in full_data:
-            org_data = entry.get("org_data")
-            org_obj = None
-            if org_data:
-                address: dict = org_data.get('address_obj')
-                region_id = None
-                full_address = None
-
-                if address:
-                    region_code = int(address.get('region_code'))
-                    region = await RegionSubjectDAO.get_region_by_code(region_code, db)
-                    region_id = region.id if region else None
-                    full_address = address.get('full_address')
-
-                okved = org_data.get('okved')
-                okved_name = None
-                if okved:
-                    okved_name = okved.get('name')
-
-                org_obj = PartInOrgOrganizationTable(
-                    name=org_data.get("name", ""),
-                    inn=org_data.get("inn", ""),
-                    ogrn=org_data.get("ogrn"),
-                    address=full_address,
-                    okved=okved_name,
-                    region_id=region_id,
-                )
-
-            individual_data = entry.get("individual_data")
-            individual_obj = None
-            if individual_data:
-                roles_data = individual_data.get("roles", [])
-                roles_objs = [
-                    PartInOrgRoleTable(
-                        name=role.get("name", ""),
-                        active=role.get("active", False),
-                    )
-                    for role in roles_data
-                ]
-
-                individual_obj = PartInOrgIndividualTable(
-                    name=individual_data.get("name", ""),
-                    inn=individual_data.get("inn", ""),
-                    roles=roles_objs,
-                )
-
-            obj = PartInOrgFullTable(
-                irbis_person_id=irbis_person_id,
-                org=org_obj,
-                individual=individual_obj,
-            )
-
-            part_in_org_full.append(obj)
+        part_in_org_full.extend(await ParticipationOrganization._process_pledgess_data(
+            irbis_person_id,
+            self.person_uuid,
+            db
+        ))
         db.add_all(part_in_org_full)
 
     async def _tax_areas_data(self, irbis_person_id: int, db: AsyncSession):
