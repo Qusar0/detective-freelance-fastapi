@@ -98,14 +98,14 @@ class FindByIRBISModel(BaseModel):
 
 class QueryDataRequest(BaseModel):
     query_id: int
-    keyword_type_category: str
+    keyword_type_category: Optional[str]
     page: int = 1
     size: int = 20
 
 
 class CategoryQueryDataRequest(BaseModel):
     query_id: int
-    keyword_type_category: str
+    keyword_type_category: Optional[str]
     size: int = 20
 
 
