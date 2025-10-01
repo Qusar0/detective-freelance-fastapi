@@ -37,5 +37,5 @@ class IndividualObjectSchema(BaseModel):
 class PartInOrgCaseFull(BaseModel):
     case_id: int = Field(..., description="Уникальный идентификатор дела")
 
-    org_data: Optional[OrgObjectSchema] = Field(None, description="Данные об организации-участнике дела")
+    org: Optional[OrgObjectSchema] = Field(None, description="Данные об организации-участнике дела")
     individual: Optional[IndividualObjectSchema] = Field(None, description="Данные физлица-участника дела")

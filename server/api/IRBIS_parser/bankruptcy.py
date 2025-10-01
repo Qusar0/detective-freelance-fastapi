@@ -72,6 +72,40 @@ class Bankruptcy:
             full_data.extend(data)
             page += 1
 
+        test_data = [
+            {
+                "first_name": "Иван",
+                "second_name": "Петрович",
+                "last_name": "Сидоров", 
+                "birth_date": "15.03.1978",
+                "born_place": "г. Москва",
+                "inn": "771234567890",
+                "ogrn": "1234567890123",
+                "snils": "123-456-789-00",
+                "old_name": "Сидоров-Петров И.П.",
+                "category_name": "Индивидуальный предприниматель",
+                "location": "Московский областной суд", 
+                "region_name": "Московская область",
+                "information": "Дело о банкротстве № А40-123456/2023",
+                "link": "https://bankrot.fedresurs.ru/Card.aspx?ID=abc123def456",
+            },
+            {
+                "first_name": "Мария",
+                "second_name": "Сергеевна",
+                "last_name": "Иванова",
+                "birth_date": "22.07.1985", 
+                "born_place": "г. Санкт-Петербург",
+                "inn": "784512345678",
+                "ogrn": "9876543210987",
+                "snils": "987-654-321-00",
+                "old_name": None,
+                "category_name": "Физическое лицо",
+                "location": "Арбитражный суд г. Санкт-Петербурга",
+                "region_name": "г. Санкт-Петербург",
+                "information": "Дело о банкротстве № А56-789012/2024",
+                "link": "https://bankrot.fedresurs.ru/Card.aspx?ID=xyz789uvw456", 
+            }
+        ]
         return [
             BankruptcyFullTable(
                 irbis_person_id=irbis_person_id,
@@ -91,5 +125,5 @@ class Bankruptcy:
                 link=item.get("link"),
                 search_type=search_type,
             )
-            for item in full_data
+            for item in test_data
         ]

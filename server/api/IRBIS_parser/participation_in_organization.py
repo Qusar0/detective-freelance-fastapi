@@ -38,7 +38,7 @@ class ParticipationOrganization:
         return all_regions, selected_regions
 
     @staticmethod
-    async def get_full_data(person_uuid: str, page: int, rows: int, search_type: str, db: AsyncSession):  # noqa: WPS615
+    async def get_full_data(person_uuid: str, page: int, rows: int, search_type: str):  # noqa: WPS615
         """
         Получение данных об участии физического лица в организациях и ИП.
 
@@ -63,18 +63,46 @@ class ParticipationOrganization:
         return full_data
 
     @staticmethod
-    async def _process_pledgess_data(irbis_person_id: int, person_uuid: str, db: AsyncSession):
+    async def _process_participation_data(irbis_person_id: int, person_uuid: str, db: AsyncSession):
         """Обработка данных о банкротстве с пагинацией"""
         full_data = []
         page = 1
 
         while True:
-            data = await ParticipationOrganization.get_full_data(person_uuid, page, 50, db)
+            data = await ParticipationOrganization.get_full_data(person_uuid, page, 50, 'all')
             if not data:
                 break
             full_data.extend(data)
             page += 1
 
+        full_data = [{
+            "org_data": {
+                "name": "ООО 'Ромашка'",
+                "inn": "7712345678",
+                "ogrn": "1234567890123",
+                "address_obj": {
+                    "region_code": 77,
+                    "full_address": "г. Москва, ул. Тверская, д. 10, офис 25"
+                },
+                "okved": {
+                    "name": "Деятельность консультативная и работы в области компьютерных технологий"
+                }
+            },
+            "individual_data": {
+                "name": "Петров Иван Сергеевич",
+                "inn": "771234567890",
+                "roles": [
+                    {
+                        "name": "Директор",
+                        "active": True
+                    },
+                    {
+                        "name": "Учредитель", 
+                        "active": True
+                    }
+                ]
+            }
+        }]
         part_in_org_full = []
         for entry in full_data:
             org_data = entry.get("org_data")
