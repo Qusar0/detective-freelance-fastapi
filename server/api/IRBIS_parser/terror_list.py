@@ -44,9 +44,29 @@ class TerrorList:
                 f"page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)
 
-        full_data: Optional[list] = []
+        full_data: Optional[list] = [
+
+                {
+                    "birth_place": "Г. СЕВЕРСК ТОМСКАЯ ОБЛАСТЬ",
+                    "id": 3759712,
+                    "fio": "ТЮМЕНЦЕВ ВАДИМ ВИКТОРОВИЧ",
+                    "birth_date": "1980-12-03T00:00:00+0100"
+                }
+
+        ]
 
         if response is not None:
             full_data = response["result"]
+
+        full_data: Optional[list] = [
+
+            {
+                "birth_place": "Г. СЕВЕРСК ТОМСКАЯ ОБЛАСТЬ",
+                "id": 3759712,
+                "fio": "ТЮМЕНЦЕВ ВАДИМ ВИКТОРОВИЧ",
+                "birth_date": "1980-12-03T00:00:00+0100"
+            }
+
+        ]
 
         return full_data
