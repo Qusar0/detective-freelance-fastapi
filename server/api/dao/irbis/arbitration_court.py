@@ -46,7 +46,7 @@ class ArbitrationCourtDAO(BaseDAO):
 
             if role:
                 logger.debug(f"Фильтрация по роли лица: {role}")
-                query = query.join(PersonRoleType).where(PersonRoleType.short_name == role)
+                query = query.join(PersonRoleType).where(PersonRoleType.short_name == role or PersonRoleType.russian_name == role.capitalize())
 
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)

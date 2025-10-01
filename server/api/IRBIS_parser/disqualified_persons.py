@@ -66,6 +66,47 @@ class DisqualifiedPersons:
             full_data.extend(data)
             page += 1
 
+        test_disqualified_data = [
+            {
+                "birth_date": "12.05.1980",
+                "fio": "Петров Сергей Иванович",
+                "article": "ст. 14.1 КоАП РФ",
+                "start_date_disq": "15.01.2023",
+                "end_date_disq": "15.01.2026",
+                "bornplace": "г. Екатеринбург", 
+                "fio_judge": "Иванова Мария Петровна",
+                "office_judge": "Арбитражный суд Свердловской области",
+                "legal_name": "ООО 'СтройИнвест'",
+                "office": "Директор",
+                "department": "Территориальный орган Росимущества по Свердловской области"
+            },
+            {
+                "birth_date": "03.11.1975",
+                "fio": "Семенов Алексей Владимирович",
+                "article": "ст. 14.12 КоАП РФ",
+                "start_date_disq": "20.03.2022",
+                "end_date_disq": "20.03.2025",
+                "bornplace": "г. Новосибирск",
+                "fio_judge": "Петров Дмитрий Сергеевич", 
+                "office_judge": "Арбитражный суд Новосибирской области",
+                "legal_name": "ЗАО 'ТехноПром'",
+                "office": "Генеральный директор",
+                "department": "Управление Федеральной службы по финансовому мониторингу"
+            },
+            {
+                "birth_date": "28.07.1988",
+                "fio": "Козлова Анна Дмитриевна",
+                "article": "ст. 14.13 КоАП РФ",
+                "start_date_disq": "10.09.2024", 
+                "end_date_disq": "10.09.2027",
+                "bornplace": "г. Казань",
+                "fio_judge": "Сидорова Ольга Викторовна",
+                "office_judge": "Арбитражный суд Республики Татарстан",
+                "legal_name": "ООО 'ФинансГрупп'",
+                "office": "Главный бухгалтер",
+                "department": "Территориальное управление Банка России"
+            }
+        ]
         return [
             DisqualifiedPersonFullTable(
                 irbis_person_id=irbis_person_id,
@@ -81,5 +122,5 @@ class DisqualifiedPersons:
                 office=item.get("office"),
                 department=item.get("department")
             )
-            for item in full_data
+            for item in test_disqualified_data
         ]

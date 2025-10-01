@@ -100,14 +100,14 @@ async def get_full_case_info(
 
         case_full = PartInOrgCaseFull(
             case_id=case.id,
-            org_data=OrgObjectSchema(
+            org=OrgObjectSchema(
                 name=case.org.name,
                 inn=case.org.inn,
                 ogrn=case.org.ogrn,
                 address=case.org.address,
                 okved=case.org.okved
             ),
-            individual_data=IndividualObjectSchema(
+            individual=IndividualObjectSchema(
                 name=case.individual.name,
                 inn=case.individual.inn,
                 roles=[
