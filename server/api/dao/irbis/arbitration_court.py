@@ -1,5 +1,5 @@
-from typing import Optional
-from sqlalchemy import select
+from typing import Optional, Tuple
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,8 +23,8 @@ class ArbitrationCourtDAO(BaseDAO):
         search_type: Optional[str],
         role: Optional[str],
         db: AsyncSession
-    ):
-        """Получение пагинированных данных о судебных делах с фильтрацией."""
+    ) -> Tuple[list, int]:
+        """Получение пагинированных данных о судебных делах с фильтрацией и общим количеством."""
         try:
             logger.debug(
                 f"DAO: Получение данных для irbis_person_id: {irbis_person_id}, "
@@ -40,13 +40,23 @@ class ArbitrationCourtDAO(BaseDAO):
                 selectinload(ArbitrationCourtFullTable.role),
             )
 
+            count_query = select(func.count(ArbitrationCourtFullTable.id)).where(
+                ArbitrationCourtFullTable.irbis_person_id == irbis_person_id
+            )
+
             if search_type:
                 logger.debug(f"Фильтрация по типу поиска: {search_type}")
                 query = query.where(ArbitrationCourtFullTable.search_type == search_type)
+                count_query = count_query.where(ArbitrationCourtFullTable.search_type == search_type)
 
             if role:
                 logger.debug(f"Фильтрация по роли лица: {role}")
-                query = query.join(PersonRoleType).where(PersonRoleType.short_name == role or PersonRoleType.russian_name == role.capitalize())
+                query = query.join(PersonRoleType).where(
+                    (PersonRoleType.russian_name == role.capitalize())
+                )
+                count_query = count_query.join(PersonRoleType).where(
+                    (PersonRoleType.russian_name == role.capitalize())
+                )
 
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
@@ -54,11 +64,14 @@ class ArbitrationCourtDAO(BaseDAO):
             result = await db.execute(query)
             results = result.scalars().all()
 
-            logger.debug(f"DAO: Найдено {len(results)} записей")
-            return results
+            count_result = await db.execute(count_query)
+            total_count = count_result.scalar_one()
+
+            logger.debug(f"DAO: Найдено {len(results)} записей из {total_count} всего")
+            return results, total_count
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при получении данных арбитражных дел дел: {e}")
+            logger.error(f"DAO: Ошибка при получении данных арбитражных дел: {e}")
             raise
 
     @staticmethod

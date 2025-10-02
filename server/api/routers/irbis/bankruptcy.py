@@ -9,6 +9,7 @@ from server.api.schemas.irbis.bankruptcy import (
     BankruptcyDataRequest,
     BankruptcyCaseFull,
     BankruptcyDataCase,
+    BankruptcyDataResponse,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.bankruptcy import BankruptcyDAO
@@ -18,7 +19,7 @@ from loguru import logger
 router = APIRouter(prefix="/bankruptcy", tags=["Irbis/Банкротства"])
 
 
-@router.post("/data", response_model=List[BankruptcyDataCase])
+@router.post("/data", response_model=BankruptcyDataResponse)
 async def get_query_data(
     request_data: BankruptcyDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -43,13 +44,14 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results = await BankruptcyDAO.get_paginated_data(
+        results, total_count = await BankruptcyDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
             search_type=request_data.search_type,
             db=db,
         )
+
         cases = [
             BankruptcyDataCase(
                 id=case.id,
@@ -63,7 +65,14 @@ async def get_query_data(
             )
             for case in results
         ]
-        return cases
+
+        total_pages = (total_count + request_data.size - 1) // request_data.size if request_data.size > 0 else 0
+
+        return BankruptcyDataResponse(
+            cases=cases,
+            total_count=total_count,
+            total_pages=total_pages
+        )
 
     except HTTPException as e:
         logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")

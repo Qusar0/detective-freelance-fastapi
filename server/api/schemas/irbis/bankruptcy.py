@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, validator, Field
 from datetime import datetime
 
@@ -24,12 +24,18 @@ class BankruptcyDataCase(BaseModel):
         return value
 
 
+class BankruptcyDataResponse(BaseModel):
+    cases: List[BankruptcyDataCase] = Field(..., description="Список дел для текущей страницы")
+    total_count: int = Field(..., description="Общее количество дел с учетом фильтров")
+    total_pages: int = Field(..., description="Общее количество страниц для пагинации")
+
+
 class BankruptcyDataRequest(BaseModel):
     query_id: int
     page: int = Field(1, ge=1, description="Номер страницы (начинается с 1)")
     size: int = Field(20, ge=1, le=100, description="Количество элементов на странице (1-100)")
 
-    search_type: str = Field("name", description="Тип поиска(name или inn)")
+    search_type: Optional[str] = Field(..., description="Тип поиска(name или inn)")
 
 
 class BankruptcyCaseFull(BaseModel):

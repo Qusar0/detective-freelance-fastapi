@@ -8,6 +8,7 @@ from server.api.schemas.irbis.irbis_general import RoleTypeInfo
 from server.api.schemas.irbis.arbitration_court import (
     ArbitrationCourtDataRequest,
     ArbitrationCourtCase,
+    ArbitrationCourtDataResponse,
     CaseTypeInfo,
     ArbitrationCourtCaseFull,
 )
@@ -19,7 +20,7 @@ from loguru import logger
 router = APIRouter(prefix="/arbitration_court", tags=["Irbis/Арбитражные суды"])
 
 
-@router.post("/data", response_model=List[ArbitrationCourtCase])
+@router.post("/data", response_model=ArbitrationCourtDataResponse)
 async def get_query_data(
     request_data: ArbitrationCourtDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -45,7 +46,7 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results = await ArbitrationCourtDAO.get_paginated_data(
+        results, total_count = await ArbitrationCourtDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
@@ -74,7 +75,13 @@ async def get_query_data(
             )
             for case in results
         ]
-        return cases
+        total_pages = (total_count + request_data.size - 1) // request_data.size if request_data.size > 0 else 0
+
+        return ArbitrationCourtDataResponse(
+            cases=cases,
+            total_count=total_count,
+            total_pages=total_pages,
+        )
 
     except HTTPException as e:
         logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")

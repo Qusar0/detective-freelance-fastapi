@@ -1,5 +1,5 @@
-from typing import Optional
-from sqlalchemy import select
+from typing import Optional, Tuple, List
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,8 +21,8 @@ class BankruptcyDAO(BaseDAO):
         size: int,
         search_type: str,
         db: AsyncSession
-    ):
-        """Фильтрация и пагинация судебных дел по полю search_type."""
+    ) -> Tuple[List[BankruptcyFullTable], int]:
+        """Фильтрация и пагинация судебных дел по полю search_type с подсчетом общего количества."""
         try:
             logger.debug(f"DAO: Фильтрация по полю search_type: {search_type}")
 
@@ -30,21 +30,25 @@ class BankruptcyDAO(BaseDAO):
                 BankruptcyFullTable.irbis_person_id == irbis_person_id
             )
 
-            if search_type:
-                query = query.where((BankruptcyFullTable.search_type == search_type))
-            else:
-                logger.warning("Нет поля search_type")
-                return []
+            count_query = select(func.count(BankruptcyFullTable.id)).where(
+                BankruptcyFullTable.irbis_person_id == irbis_person_id
+            )
 
-            # Пагинация
+            if search_type:
+                query = query.where(BankruptcyFullTable.search_type == search_type)
+                count_query = count_query.where(BankruptcyFullTable.search_type == search_type)
+
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
 
             result = await db.execute(query)
             results = result.scalars().all()
 
-            logger.debug(f"DAO: Найдено {len(results)} записей для search_type = '{search_type}'")
-            return results
+            count_result = await db.execute(count_query)
+            total_count = count_result.scalar_one()
+
+            logger.debug(f"DAO: Найдено {len(results)} записей из {total_count} всего для search_type = '{search_type}'")
+            return results, total_count
 
         except Exception as e:
             logger.error(f"DAO: Ошибка при фильтрации: {e}")

@@ -15,6 +15,7 @@ from server.api.schemas.irbis.court_general import (
     CourtGeneralCaseFull,
     CourtGeneralFace,
     CourtGeneralProgress,
+    CourtGeneralDataResponse,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
 from server.api.dao.irbis.court_general_jur import CourtGeneralJurDAO
@@ -45,7 +46,7 @@ async def get_process_types(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.post("/data", response_model=Optional[List[CourtGeneralCase]])
+@router.post("/data", response_model=CourtGeneralDataResponse)
 async def get_query_data(
     request_data: CourtGeneralDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
@@ -71,7 +72,7 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results = await CourtGeneralJurDAO.get_paginated_data(
+        results, total_count = await CourtGeneralJurDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
@@ -102,7 +103,14 @@ async def get_query_data(
             )
             for case in results
         ]
-        return cases
+
+        total_pages = (total_count + request_data.size - 1) // request_data.size if request_data.size else 0
+
+        return CourtGeneralDataResponse(
+            cases=cases,
+            total_count=total_count,
+            total_pages=total_pages
+        )
 
     except HTTPException as e:
         logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")

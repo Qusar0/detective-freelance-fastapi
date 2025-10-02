@@ -16,7 +16,7 @@ class ArbitrationCourtDataRequest(BaseModel):
 
     role: Optional[str] = Field(
         None,
-        description="Роль человека в деле (коды: P, R). Если None - все роли",
+        description="Роль человека в деле. Если None - все роли",
     )
 
 
@@ -54,6 +54,12 @@ class ArbitrationCourtCase(BaseModel):
         elif isinstance(value, datetime):
             return value.strftime('%Y-%m-%d')
         return value
+
+
+class ArbitrationCourtDataResponse(BaseModel):
+    cases: List[ArbitrationCourtCase] = Field(..., description="Список дел для текущей страницы")
+    total_count: int = Field(..., description="Общее количество дел с учетом фильтров")
+    total_pages: int = Field(..., description="Общее количество страниц для пагинации")
 
 
 class ArbitrationCourtCaseFull(BaseModel):
