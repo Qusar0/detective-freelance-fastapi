@@ -142,6 +142,10 @@ async def get_query_data(
             court_general=results['court_general_full'],
             disqualified_person=results['disqualified_person_full'],
             pledgess=results['pledgess_full'],
+            terrorists=results['terrorists'],
+            tax_arrears=results['tax_arrears'],
+            fssp=results['fssp'],
+            part_in_org=results['part_in_org'],
         )
         return case
 

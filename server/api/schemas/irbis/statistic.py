@@ -9,3 +9,7 @@ class StatisticGeneralCase(BaseModel):
     court_general: Optional[int] = Field(..., description="Количество записей из судов общей юрисдикции")
     disqualified_person: Optional[int] = Field(..., description="Количество записей о дисквалификации")
     pledgess: Optional[int] = Field(..., description="Количество записей о залогах")
+    terrorists: Optional[int] = Field(..., description="Количество записей о террористах")
+    tax_arrears: Optional[int] = Field(..., description="Количество записей о задолженностях")
+    fssp: Optional[int] = Field(..., description="Количество записей о производствах")
+    part_in_org: Optional[int] = Field(..., description="Количество записей об учасиии в организациях")
