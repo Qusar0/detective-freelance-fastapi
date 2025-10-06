@@ -76,7 +76,7 @@ class Bankruptcy:
             {
                 "first_name": "Иван",
                 "second_name": "Петрович",
-                "last_name": "Сидоров", 
+                "last_name": "Сидоров",
                 "birth_date": "15.03.1978",
                 "born_place": "г. Москва",
                 "inn": "771234567890",
@@ -84,7 +84,7 @@ class Bankruptcy:
                 "snils": "123-456-789-00",
                 "old_name": "Сидоров-Петров И.П.",
                 "category_name": "Индивидуальный предприниматель",
-                "location": "Московский областной суд", 
+                "location": "Московский областной суд",
                 "region_name": "Московская область",
                 "information": "Дело о банкротстве № А40-123456/2023",
                 "link": "https://bankrot.fedresurs.ru/Card.aspx?ID=abc123def456",
@@ -93,7 +93,7 @@ class Bankruptcy:
                 "first_name": "Мария",
                 "second_name": "Сергеевна",
                 "last_name": "Иванова",
-                "birth_date": "22.07.1985", 
+                "birth_date": "22.07.1985",
                 "born_place": "г. Санкт-Петербург",
                 "inn": "784512345678",
                 "ogrn": "9876543210987",
@@ -103,7 +103,7 @@ class Bankruptcy:
                 "location": "Арбитражный суд г. Санкт-Петербурга",
                 "region_name": "г. Санкт-Петербург",
                 "information": "Дело о банкротстве № А56-789012/2024",
-                "link": "https://bankrot.fedresurs.ru/Card.aspx?ID=xyz789uvw456", 
+                "link": "https://bankrot.fedresurs.ru/Card.aspx?ID=xyz789uvw456",
             }
         ]
         return [
