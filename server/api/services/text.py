@@ -1,5 +1,6 @@
 from typing import Dict, List, Any
 from deep_translator import GoogleTranslator
+from loguru import logger
 
 
 def process_text(text: str, lang: str) -> str:
@@ -86,7 +87,7 @@ def translate_text(text: str, source_lang: str, target_lang: str) -> List[str]:
         translated = GoogleTranslator(source=source_lang, target=target_lang).translate(text)
         return list([word.strip().lower() for word in translated.split('. ') if word.strip()])
     except Exception as e:
-        print(f"Translation error for '{text}' to '{target_lang}': {e}")
+        logger.error(f"Ошибка перевода '{text}' на '{target_lang}': {e}")
         return []
 
 

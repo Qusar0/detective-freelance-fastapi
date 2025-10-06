@@ -97,7 +97,7 @@ class ParticipationOrganization:
                         "active": True
                     },
                     {
-                        "name": "Учредитель", 
+                        "name": "Учредитель",
                         "active": True
                     }
                 ]

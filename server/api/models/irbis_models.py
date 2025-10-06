@@ -168,7 +168,10 @@ class ArbitrationCourtFullTable(Base):
     )
     irbis_person_id: Mapped[int] = mapped_column(ForeignKey('irbis_person.id', ondelete='CASCADE'), nullable=False)
     court_name_val: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    role_id: Mapped[Optional[int]] = mapped_column(ForeignKey('person_role_types.id', ondelete='CASCADE'), nullable=True)
+    role_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('person_role_types.id', ondelete='CASCADE'),
+        nullable=True
+    )
     case_date: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     case_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     inn: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
@@ -178,7 +181,10 @@ class ArbitrationCourtFullTable(Base):
         nullable=True,
     )
     address_val: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    region_id: Mapped[Optional[int]] = mapped_column(ForeignKey('region_subjects.id', ondelete='CASCADE'), nullable=True)
+    region_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('region_subjects.id', ondelete='CASCADE'),
+        nullable=True
+    )
     case_number: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     search_type: Mapped[Optional[str]] = mapped_column(String(4), nullable=True)
 
@@ -380,7 +386,11 @@ class CourtGeneralJurFullTable(Base):
     papers: Mapped[Optional[list[str]]] = mapped_column(String, nullable=True)
     papers_pretty: Mapped[Optional[list[str]]] = mapped_column(String, nullable=True)
     links: Mapped[Optional[dict[str, list[str]]]] = mapped_column(JSONB, nullable=True)
-    match_type_id: Mapped[Optional[int]] = mapped_column(ForeignKey('match_types.id', ondelete='CASCADE'), nullable=True)
+    match_type_id: Mapped[Optional[int]] = mapped_column(ForeignKey(
+        'match_types.id',
+        ondelete='CASCADE'),
+        nullable=True
+    )
 
     faces: Mapped[List['CourtGeneralFacesTable']] = relationship(
         back_populates='case',

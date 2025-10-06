@@ -2,6 +2,7 @@ import asyncio
 from typing import List
 from celery import shared_task
 import httpx
+from loguru import logger
 
 from server.api.scripts.lampyre_email import LampyreMail
 from server.api.dao.services_balance import ServicesBalanceDAO
@@ -42,6 +43,7 @@ class EmailSearchTask(BaseSearchTask):
                 mentions_html, filters = result['processed_data']
             except Exception as e:
                 self.money_to_return += 5
+                logger.error(f"Ошибка в получении упоминаний: {e}")
                 self.logger.log_error(f"Ошибка в получении упоминаний: {e}")
 
         if 'acc checker' in self.methods_type:
@@ -50,6 +52,7 @@ class EmailSearchTask(BaseSearchTask):
                 acc_checker = lampyre_email.main(self.email, ['acc checker'])
             except Exception as e:
                 self.money_to_return += 130
+                logger.error(f"Ошибка в проверке аккаунтов: {e}")
                 self.logger.log_error(f"Ошибка в проверке аккаунтов: {e}")
 
         html = response_email_template(
@@ -99,6 +102,7 @@ class EmailSearchTask(BaseSearchTask):
             await db.commit()
         except Exception as e:
             await db.rollback()
+            logger.error(f"Не удалось сохранить необработанный результат: {e}")
             self.logger.log_error(f"Failed to save raw results: {e}")
             raise
 
@@ -138,6 +142,7 @@ class EmailSearchTask(BaseSearchTask):
                 if attempt < max_attempts:
                     await asyncio.sleep(retry_delay)
         else:
+            logger.error(f"Google запрос полностью провален: {url}")
             self.logger.log_error(f"Google запрос полностью провален: {url}")
             update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 
@@ -176,6 +181,7 @@ class EmailSearchTask(BaseSearchTask):
                     if attempt < max_attempts:
                         await asyncio.sleep(retry_delay)
             else:
+                logger.error(f"Yandex запрос полностью провален: {url}")
                 self.logger.log_error(f"Yandex запрос полностью провален: {url}")
                 update_stats(self.request_stats, self.stats_lock, attempt, success=False)
 

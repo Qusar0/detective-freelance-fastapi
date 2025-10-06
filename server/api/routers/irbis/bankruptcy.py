@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
 from server.api.database.database import get_db
 
 from server.api.schemas.irbis.bankruptcy import (

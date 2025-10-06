@@ -28,7 +28,7 @@ class StatisticsDAO(BaseDAO):
         "court_general_full": CourtGeneralJurFullTable,
         "disqualified_person_full": DisqualifiedPersonFullTable,
         "pledgess_full": PledgeFullTable,
-        "terrorists":  TerrorListFullTable,
+        "terrorists": TerrorListFullTable,
         "tax_arrears": TaxArrearsFullTable,
         "fssp": FSSPFullTable,
         "part_in_org": PartInOrgFullTable

@@ -10,8 +10,9 @@ from server.api.models.models import (
     QuerySearchCategory,
     QueryTranslationLanguages,
     Events,
-    TextData,
+    TextData
 )
+from server.api.models.irbis_models import IrbisPerson
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
 from server.api.services.file_storage import FileStorageService
@@ -84,6 +85,7 @@ class UserQueriesDAO(BaseDAO):
                     QueryTranslationLanguages,
                     Events,
                     TextData,
+                    IrbisPerson
                 }
                 for table in tables:
                     await db.execute(delete(table).where(table.query_id == query_id))

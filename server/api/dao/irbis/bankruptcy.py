@@ -47,7 +47,7 @@ class BankruptcyDAO(BaseDAO):
             count_result = await db.execute(count_query)
             total_count = count_result.scalar_one()
 
-            logger.debug(f"DAO: Найдено {len(results)} записей из {total_count} всего для search_type = '{search_type}'")
+            logger.debug(f"DAO:Найдено {len(results)} записей из {total_count} всего для search_type = '{search_type}'")
             return results, total_count
 
         except Exception as e:
