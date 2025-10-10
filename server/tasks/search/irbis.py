@@ -11,7 +11,6 @@ from server.api.IRBIS_parser.fssp import FSSP
 from server.api.IRBIS_parser.ml_index import MLIndex
 from server.api.IRBIS_parser.participation_in_organization import ParticipationOrganization
 from server.api.IRBIS_parser.tax_arrears import TaxArrears
-from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
     CorruptionPreviewTable, CorruptionFullTable,
@@ -19,7 +18,7 @@ from server.api.models.irbis_models import (
     PledgesPreviewTable,
     DisqualifiedPersonPreviewTable,
     FSSPPreviewTable, MLIndexFullTable,
-    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrganizationTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    PartInOrgPreviewTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
@@ -28,7 +27,6 @@ from server.tasks.celery_config import get_event_loop
 from server.logger import SearchLogger
 from server.api.dao.irbis.match_type import MatchTypeDAO
 from server.api.dao.irbis.person_regions import PersonRegionsDAO
-from server.api.dao.irbis.region_subjects import RegionSubjectDAO
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

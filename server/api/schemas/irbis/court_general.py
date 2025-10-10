@@ -16,7 +16,7 @@ class CourtGeneralFace(BaseModel):
 
 class CourtGeneralProgress(BaseModel):
     name: str = Field(..., description="Название этапа процесса")
-    progress_data: str = Field(..., description="Дата этапа процесса")
+    progress_data: Optional[str] = Field(None, description="Дата этапа процесса")
     resolution: Optional[str] = Field(None, description="Решение по этапу")
 
 

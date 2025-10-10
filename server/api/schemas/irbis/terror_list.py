@@ -30,4 +30,3 @@ class TerroristsDataRequest(BaseModel):
     query_id: int
     page: int = Field(1, ge=1, description="Номер страницы (начинается с 1)")
     size: int = Field(20, ge=1, le=100, description="Количество элементов на странице (1-100)")
-
