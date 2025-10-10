@@ -75,34 +75,7 @@ class ParticipationOrganization:
             full_data.extend(data)
             page += 1
 
-        full_data = [{
-            "org_data": {
-                "name": "ООО 'Ромашка'",
-                "inn": "7712345678",
-                "ogrn": "1234567890123",
-                "address_obj": {
-                    "region_code": 77,
-                    "full_address": "г. Москва, ул. Тверская, д. 10, офис 25"
-                },
-                "okved": {
-                    "name": "Деятельность консультативная и работы в области компьютерных технологий"
-                }
-            },
-            "individual_data": {
-                "name": "Петров Иван Сергеевич",
-                "inn": "771234567890",
-                "roles": [
-                    {
-                        "name": "Директор",
-                        "active": True
-                    },
-                    {
-                        "name": "Учредитель",
-                        "active": True
-                    }
-                ]
-            }
-        }]
+        full_data = []
         part_in_org_full = []
         for entry in full_data:
             org_data = entry.get("org_data")

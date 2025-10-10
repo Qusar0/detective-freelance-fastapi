@@ -10,6 +10,7 @@ from server.api.IRBIS_parser.disqualified_persons import DisqualifiedPersons
 from server.api.IRBIS_parser.fssp import FSSP
 from server.api.IRBIS_parser.ml_index import MLIndex
 from server.api.IRBIS_parser.participation_in_organization import ParticipationOrganization
+from server.api.IRBIS_parser.terror_list import TerrorList
 from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
@@ -58,8 +59,7 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _process_search(self, db: AsyncSession):
         try:
-            # person_uuid = await self.person.get_person_uuid()
-            self.person_uuid = 'ae980143-1aef-4426-a81f-c85a2c104dc4'  # 'f1b008d9-5ed1-49f2-8be0-997817a9e48a'
+            self.person_uuid = await self.person.get_person_uuid()
             if self.person_uuid:
                 if self.second_name:
                     fullname = f'{self.last_name} {self.first_name} {self.second_name}'
@@ -164,75 +164,6 @@ class IrbisSearchTask(BaseSearchTask):
             irbis_person_id,
             self.person_uuid,
         )
-        db.add_all(corruption_full)
-
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "key": "e3a4646f-ef96-471b-86e5-b25562228a97",
-                "full_name": "Литонина Ирина Ивановна",
-                "organization": "Министерство сельского хозяйства Сахалинской области",
-                "position": "Советник департамента экономики и финансов",
-                "normative_act": "Пункт 2 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
-                "application_date": "2019-10-28",
-                "publish_date": "2019-08-07",
-                "excluded_reason": "В соответствии с подпунктом \"а\" пункта 15 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228 21 марта 2020 г. сведения подлежат исключению из реестра лиц, уволенных в связи с утратой доверия"
-            },
-            {
-                "key": "a1b2c3d4-5678-90ef-1234-567890abcdef",
-                "full_name": "Петров Алексей Владимирович",
-                "organization": "Администрация города Краснодара",
-                "position": "Начальник отдела имущественных отношений",
-                "normative_act": "Пункт 1 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
-                "application_date": "2020-03-15",
-                "publish_date": "2020-01-20",
-                "excluded_reason": "В связи с истечением срока хранения сведений в соответствии с пунктом 16 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228"
-            },
-            {
-                "key": "b2c3d4e5-6789-01fg-2345-678901abcdef",
-                "full_name": "Смирнова Ольга Дмитриевна",
-                "organization": "Министерство финансов Московской области",
-                "position": "Заместитель начальника управления бюджетного планирования",
-                "normative_act": "Пункт 3 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
-                "application_date": "2021-06-10",
-                "publish_date": "2021-04-12",
-                "excluded_reason": "На основании решения суда о восстановлении на службе от 15 мая 2022 г."
-            },
-            {
-                "key": "c3d4e5f6-7890-12gh-3456-789012abcdef",
-                "full_name": "Кузнецов Денис Сергеевич",
-                "organization": "Правительство Нижегородской области",
-                "position": "Советник губернатора по экономическим вопросам",
-                "normative_act": "Пункт 2 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
-                "application_date": "2018-11-05",
-                "publish_date": "2018-09-18",
-                "excluded_reason": "В связи со смертью гражданского служащего на основании представленных документов"
-            },
-            {
-                "key": "d4e5f6g7-8901-23hi-4567-890123abcdef",
-                "full_name": "Волкова Екатерина Александровна",
-                "organization": "Министерство здравоохранения Республики Татарстан",
-                "position": "Главный специалист отдела кадров",
-                "normative_act": "Пункт 1 части 1 статьи 59.2 Федерального закона от 27 июля 2004 г. № 79-ФЗ \"О государственной гражданской службе Российской Федерации\"",
-                "application_date": "2022-02-28",
-                "publish_date": "2022-01-10",
-                "excluded_reason": "В соответствии с подпунктом \"б\" пункта 15 постановления Правительства Российской Федерации от 5 марта 2018 г. № 228 в связи с признанием сведений не соответствующими действительности"
-            }
-        ]
-
-        corruption_full = [
-            CorruptionFullTable(
-                irbis_person_id=irbis_person_id,
-                full_name=item.get("full_name"),
-                organization=item.get("organization"),
-                position=item.get("position"),
-                normative_act=item.get("normative_act"),
-                application_date=item.get("application_date"),
-                publish_date=item.get("publish_date"),
-                excluded_reason=item.get("excluded_reason"),
-            )
-            for item in temp_result  # TODO: Вернуть full_data
-        ]
         db.add_all(corruption_full)
 
     async def _court_of_gen_jur_data(self, irbis_person_id: int, db: AsyncSession):
@@ -435,17 +366,7 @@ class IrbisSearchTask(BaseSearchTask):
         db.add_all(tax_areas_full)
 
     async def _terror_list_data(self, irbis_person_id: int, db: AsyncSession):
-        # full_data = await TerrorList.get_full_data(self.person_uuid, 1, 50)
-
-        # TODO: УДАЛИТЬ ПОСЛЕ РАЗРАБОТКИ АПИ
-        temp_result = [
-            {
-                "birth_place": "Г. СЕВЕРСК ТОМСКАЯ ОБЛАСТЬ",
-                "id": 3759712,
-                "fio": "ТЮМЕНЦЕВ ВАДИМ ВИКТОРОВИЧ",
-                "birth_date": "1980-12-03T00:00:00+0100"
-            }
-        ]
+        full_data = await TerrorList.get_full_data(self.person_uuid, 1, 50)
 
         terror_list_full = [
             TerrorListFullTable(
@@ -454,7 +375,7 @@ class IrbisSearchTask(BaseSearchTask):
                 birth_date=item.get("birth_date"),
                 birth_place=item.get("birth_place"),
             )
-            for item in temp_result  # TODO: Вернуть full_data
+            for item in full_data
         ]
         db.add_all(terror_list_full)
 
