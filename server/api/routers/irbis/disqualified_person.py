@@ -2,36 +2,33 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List
 from server.api.database.database import get_db
-from server.api.schemas.irbis.irbis_general import RoleTypeInfo
-from server.api.schemas.irbis.arbitration_court import (
-    ArbitrationCourtDataRequest,
-    ArbitrationCourtCase,
-    ArbitrationCourtDataResponse,
-    CaseTypeInfo,
-    ArbitrationCourtCaseFull,
+
+from server.api.schemas.irbis.disqualified_person import (
+    DisqDataRequest,
+    DisqCaseFull,
+    DisqDataCase,
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
-from server.api.dao.irbis.arbitration_court import ArbitrationCourtDAO
+from server.api.dao.irbis.disqualified_person import DisqualifiedPersonDAO
 from loguru import logger
 
 
-router = APIRouter(prefix="/arbitration_court", tags=["Irbis/Арбитражные суды"])
+router = APIRouter(prefix="/disqualified_person", tags=["Irbis/Дисквалифицированные лица"])
 
 
-@router.post("/data", response_model=ArbitrationCourtDataResponse)
+@router.post("/data", response_model=List[DisqDataCase])
 async def get_query_data(
-    request_data: ArbitrationCourtDataRequest = Body(...),
+    request_data: DisqDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о делах общий юрисдикции по выполненному запросу."""
+    """Получает данные о дисквалифицированных лицах по выполненному запросу."""
     try:
         logger.info(
-            f"Запрос arbitration_court_data для query_id: {request_data.query_id}, "
-            f"page: {request_data.page}, size: {request_data.size}, "
-            f"search_type: {request_data.search_type}, "
-            f"role: {request_data.role}"
+            f"Запрос disqualified_person_data для query_id: {request_data.query_id}, "
+            f"page: {request_data.page}, size: {request_data.size}"
         )
 
         Authorize.jwt_required()
@@ -45,42 +42,25 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results, total_count = await ArbitrationCourtDAO.get_paginated_data(
+        results = await DisqualifiedPersonDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
-            search_type=request_data.search_type,
-            role=request_data.role,
             db=db,
         )
         cases = [
-            ArbitrationCourtCase(
+            DisqDataCase(
                 id=case.id,
-                court_name=case.court_name_val,
-                case_date=case.case_date,
-                name=case.name,
-                case_number=case.case_number,
-                address=case.address_val,
-                search_type=case.search_type,
-                inn=case.inn,
-                case_type=CaseTypeInfo(
-                    id=case.case_type.id,
-                    name=case.case_type.name,
-                ) if case.case_type else None,
-                role=RoleTypeInfo(
-                    id=case.role.id,
-                    name=case.role.russian_name,
-                )
+                fio=case.fio,
+                start_date_disq=case.start_date_disq,
+                end_date_disq=case.end_date_disq,
+                article=case.article,
+                legal_name=case.legal_name,
+                office=case.office,
             )
             for case in results
         ]
-        total_pages = (total_count + request_data.size - 1) // request_data.size if request_data.size > 0 else 0
-
-        return ArbitrationCourtDataResponse(
-            cases=cases,
-            total_count=total_count,
-            total_pages=total_pages,
-        )
+        return cases
 
     except HTTPException as e:
         logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
@@ -89,25 +69,25 @@ async def get_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в: {e}")
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.get("/case_full/{case_id}", response_model=ArbitrationCourtCaseFull)
+@router.get("/case_full/{case_id}", response_model=DisqCaseFull)
 async def get_full_case_info(
     case_id: int,
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает полную информацию о судебном деле по ID дела."""
+    """Получает полную информацию о банкротсвах по ID."""
     try:
-        logger.info(f"Запрос полной информации по делу ID: {case_id}")
+        logger.info(f"Запрос полной информации о дисквалифицированных лицах по ID: {case_id}")
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        case = await ArbitrationCourtDAO.get_full_case_by_id(case_id, db)
+        case = await DisqualifiedPersonDAO.get_full_case_by_id(case_id, db)
         if not case:
             logger.warning(f"Дело {case_id} не найдено")
             raise HTTPException(status_code=404, detail="Дело не найдено")
@@ -119,18 +99,19 @@ async def get_full_case_info(
             )
             raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        case_full = ArbitrationCourtCaseFull(
+        case_full = DisqCaseFull(
             id=case.id,
-            court_name=case.court_name_val,
-            case_date=case.case_date,
-            name=case.name,
-            case_number=case.case_number,
-            address=case.address_val,
-            inn=case.inn,
-            case_type=case.case_type.name,
-            role=case.role.russian_name,
-            region=case.region.name if case.region else None,
-            opponents=[opponent.name for opponent in case.oponents],
+            birth_date=case.birth_date,
+            fio=case.fio,
+            article=case.article,
+            start_date_disq=case.start_date_disq,
+            end_date_disq=case.end_date_disq,
+            bornplace=case.bornplace,
+            fio_judge=case.fio_judge,
+            office_judge=case.office_judge,
+            legal_name=case.legal_name,
+            office=case.office,
+            department=case.department
         )
 
         logger.success(f"Успешно возвращена полная информация по делу {case_id}")
@@ -143,5 +124,5 @@ async def get_full_case_info(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}")
+        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

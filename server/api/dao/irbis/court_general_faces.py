@@ -29,5 +29,5 @@ class CourtGeneralFacesDAO(BaseDAO):
             return faces
 
         except Exception as e:
-            logger.error(f"Ошибка при получении лиц для дела {case_id}: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении лиц для дела {case_id}: {e}")
             return None

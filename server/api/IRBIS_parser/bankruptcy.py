@@ -1,6 +1,9 @@
 from typing import Optional
 
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
+from server.api.models.irbis_models import (
+    BankruptcyFullTable
+)
 
 
 class Bankruptcy:
@@ -55,3 +58,38 @@ class Bankruptcy:
             full_data = response["result"]
 
         return full_data
+
+    @staticmethod
+    async def _process_bankruptcy_data(irbis_person_id: int, person_uuid: str, search_type: str):
+        """Обработка данных о банкротстве с пагинацией"""
+        full_data = []
+        page = 1
+
+        while True:
+            data = await Bankruptcy.get_full_data(person_uuid, page, 50, search_type)
+            if not data:
+                break
+            full_data.extend(data)
+            page += 1
+
+        return [
+            BankruptcyFullTable(
+                irbis_person_id=irbis_person_id,
+                first_name=item.get("first_name"),
+                second_name=item.get("second_name"),
+                last_name=item.get("last_name"),
+                birth_date=item.get("birth_date"),
+                born_place=item.get("born_place"),
+                inn=item.get("inn"),
+                ogrn=item.get("ogrn"),
+                snils=item.get("snils"),
+                old_name=item.get("old_name"),
+                category_name=item.get("category_name"),
+                location=item.get("location"),
+                region_name=item.get("region_name"),
+                information=item.get("information"),
+                link=item.get("link"),
+                search_type=search_type,
+            )
+            for item in full_data
+        ]

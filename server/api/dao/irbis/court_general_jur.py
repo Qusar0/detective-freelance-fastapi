@@ -1,5 +1,5 @@
-from typing import Optional, List
-from sqlalchemy import select
+from typing import Optional, List, Tuple
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,8 +24,8 @@ class CourtGeneralJurDAO(BaseDAO):
         all_regions: bool,
         case_categories: Optional[List[str]],
         db: AsyncSession
-    ):
-        """Получение пагинированных данных о судебных делах с фильтрацией."""
+    ) -> Tuple[List[CourtGeneralJurFullTable], int]:
+        """Получение пагинированных данных о судебных делах с фильтрацией и общим количеством."""
         try:
             logger.debug(
                 f"DAO: Получение данных для irbis_person_id: {irbis_person_id}, "
@@ -40,6 +40,10 @@ class CourtGeneralJurDAO(BaseDAO):
                 selectinload(CourtGeneralJurFullTable.process_type),
             )
 
+            count_query = select(func.count(CourtGeneralJurFullTable.id)).where(
+                CourtGeneralJurFullTable.irbis_person_id == irbis_person_id
+            )
+
             if not all_regions:
                 selected_regions_query = select(PersonRegions.region_id).where(
                     PersonRegions.person_id == irbis_person_id
@@ -50,13 +54,11 @@ class CourtGeneralJurDAO(BaseDAO):
                 if selected_region_ids:
                     logger.debug(f"Фильтрация по выбранным регионам: {selected_region_ids}")
                     query = query.where(CourtGeneralJurFullTable.region_id.in_(selected_region_ids))
-                else:
-                    logger.debug("Нет выбранных регионов, возвращаем пустой результат")
-                    return []
-
+                    count_query = count_query.where(CourtGeneralJurFullTable.region_id.in_(selected_region_ids))
             if case_categories:
                 logger.debug(f"Фильтрация по категориям: {case_categories}")
                 query = query.join(ProcessType).where(ProcessType.code.in_(case_categories))
+                count_query = count_query.join(ProcessType).where(ProcessType.code.in_(case_categories))
 
             offset = (page - 1) * size
             query = query.offset(offset).limit(size)
@@ -64,11 +66,14 @@ class CourtGeneralJurDAO(BaseDAO):
             result = await db.execute(query)
             results = result.scalars().all()
 
-            logger.debug(f"DAO: Найдено {len(results)} записей")
-            return results
+            count_result = await db.execute(count_query)
+            total_count = count_result.scalar_one()
+
+            logger.debug(f"DAO: Найдено {len(results)} записей из {total_count} всего")
+            return results, total_count
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при получении данных судебных дел: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при получении данных судебных дел: {e}")
             raise
 
     @staticmethod
@@ -97,5 +102,5 @@ class CourtGeneralJurDAO(BaseDAO):
             return case
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}")
             raise

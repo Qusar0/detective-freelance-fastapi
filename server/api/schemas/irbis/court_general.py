@@ -16,7 +16,7 @@ class CourtGeneralFace(BaseModel):
 
 class CourtGeneralProgress(BaseModel):
     name: str = Field(..., description="Название этапа процесса")
-    progress_data: str = Field(..., description="Дата этапа процесса")
+    progress_data: Optional[str] = Field(None, description="Дата этапа процесса")
     resolution: Optional[str] = Field(None, description="Решение по этапу")
 
 
@@ -76,3 +76,9 @@ class CourtGeneralCaseFull(BaseModel):
 
     faces: List[CourtGeneralFace] = Field(..., description="Участники дела")
     progress: List[CourtGeneralProgress] = Field(..., description="Ход процесса")
+
+
+class CourtGeneralDataResponse(BaseModel):
+    cases: List[CourtGeneralCase] = Field(..., description="Список дел для текущей страницы")
+    total_count: int = Field(..., description="Общее количество дел с учетом фильтров")
+    total_pages: int = Field(..., description="Общее количество страниц для пагинации")

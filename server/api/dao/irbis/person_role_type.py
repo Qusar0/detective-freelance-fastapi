@@ -21,7 +21,7 @@ class PersonRoleTypeDAO(BaseDAO):
             person_roles_map = {role.name: role for role in person_roles}
             return person_roles_map
         except Exception as e:
-            logger.error(f"Ошибка при получении типов участников: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении типов участников: {e}")
             return {}
 
     @classmethod
@@ -36,5 +36,5 @@ class PersonRoleTypeDAO(BaseDAO):
             person_roles_map = {role.short_name: role for role in person_roles}
             return person_roles_map
         except Exception as e:
-            logger.error(f"Ошибка при получении типов участников с коротким именем: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении типов участников с коротким именем: {e}")
             return {}

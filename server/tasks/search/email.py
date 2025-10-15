@@ -8,7 +8,6 @@ from server.api.scripts.lampyre_email import LampyreMail
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.keywords import KeywordsDAO
-from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.models.models import QueriesData, QueryDataKeywords
 from server.api.templates.html_work import response_email_template
 from server.api.services.file_storage import FileStorageService
@@ -110,7 +109,6 @@ class EmailSearchTask(BaseSearchTask):
         all_raw_data = {}
         all_found_data = []
         urls = []
-        proh_sites = await ProhibitedSitesDAO.select_needless_sites(db)
         max_attempts = 5
         retry_delay = 2
 
@@ -157,7 +155,7 @@ class EmailSearchTask(BaseSearchTask):
                         handling_resp = handle_xmlriver_response(
                             response,
                             all_found_data,
-                            proh_sites,
+                            [],
                             self.email,
                             all_raw_data,
                             existing_urls,

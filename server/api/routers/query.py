@@ -39,7 +39,7 @@ from server.api.schemas.query import (
 
 from server.api.dao.queries_balance import QueriesBalanceDAO
 from server.api.dao.user_queries import UserQueriesDAO
-from server.api.dao.user_balances import UserBalancesDAO
+from server.api.dao.user_balances import UserBalancesDAO, InsufficientFundsError
 from server.api.dao.balance_history import BalanceHistoryDAO
 from server.api.dao.queries_data import QueriesDataDAO
 from server.api.dao.query_translation_languages import QueryTranslationLanguagesDAO
@@ -232,6 +232,8 @@ async def find_by_name(
         await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
+    except InsufficientFundsError:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
@@ -269,6 +271,8 @@ async def find_by_number(
             args=(search_number, methods_type, user_query_id, price),
             queue='num_tasks'
         )
+    except InsufficientFundsError:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
@@ -307,6 +311,8 @@ async def find_by_email(
             args=(search_email, methods_type, user_query_id, price),
             queue='email_tasks',
         )
+    except InsufficientFundsError:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
@@ -368,6 +374,8 @@ async def find_by_company(
         await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
+    except InsufficientFundsError:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
@@ -391,7 +399,7 @@ async def find_by_irbis(
         channel = await generate_sse_message_type(user_id=user_id, db=db)
         price = 100
 
-        query_title = " ".join([request_data.first_name.strip(), request_data.second_name.strip()])
+        query_title = " ".join([request_data.first_name.strip(), request_data.last_name.strip()])
 
         user_query_id = await UserQueriesDAO.save_user_query(user_id, query_title, 'irbis', db)
 
@@ -414,6 +422,8 @@ async def find_by_irbis(
         await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
         start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
+    except InsufficientFundsError:
+        raise HTTPException(status_code=400, detail="Недостаточно средств")
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
@@ -592,7 +602,7 @@ async def get_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",
@@ -660,7 +670,7 @@ async def get_category_query_data(
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка при получении данных запроса {request_data.query_id}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail="Произошла ошибка при получении данных запроса",

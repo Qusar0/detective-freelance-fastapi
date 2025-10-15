@@ -21,5 +21,5 @@ class ProcessTypeDAO(BaseDAO):
             process_type_map = {process_type.code: process_type for process_type in process_types}
             return process_type_map
         except Exception as e:
-            logger.error(f"Ошибка при получении типов процесса: {e}", exc_info=True)
+            logger.error(f"Ошибка при получении типов процесса: {e}")
             return {}

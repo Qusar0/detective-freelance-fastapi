@@ -48,5 +48,4 @@ class TerrorList:
 
         if response is not None:
             full_data = response["result"]
-
         return full_data

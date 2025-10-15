@@ -2,36 +2,36 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
 from server.api.database.database import get_db
-from server.api.schemas.irbis.irbis_general import RoleTypeInfo
-from server.api.schemas.irbis.arbitration_court import (
-    ArbitrationCourtDataRequest,
-    ArbitrationCourtCase,
-    ArbitrationCourtDataResponse,
-    CaseTypeInfo,
-    ArbitrationCourtCaseFull,
+from server.api.schemas.irbis.pledgess import (
+    PledgessGeneralCase,
+    PledgessDataRequest,
+    PledgessGeneralPledgees,
+    PledgessGeneralPledges,
+    PledgeObjectSchema,
+    PledgePartiesSchema,
+    PledgessCaseFull
 )
 from server.api.dao.irbis.irbis_person import IrbisPersonDAO
-from server.api.dao.irbis.arbitration_court import ArbitrationCourtDAO
+from server.api.dao.irbis.pledgess import PledgessDAO
 from loguru import logger
 
 
-router = APIRouter(prefix="/arbitration_court", tags=["Irbis/Арбитражные суды"])
+router = APIRouter(prefix="/pledgess", tags=["Irbis/Залоги"])
 
 
-@router.post("/data", response_model=ArbitrationCourtDataResponse)
+@router.post("/data", response_model=Optional[List[PledgessGeneralCase]])
 async def get_query_data(
-    request_data: ArbitrationCourtDataRequest = Body(...),
+    request_data: PledgessDataRequest = Body(...),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Получает данные о делах общий юрисдикции по выполненному запросу."""
+    """Получает данные о залогах по выполненному запросу."""
     try:
         logger.info(
-            f"Запрос arbitration_court_data для query_id: {request_data.query_id}, "
+            f"Запрос court_general_data для query_id: {request_data.query_id}, "
             f"page: {request_data.page}, size: {request_data.size}, "
-            f"search_type: {request_data.search_type}, "
-            f"role: {request_data.role}"
         )
 
         Authorize.jwt_required()
@@ -45,55 +45,53 @@ async def get_query_data(
 
         logger.debug(f"Найден irbis_person: {irbis_person.id}")
 
-        results, total_count = await ArbitrationCourtDAO.get_paginated_data(
+        results = await PledgessDAO.get_paginated_data(
             irbis_person_id=irbis_person.id,
             page=request_data.page,
             size=request_data.size,
-            search_type=request_data.search_type,
-            role=request_data.role,
             db=db,
         )
         cases = [
-            ArbitrationCourtCase(
-                id=case.id,
-                court_name=case.court_name_val,
-                case_date=case.case_date,
-                name=case.name,
-                case_number=case.case_number,
-                address=case.address_val,
-                search_type=case.search_type,
-                inn=case.inn,
-                case_type=CaseTypeInfo(
-                    id=case.case_type.id,
-                    name=case.case_type.name,
-                ) if case.case_type else None,
-                role=RoleTypeInfo(
-                    id=case.role.id,
-                    name=case.role.russian_name,
-                )
+            PledgessGeneralCase(
+                case_id=case.id,
+                pledge_type=case.pledge_type,
+                reg_date=case.reg_date,
+                pledgers=[
+                    PledgessGeneralPledgees(
+                        name=party.name,
+                    )
+                    for party in case.parties if party.type == 'pledgers'
+                ],
+                pledgees=[
+                    PledgessGeneralPledgees(
+                        name=party.name,
+                    )
+                    for party in case.parties if party.type == 'pledgees'
+                ],
+                pledges=[
+                    PledgessGeneralPledges(
+                        pledge_type=pledge.pledge_type,
+                        pledge_num=pledge.pledge_num,
+                    )
+                    for pledge in case.pledges
+                ]
             )
             for case in results
         ]
-        total_pages = (total_count + request_data.size - 1) // request_data.size if request_data.size > 0 else 0
-
-        return ArbitrationCourtDataResponse(
-            cases=cases,
-            total_count=total_count,
-            total_pages=total_pages,
-        )
+        return cases
 
     except HTTPException as e:
-        logger.error(f"HTTPException в court_general_data: {e.detail}, статус: {e.status_code}")
+        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в: {e}")
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
 
-@router.get("/case_full/{case_id}", response_model=ArbitrationCourtCaseFull)
+@router.get("/case_full/{case_id}", response_model=PledgessCaseFull)
 async def get_full_case_info(
     case_id: int,
     Authorize: AuthJWT = Depends(),
@@ -101,13 +99,13 @@ async def get_full_case_info(
 ):
     """Получает полную информацию о судебном деле по ID дела."""
     try:
-        logger.info(f"Запрос полной информации по делу ID: {case_id}")
+        logger.info(f"Запрос полной информации о залогах по делу ID: {case_id}")
 
         Authorize.jwt_required()
         user_id = int(Authorize.get_jwt_subject())
         logger.debug(f"Аутентифицированный пользователь: {user_id}")
 
-        case = await ArbitrationCourtDAO.get_full_case_by_id(case_id, db)
+        case = await PledgessDAO.get_full_case_by_id(case_id, db)
         if not case:
             logger.warning(f"Дело {case_id} не найдено")
             raise HTTPException(status_code=404, detail="Дело не найдено")
@@ -119,29 +117,50 @@ async def get_full_case_info(
             )
             raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        case_full = ArbitrationCourtCaseFull(
-            id=case.id,
-            court_name=case.court_name_val,
-            case_date=case.case_date,
-            name=case.name,
-            case_number=case.case_number,
-            address=case.address_val,
-            inn=case.inn,
-            case_type=case.case_type.name,
-            role=case.role.russian_name,
-            region=case.region.name if case.region else None,
-            opponents=[opponent.name for opponent in case.oponents],
+        case_full = PledgessCaseFull(
+            case_id=case.id,
+            reg_date=case.reg_date,
+            pledge_reestr_number=case.pledge_reestr_number,
+            pledge_type=case.pledge_type,
+
+            pledgers=[
+                PledgePartiesSchema(
+                    name=party.name,
+                    birth_date=party.birth_date,
+                    inn=party.inn,
+                    ogrn=party.ogrn,
+                )
+                for party in case.parties if party.type == 'pledgers'
+            ],
+            pledgees=[
+                PledgePartiesSchema(
+                    name=party.name,
+                    type=party.type,
+                    inn=party.inn,
+                    ogrn=party.ogrn,
+                )
+                for party in case.parties if party.type == 'pledgees'
+            ],
+            pledges=[
+                PledgeObjectSchema(
+                    id=pledge.id,
+                    pledge_num_name=pledge.pledge_num_name,
+                    pledge_num=pledge.pledge_num,
+                    pledge_type=pledge.pledge_type
+                )
+                for pledge in case.pledges
+            ]
         )
 
         logger.success(f"Успешно возвращена полная информация по делу {case_id}")
         return case_full
 
     except HTTPException as e:
-        logger.warning(f"HTTPException в get_full_case_info: {e.detail}, статус: {e.status_code}")
+        logger.warning(f"HTTPException: {e.detail}, статус: {e.status_code}")
         raise e
     except MissingTokenError:
         logger.error('Неавторизованный пользователь')
         raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
     except Exception as e:
-        logger.error(f"Неожиданная ошибка в get_full_case_info: {e}")
+        logger.error(f"Неожиданная ошибка: {e}")
         raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")

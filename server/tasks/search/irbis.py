@@ -5,21 +5,21 @@ from server.api.IRBIS_parser.bankruptcy import Bankruptcy
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
 from server.api.IRBIS_parser.corruption import Corruption
 from server.api.IRBIS_parser.court_of_general_jurisdiction import CourtGeneralJurisdiction
-from server.api.IRBIS_parser.deposits import Deposits
+from server.api.IRBIS_parser.pledgess import Pledges
 from server.api.IRBIS_parser.disqualified_persons import DisqualifiedPersons
 from server.api.IRBIS_parser.fssp import FSSP
 from server.api.IRBIS_parser.ml_index import MLIndex
 from server.api.IRBIS_parser.participation_in_organization import ParticipationOrganization
-from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.IRBIS_parser.terror_list import TerrorList
+from server.api.IRBIS_parser.tax_arrears import TaxArrears
 from server.api.models.irbis_models import (
     ArbitrationCourtPreviewTable, BankruptcyPreviewTable,
-    BankruptcyFullTable, CorruptionPreviewTable, CorruptionFullTable,
+    CorruptionPreviewTable,
     CourtGeneralJurPreviewTable, CourtGeneralJurCategoricalTable,
-    DepositsPreviewTable, DepositsFullTable, DepositsPartiesTable, DepositsPledgeObjectTable,
-    DisqualifiedPersonFullTable,
-    FSSPPreviewTable, FSSPFullTable, MLIndexFullTable,
-    PartInOrgPreviewTable, PartInOrgFullTable, PartInOrgOrgTable, PartInOrgIndividualTable, PartInOrgRoleTable,
+    PledgesPreviewTable,
+    DisqualifiedPersonPreviewTable,
+    FSSPPreviewTable, MLIndexFullTable,
+    PartInOrgPreviewTable,
     TerrorListFullTable, IrbisPerson,
     TaxArrearsFullTable, TaxArrearsFieldTable
 )
@@ -59,8 +59,7 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _process_search(self, db: AsyncSession):
         try:
-            # person_uuid = await self.person.get_person_uuid()
-            self.person_uuid = 'f1b008d9-5ed1-49f2-8be0-997817a9e48a'
+            self.person_uuid = await self.person.get_person_uuid()
             if self.person_uuid:
                 if self.second_name:
                     fullname = f'{self.last_name} {self.first_name} {self.second_name}'
@@ -84,7 +83,7 @@ class IrbisSearchTask(BaseSearchTask):
                 await self._bankruptcy_data(irbis_person_id, db),
                 await self._corruption_data(irbis_person_id, db),
                 await self._court_of_gen_jur_data(irbis_person_id, db),
-                await self._deposits_data(irbis_person_id, db),
+                await self._pledges_data(irbis_person_id, db),
                 await self._disqualified_pers_data(irbis_person_id, db),
                 await self._fssp_data(irbis_person_id, db),
                 await self._ml_index_data(irbis_person_id, db),
@@ -134,8 +133,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _bankruptcy_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_name, data_preview_inn = await Bankruptcy.get_data_preview(self.person_uuid)
-        full_data_fio = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'name')
-        full_data_inn = await Bankruptcy.get_full_data(self.person_uuid, 1, 50, 'inn')
 
         bankruptcy_preview = BankruptcyPreviewTable(
             irbis_person_id=irbis_person_id,
@@ -144,49 +141,29 @@ class IrbisSearchTask(BaseSearchTask):
         )
         db.add(bankruptcy_preview)
 
-        bankruptcy_full = [
-            BankruptcyFullTable(
-                irbis_person_id=irbis_person_id,
-                first_name=item.get("first_name"),
-                second_name=item.get("second_name"),
-                last_name=item.get("last_name"),
-                birth_date=item.get("birth_date"),
-                born_place=item.get("born_place"),
-                inn=item.get("inn"),
-                ogrn=item.get("ogrn"),
-                snils=item.get("snils"),
-                old_name=item.get("old_name"),
-                category_name=item.get("category_name"),
-                location=item.get("location"),
-                region_name=item.get("region_name"),
-                information=item.get("information"),
-                link=item.get("link")
+        bankruptcy_full = []
+        for search_type in {'name', 'inn'}:
+            found_data = await Bankruptcy._process_bankruptcy_data(
+                irbis_person_id,
+                self.person_uuid,
+                search_type,
             )
-            for item in full_data_fio + full_data_inn
-        ]
+            bankruptcy_full.extend(found_data)
         db.add_all(bankruptcy_full)
 
     async def _corruption_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await Corruption.get_data_preview(self.person_uuid)
-        full_data = await Corruption.get_full_data(self.person_uuid, 1, 50)
 
-        corruption_preview = CorruptionPreviewTable(irbis_person_id=irbis_person_id, count=data_preview)
+        corruption_preview = CorruptionPreviewTable(
+            irbis_person_id=irbis_person_id,
+            count=data_preview,
+        )
         db.add(corruption_preview)
 
-        corruption_full = [
-            CorruptionFullTable(
-                irbis_person_id=irbis_person_id,
-                key=item.get("key"),
-                full_name=item.get("full_name"),
-                organization=item.get("organization"),
-                position=item.get("position"),
-                normative_act=item.get("normative_act"),
-                application_date=item.get("application_date"),
-                publish_date=item.get("publish_date"),
-                excluded_reason=item.get("excluded_reason"),
-            )
-            for item in full_data
-        ]
+        corruption_full = await Corruption._process_corruption_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
         db.add_all(corruption_full)
 
     async def _court_of_gen_jur_data(self, irbis_person_id: int, db: AsyncSession):
@@ -247,12 +224,11 @@ class IrbisSearchTask(BaseSearchTask):
             court_gen_full.extend(found_data)
         db.add_all(court_gen_full)
 
-    async def _deposits_data(self, irbis_person_id: int, db: AsyncSession):
-        data_preview = await Deposits.get_data_preview(self.person_uuid)
-        full_data = await Deposits.get_full_data(self.person_uuid, 1, 100)
+    async def _pledges_data(self, irbis_person_id: int, db: AsyncSession):
+        data_preview = await Pledges.get_data_preview(self.person_uuid)
 
-        deposits_preview = [
-            DepositsPreviewTable(
+        pledges_preview = [
+            PledgesPreviewTable(
                 irbis_person_id=irbis_person_id,
                 pledge_count=item.get("pledge_count"),
                 pledge_type=item.get("pledge_type"),
@@ -260,71 +236,32 @@ class IrbisSearchTask(BaseSearchTask):
             )
             for item in data_preview
         ]
-        db.add_all(deposits_preview)
+        db.add_all(pledges_preview)
 
-        deposits_full = []
-        for deposit_info in full_data:
-            parties = [
-                DepositsPartiesTable(
-                    name=party.get("name", ""),
-                    external_id=party.get("external_id", 0),
-                    type=party.get("type", ""),
-                    subtype=party.get("subtype", ""),
-                    birth_date=party.get("birth_date", ""),
-                    inn=party.get("inn"),
-                    ogrn=party.get("ogrn")
-                )
-                for party in deposit_info.get("parties", [])
-            ]
-
-            pledges = [
-                DepositsPledgeObjectTable(
-                    pledge_id_name=pledge.get("pledge_id_name", ""),
-                    pledge_id=pledge.get("pledge_id", ""),
-                    pledge_type=pledge.get("pledge_type", ""),
-                    external_id=pledge.get("external_id", 0)
-                )
-                for pledge in deposit_info.get("pledges", [])
-            ]
-
-            obj = DepositsFullTable(
-                irbis_person_id=irbis_person_id,
-                pledge_count=deposit_info.get("pledge_count", 0),
-                pledge_type=deposit_info.get("pledge_type", ""),
-                response_id=deposit_info.get("response_id", 0),
-                parties=parties,
-                pledges=pledges,
-            )
-            deposits_full.append(obj)
-        db.add_all(deposits_full)
+        pledges_full = []
+        pledges_full.extend(await Pledges._process_pledgess_data(
+            irbis_person_id,
+            self.person_uuid,
+        ))
+        db.add_all(pledges_full)
 
     async def _disqualified_pers_data(self, irbis_person_id: int, db: AsyncSession):
-        full_data = await DisqualifiedPersons.get_full_data(self.person_uuid, 1, 50)
+        data_preview_count = await DisqualifiedPersons.get_data_preview(self.person_uuid)
 
-        disqualified_full = [
-            DisqualifiedPersonFullTable(
-                irbis_person_id=irbis_person_id,
-                response_id=item.get("id"),
-                reestr_key=item.get("reestr_key"),
-                birth_date=item.get("birth_date"),
-                fio=item.get("fio"),
-                article=item.get("article"),
-                start_date_disq=item.get("start_date_disq"),
-                end_date_disq=item.get("end_date_disq"),
-                bornplace=item.get("bornplace"),
-                fio_judge=item.get("fio_judge"),
-                office_judge=item.get("office_judge"),
-                legal_name=item.get("legal_name"),
-                office=item.get("office"),
-                department=item.get("department"),
-            )
-            for item in full_data
-        ]
-        db.add_all(disqualified_full)
+        disq_pers_preview = DisqualifiedPersonPreviewTable(
+            irbis_person_id=irbis_person_id,
+            count=data_preview_count
+        )
+        db.add(disq_pers_preview)
+
+        disqualified_pers_full = await DisqualifiedPersons._process_bankruptcy_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
+        db.add_all(disqualified_pers_full)
 
     async def _fssp_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview = await FSSP.get_data_preview(self.person_uuid)
-        data_full = await FSSP.get_full_data(self.person_uuid, 1, 50)
 
         fssp_preview = [
             FSSPPreviewTable(
@@ -338,22 +275,10 @@ class IrbisSearchTask(BaseSearchTask):
         ]
         db.add_all(fssp_preview)
 
-        fssp_full = [
-            FSSPFullTable(
-                irbis_person_id=irbis_person_id,
-                ip=item.get("ip"),
-                fio=item.get("fio"),
-                rosp=item.get("rosp"),
-                type_ip=item.get("type_ip"),
-                summ=item.get("summ"),
-                rekv=item.get("rekv"),
-                end_cause=item.get("end_cause"),
-                pristav=item.get("pristav"),
-                pristav_phones=item.get("pristav_phones"),
-                response_id=item.get("id")
-            )
-            for item in data_full
-        ]
+        fssp_full = await FSSP._process_fssp_data(
+            irbis_person_id,
+            self.person_uuid,
+        )
         db.add_all(fssp_full)
 
     async def _ml_index_data(self, irbis_person_id: int, db: AsyncSession):
@@ -370,8 +295,6 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _part_in_org_data(self, irbis_person_id: int, db: AsyncSession):
         data_preview_all, data_preview_selected = await ParticipationOrganization.get_data_preview(self.person_uuid)
-        full_data = await ParticipationOrganization.get_full_data(self.person_uuid, 1, 50, 'all')
-
         part_in_org_preview = []
         for item in data_preview_all:
             obj = PartInOrgPreviewTable(
@@ -392,46 +315,11 @@ class IrbisSearchTask(BaseSearchTask):
         db.add_all(part_in_org_preview)
 
         part_in_org_full = []
-        for entry in full_data:
-            org_data = entry.get("org_data")
-            org_obj = None
-            if org_data:
-                org_obj = PartInOrgOrgTable(
-                    name=org_data.get("name", ""),
-                    inn=org_data.get("inn", ""),
-                    ogrn=org_data.get("ogrn"),
-                    adress=org_data.get("adress", ""),
-                    okved=org_data.get("okved"),
-                )
-
-            individual_data = entry.get("individual_data")
-            individual_obj = None
-            if individual_data:
-                roles_data = individual_data.get("roles", [])
-                roles_objs = [
-                    PartInOrgRoleTable(
-                        name=role.get("name", ""),
-                        active=role.get("active", False),
-                    )
-                    for role in roles_data
-                ]
-
-                individual_obj = PartInOrgIndividualTable(
-                    name=individual_data.get("name", ""),
-                    inn=individual_data.get("inn", ""),
-                    roles=roles_objs,
-                )
-
-            obj = PartInOrgFullTable(
-                irbis_person_id=irbis_person_id,
-                filter_type=entry.get("filter_type", ""),
-                count=entry.get("count", 0),
-                part_type=entry.get("part_type", ""),
-                org=org_obj,
-                individual=individual_obj,
-            )
-
-            part_in_org_full.append(obj)
+        part_in_org_full.extend(await ParticipationOrganization._process_participation_data(
+            irbis_person_id,
+            self.person_uuid,
+            db,
+        ))
         db.add_all(part_in_org_full)
 
     async def _tax_areas_data(self, irbis_person_id: int, db: AsyncSession):
@@ -445,14 +333,12 @@ class IrbisSearchTask(BaseSearchTask):
             currency = money.get("currency", {})
 
             money_name = currency.get("name", "")
-            money_code = currency.get("code", 0)
             money_value = money.get("value", 0.0)
 
             arrear_obj = TaxArrearsFullTable(
                 irbis_person_id=irbis_person_id,
                 provider=provider,
                 money_name=money_name,
-                money_code=money_code,
                 money_value=money_value,
             )
 
@@ -460,11 +346,9 @@ class IrbisSearchTask(BaseSearchTask):
             for field in info_fields:
                 field_obj = TaxArrearsFieldTable(
                     type="info",
-                    field_id=field.get("id", ""),
                     field_name=field.get("name", ""),
-                    field_type=field.get("fieldType", ""),
                     value=field.get("value", ""),
-                    arrear=arrear_obj,
+                    tax_arrear=arrear_obj,
                 )
                 arrear_obj.fields.append(field_obj)
 
@@ -472,11 +356,9 @@ class IrbisSearchTask(BaseSearchTask):
             for field in payment_fields:
                 field_obj = TaxArrearsFieldTable(
                     type="payment",
-                    field_id=field.get("id", ""),
                     field_name=field.get("name", ""),
-                    field_type=field.get("fieldType", ""),
                     value=field.get("value", ""),
-                    arrear=arrear_obj,
+                    tax_arrear=arrear_obj,
                 )
                 arrear_obj.fields.append(field_obj)
 
@@ -485,10 +367,10 @@ class IrbisSearchTask(BaseSearchTask):
 
     async def _terror_list_data(self, irbis_person_id: int, db: AsyncSession):
         full_data = await TerrorList.get_full_data(self.person_uuid, 1, 50)
+
         terror_list_full = [
             TerrorListFullTable(
                 irbis_person_id=irbis_person_id,
-                response_id=item.get("id"),
                 fio=item.get("fio"),
                 birth_date=item.get("birth_date"),
                 birth_place=item.get("birth_place"),

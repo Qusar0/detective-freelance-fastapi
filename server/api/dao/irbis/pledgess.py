@@ -4,15 +4,15 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.models.irbis_models import (
-    DisqualifiedPersonFullTable,
-    IrbisPerson,
+    PledgeFullTable,
+    IrbisPerson
 )
 from server.api.dao.base import BaseDAO
 from loguru import logger
 
 
-class DisqualifiedPersonDAO(BaseDAO):
-    model = DisqualifiedPersonFullTable
+class PledgessDAO(BaseDAO):
+    model = PledgeFullTable
 
     @staticmethod
     async def get_paginated_data(
@@ -21,11 +21,16 @@ class DisqualifiedPersonDAO(BaseDAO):
         size: int,
         db: AsyncSession
     ):
-        """Фильтрация и пагинация судебных дел по полю search_type."""
+        """Фильтрация и пагинация с подгрузкой связанных данных."""
         try:
 
-            query = select(DisqualifiedPersonFullTable).where(
-                DisqualifiedPersonFullTable.irbis_person_id == irbis_person_id
+            query = select(PledgeFullTable).where(
+                PledgeFullTable.irbis_person_id == irbis_person_id
+            )
+
+            query = query.options(
+                selectinload(PledgeFullTable.parties),
+                selectinload(PledgeFullTable.pledges)
             )
 
             offset = (page - 1) * size
@@ -36,29 +41,31 @@ class DisqualifiedPersonDAO(BaseDAO):
 
             logger.debug(f"DAO: Найдено {len(results)} записей")
             return results
-
         except Exception as e:
-            logger.error(f"DAO: Ошибка при фильтрации: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при получении данных: {e}")
             raise
 
     @staticmethod
     async def get_full_case_by_id(
         case_id: int,
         db: AsyncSession
-    ) -> Optional[DisqualifiedPersonFullTable]:
+    ) -> Optional[PledgeFullTable]:
         """Получение полной информации о деле по ID с связанными данными."""
         try:
             logger.debug(f"DAO: Получение полной информации по делу ID: {case_id}")
-            query = select(DisqualifiedPersonFullTable).options(
-                selectinload(DisqualifiedPersonFullTable.irbis_person).selectinload(IrbisPerson.query)
+            query = select(PledgeFullTable).options(
+                selectinload(PledgeFullTable.irbis_person).selectinload(IrbisPerson.query)
             ).where(
-                DisqualifiedPersonFullTable.id == case_id
+                PledgeFullTable.id == case_id
             )
-
+            query = query.options(
+                selectinload(PledgeFullTable.parties),
+                selectinload(PledgeFullTable.pledges)
+            )
             result = await db.execute(query)
             case = result.scalar_one_or_none()
             return case
 
         except Exception as e:
-            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}", exc_info=True)
+            logger.error(f"DAO: Ошибка при получении полной информации по делу {case_id}: {e}")
             raise

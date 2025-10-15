@@ -3,7 +3,6 @@ import datetime
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from threading import Lock
-
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.telegram_notifications import TelegramNorificationsDAO
 from server.api.dao.balance_history import BalanceHistoryDAO
@@ -29,6 +28,9 @@ class BaseSearchTask(ABC):
     async def execute(self):
         async with async_session() as db:
             user_query = await UserQueriesDAO.get_user_query(self.query_id, db)
+            if user_query is None:
+                logger.error(f"UserQuery с ID {self.query_id} не найден")
+                return
             if user_query.query_status == "done":
                 return
 
