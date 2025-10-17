@@ -1,5 +1,6 @@
 from celery import shared_task
 from loguru import logger
+from time import sleep
 from server.api.IRBIS_parser.arbitration_court import ArbitrationCourt
 from server.api.IRBIS_parser.bankruptcy import Bankruptcy
 from server.api.IRBIS_parser.base_irbis_init import BaseAuthIRBIS
@@ -60,6 +61,7 @@ class IrbisSearchTask(BaseSearchTask):
     async def _process_search(self, db: AsyncSession):
         try:
             self.person_uuid = await self.person.get_person_uuid()
+            sleep(10)
             if self.person_uuid:
                 if self.second_name:
                     fullname = f'{self.last_name} {self.first_name} {self.second_name}'
@@ -77,7 +79,11 @@ class IrbisSearchTask(BaseSearchTask):
                 )
                 db.add(person)
                 await db.flush()
+
                 irbis_person_id = person.id
+
+                await PersonRegionsDAO.add_regions(irbis_person_id, self.regions, db)
+                await db.commit()
 
                 await self._arbitration_court_data(irbis_person_id, db),
                 await self._bankruptcy_data(irbis_person_id, db),
@@ -90,8 +96,6 @@ class IrbisSearchTask(BaseSearchTask):
                 await self._part_in_org_data(irbis_person_id, db),
                 await self._tax_areas_data(irbis_person_id, db),
                 await self._terror_list_data(irbis_person_id, db),
-
-                await PersonRegionsDAO.add_regions(irbis_person_id, self.regions, db)
                 await db.commit()
 
         except Exception as e:
