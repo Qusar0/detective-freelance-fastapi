@@ -64,7 +64,7 @@ class BaseAuthIRBIS:
     @staticmethod
     async def get_response(link):
         async with aiohttp.ClientSession() as session:
-            async with session.get(link) as response:
+            async with session.get(link, allow_redirects=True) as response:
                 response_data = await response.json()
 
             if response_data["status"] == 0:
