@@ -130,7 +130,7 @@ def handle_xmlriver_response(  # noqa: WPS211
     logger.debug(f"Начало обработки ответа XMLriver для ключевого слова: {keyword}")
 
     try:  # noqa: WPS229
-        json_data = xmltodict.parse(response.content.decode('utf-8'))
+        json_data = xmltodict.parse(response.content)
         response_data = json_data["yandexsearch"]["response"]
 
         if "error" in response_data:
