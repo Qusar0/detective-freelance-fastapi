@@ -15,7 +15,7 @@ class TaxArrears:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-nalog.json?event=data")
         response = await BaseAuthIRBIS.get_response(link)
 

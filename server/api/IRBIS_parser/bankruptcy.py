@@ -20,7 +20,7 @@ class Bankruptcy:
             int: Результат запроса по имени.
             int: Результат запроса по инн.
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-bankrot.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -47,7 +47,7 @@ class Bankruptcy:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-bankrot.json?event=data&"
                 f"page={page}&rows={rows}&search_type={search_type}&version=2")
         response = await BaseAuthIRBIS.get_response(link)

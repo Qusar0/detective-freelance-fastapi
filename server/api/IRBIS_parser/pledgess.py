@@ -20,7 +20,7 @@ class Pledges:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-pledge.json?event=preview-type")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -44,7 +44,7 @@ class Pledges:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-pledge.json?event=data"
                 f"&page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)

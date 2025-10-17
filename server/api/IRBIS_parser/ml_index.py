@@ -13,7 +13,7 @@ class MLIndex:
         Returns:
             dict: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-scoring.json?event=scoring")
         response = await BaseAuthIRBIS.get_response(link)
 

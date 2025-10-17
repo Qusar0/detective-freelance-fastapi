@@ -31,7 +31,7 @@ class CourtGeneralJurisdiction:
         )
 
         link = (
-            f"http://ir-bis.org/ru/base/-/services/report/"
+            f"https://ir-bis.org/ru/base/-/services/report/"
             f"{person_uuid}/people-judge.json?event=role-preview"
             f"&filter_text={filter_text}&strategy={strategy}"
         )
@@ -74,7 +74,7 @@ class CourtGeneralJurisdiction:
             f"Запрос категорий дел для person_uuid: {person_uuid}, filter0: {filter0}, filter_text: {filter_text}",
         )
 
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-judge.json?event=category-preview&"
                 f"filter0={filter0}&filter_text={filter_text}&strategy={strategy}")
 
@@ -122,7 +122,7 @@ class CourtGeneralJurisdiction:
         """
         logger.debug(f"Запрос полных данных страница {page} для {person_uuid}, filter0: {filter0}")
 
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-judge.json?event=role-data&version=2"
                 f"&page={page}&rows={rows}&strategy={strategy}"
                 f"&filter0={filter0}&filter_text={filter_text}")

@@ -24,7 +24,7 @@ class ArbitrationCourt:
             dict: Результат запроса по имени.
             dict: Результат запроса по инн.
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-arbitr.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -51,7 +51,7 @@ class ArbitrationCourt:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-arbitr.json?event=data&page={page}"
                 f"&rows={rows}&search_type={search_type}")
         response = await BaseAuthIRBIS.get_response(link)

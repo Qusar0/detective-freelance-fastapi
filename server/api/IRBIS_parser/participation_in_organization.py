@@ -24,7 +24,7 @@ class ParticipationOrganization:
             list: Результат запроса по всем регионам
             list: Результат запроса по выбранным регионам
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-orgs.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -51,7 +51,7 @@ class ParticipationOrganization:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-orgs.json?event=data&"
                 f"search_type={search_type}&page={page}&rows={rows}&version=3")
         response = await BaseAuthIRBIS.get_response(link)

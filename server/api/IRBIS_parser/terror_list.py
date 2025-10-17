@@ -15,7 +15,7 @@ class TerrorList:
         Returns:
             int: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-terrorist.json?event=preview")
         response = await BaseAuthIRBIS.get_response(link)
 
@@ -39,7 +39,7 @@ class TerrorList:
         Returns:
             list: Результат запроса
         """
-        link = (f"http://ir-bis.org/ru/base/-/services/report/"
+        link = (f"https://ir-bis.org/ru/base/-/services/report/"
                 f"{person_uuid}/people-terrorist.json?event=data&"
                 f"page={page}&rows={rows}")
         response = await BaseAuthIRBIS.get_response(link)
