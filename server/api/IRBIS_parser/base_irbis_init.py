@@ -55,7 +55,7 @@ class BaseAuthIRBIS:
         link = self.generate_link()
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(link) as response:
+            async with session.get(link, allow_redirects=True) as response:
                 response = await response.json()
                 if response["status"] == 0:
                     return response["uuid"]
@@ -69,7 +69,7 @@ class BaseAuthIRBIS:
 
             if response_data["status"] == 0:
                 await asyncio.sleep(float(response_data["waitTime"]) / 1000)
-                async with session.get(link) as repeated_response:
+                async with session.get(link, allow_redirects=True) as repeated_response:
                     response_data = await repeated_response.json()
 
             if response_data["status"] == 1:
