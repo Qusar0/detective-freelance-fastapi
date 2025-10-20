@@ -4,13 +4,13 @@ from server.api.conf.config import settings
 
 SEARCH_ENGINES = {
     'google': (
-        f'http://xmlriver.com/search/xml'
+        f'https://xmlriver.com/search/xml'
         f'?user={settings.xml_river_user_id}'
         f'&key={settings.xml_river_api_key}'
         f'&query='
     ),
     'yandex': (
-        f'http://xmlriver.com/search_yandex/xml'
+        f'https://xmlriver.com/search_yandex/xml'
         f'?user={settings.xml_river_user_id}'
         f'&key={settings.xml_river_api_key}'
         f'&groupby=10'
