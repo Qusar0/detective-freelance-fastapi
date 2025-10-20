@@ -1,6 +1,6 @@
 from typing import Dict
 from loguru import logger
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -37,12 +37,12 @@ class QueryKeywordStatsDAO(BaseDAO):
 
             all_types_query = select(KeywordType.keyword_type_name).where(type_filter)
             all_types_result = await db.execute(all_types_query)
-            all_types = {t[0]: 0 for t in all_types_result.all()}
+            all_types = {t[0].replace('company_', ''): 0 for t in all_types_result.all()}
 
             type_stats_query = (
                 select(
                     KeywordType.keyword_type_name,
-                    func.count(QueriesData.id)
+                    func.count(distinct(QueriesData.id))
                 )
                 .join(KeywordType.keywords)
                 .join(Keywords.query_data_associations)
@@ -57,6 +57,7 @@ class QueryKeywordStatsDAO(BaseDAO):
             type_stats_result = await db.execute(type_stats_query)
 
             for keyword_type, count in type_stats_result.all():
+                keyword_type = keyword_type.replace('company_', '')
                 all_types[keyword_type] = count
 
             subquery = (

@@ -7,6 +7,7 @@ from loguru import logger
 
 from server.api.models.models import QueriesData, KeywordType, Keywords, QueryDataKeywords
 from server.api.dao.base import BaseDAO
+from server.api.dao.user_queries import UserQueriesDAO
 
 
 class QueriesDataDAO(BaseDAO):
@@ -33,6 +34,12 @@ class QueriesDataDAO(BaseDAO):
                     )
                 )
             else:
+                query = await UserQueriesDAO.get_user_query(query_id, db)
+                query_category = query.query_category
+
+                if keyword_type_category in {'reputation', 'negativ', 'relations'} and query_category == 'company':
+                    keyword_type_category = f'company_{keyword_type_category}'
+
                 base_query = cls._build_base_query(query_id, keyword_type_category)
                 count_query = select(func.count()).select_from(base_query.alias())
             result = await db.execute(count_query)
@@ -52,6 +59,12 @@ class QueriesDataDAO(BaseDAO):
     ) -> List:
         """Получает пагинированные данные запроса с фильтрацией."""
         try:
+            query = await UserQueriesDAO.get_user_query(query_id, db)
+            query_category = query.query_category
+
+            if keyword_type_category in {'reputation', 'negativ', 'relations'} and query_category == 'company':
+                keyword_type_category = f'company_{keyword_type_category}'
+
             base_query = cls._build_base_query(query_id, keyword_type_category)
             paginated_query = (
                 base_query

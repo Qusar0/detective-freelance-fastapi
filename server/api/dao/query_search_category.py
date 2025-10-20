@@ -75,7 +75,7 @@ class QuerySearchCategoryDAO(BaseDAO):
                 .join(QuerySearchCategory.search_category_type)
                 .where(QuerySearchCategory.query_id == query_id)
             )
-            return [{"code": en_name, "name": ru_name} for ru_name, en_name in result.all()]
+            return [{"code": en_name.replace('company_', ''), "name": ru_name} for ru_name, en_name in result.all()]
         except SQLAlchemyError as e:
             logger.error(f"Ошибка получения категорий поиска: {e}")
             raise
