@@ -27,12 +27,12 @@ class CaseTypeInfo(BaseModel):
 
 class ArbitrationCourtCase(BaseModel):
     id: int = Field(..., description="ID дела в базе данных")
-    court_name: str = Field(..., description="Название суда")
-    case_date: str = Field(..., description="Дата дела")
-    name: str = Field(..., description="ФИО участника дела")
-    case_number: str = Field(..., description="Номер дела")
-    address: str = Field(..., description="Адрес")
-    search_type: str = Field(..., description="Тип поиска")
+    court_name: Optional[str] = Field(..., description="Название суда")
+    case_date: Optional[str] = Field(..., description="Дата дела")
+    name: Optional[str] = Field(..., description="ФИО участника дела")
+    case_number: Optional[str] = Field(..., description="Номер дела")
+    address: Optional[str] = Field(..., description="Адрес")
+    search_type: Optional[str] = Field(..., description="Тип поиска")
 
     inn: Optional[str] = Field(None, description="ИНН")
     case_type: Optional[CaseTypeInfo] = Field(None, description="Тип дела")
@@ -58,17 +58,17 @@ class ArbitrationCourtCase(BaseModel):
 
 class ArbitrationCourtDataResponse(BaseModel):
     cases: List[ArbitrationCourtCase] = Field(..., description="Список дел для текущей страницы")
-    total_count: int = Field(..., description="Общее количество дел с учетом фильтров")
-    total_pages: int = Field(..., description="Общее количество страниц для пагинации")
+    total_count: int = Field(0, description="Общее количество дел с учетом фильтров")
+    total_pages: int = Field(0, description="Общее количество страниц для пагинации")
 
 
 class ArbitrationCourtCaseFull(BaseModel):
     id: int = Field(..., description="ID дела в базе данных")
-    court_name: str = Field(..., description="Название суда")
-    case_date: str = Field(..., description="Дата дела")
-    name: str = Field(..., description="ФИО участника дела")
-    case_number: str = Field(..., description="Номер дела")
-    address: str = Field(..., description="Адрес")
+    court_name: Optional[str] = Field(..., description="Название суда")
+    case_date: Optional[str] = Field(..., description="Дата дела")
+    name: Optional[str] = Field(..., description="ФИО участника дела")
+    case_number: Optional[str] = Field(..., description="Номер дела")
+    address: Optional[str] = Field(..., description="Адрес")
 
     inn: Optional[str] = Field(None, description="ИНН")
     case_type: Optional[str] = Field(None, description="Тип дела")

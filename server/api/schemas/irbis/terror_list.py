@@ -6,8 +6,8 @@ from datetime import datetime
 class TerroristsDataCase(BaseModel):
     """Краткая информация о деле (список)."""
     id: int = Field(..., description="ID записи в базе данных")
-    fio: str = Field(..., description="ФИО")
-    birth_place: str = Field(..., description="Место рождения")
+    fio: Optional[str] = Field(..., description="ФИО")
+    birth_place: Optional[str] = Field(..., description="Место рождения")
     birth_date: Optional[str] = Field(None, description="Дата рождения")
 
     @validator("birth_date", pre=True)

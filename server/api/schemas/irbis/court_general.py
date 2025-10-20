@@ -9,29 +9,29 @@ from server.api.schemas.irbis.irbis_general import (
 
 
 class CourtGeneralFace(BaseModel):
-    role: str = Field(..., description="Роль лица в деле")
-    face: str = Field(..., description="ФИО лица")
-    role_name: str = Field(..., description="Название роли на русском языке")
+    role: Optional[str] = Field(..., description="Роль лица в деле")
+    face: Optional[str] = Field(..., description="ФИО лица")
+    role_name: Optional[str] = Field(..., description="Название роли на русском языке")
 
 
 class CourtGeneralProgress(BaseModel):
-    name: str = Field(..., description="Название этапа процесса")
+    name: Optional[str] = Field(..., description="Название этапа процесса")
     progress_data: Optional[str] = Field(None, description="Дата этапа процесса")
     resolution: Optional[str] = Field(None, description="Решение по этапу")
 
 
 class CourtGeneralCase(BaseModel):
     case_id: int = Field(..., description="ID дела в базе данных")
-    case_number: str = Field(..., description="Номер дела")
-    court_name: str = Field(..., description="Название суда")
-    start_date: str = Field(..., description="Дата начала дела")
-    end_date: str = Field(..., description="Дата окончания дела (или 'to date' если еще продолжается)")
+    case_number: Optional[str] = Field(..., description="Номер дела")
+    court_name: Optional[str] = Field(..., description="Название суда")
+    start_date: Optional[str] = Field(..., description="Дата начала дела")
+    end_date: Optional[str] = Field(..., description="Дата окончания дела (или 'to date' если еще продолжается)")
     review: int = Field(..., description="Количество аппеляций")
     region: RegionInfo = Field(..., description="Информация о регионе")
     process_type: ProcessTypeInfo = Field(..., description="Информация о типе процесса")
     judge: Optional[str] = Field(None, description="ФИО судьи")
-    papers: str = Field(..., description="Категория дела из первоисточника")
-    papers_pretty: str = Field(..., description="Категория дела (эталонная)")
+    papers: Optional[str] = Field(..., description="Категория дела из первоисточника")
+    papers_pretty: Optional[str] = Field(..., description="Категория дела (эталонная)")
 
     @validator('start_date', 'end_date', pre=True)
     def parse_date(cls, value):
@@ -59,10 +59,10 @@ class CourtGeneralDataRequest(BaseModel):
 
 class CourtGeneralCaseFull(BaseModel):
     case_id: int = Field(..., description="ID дела в базе данных")
-    case_number: str = Field(..., description="Номер дела")
-    court_name: str = Field(..., description="Название суда")
-    start_date: str = Field(..., description="Дата начала дела")
-    end_date: str = Field(..., description="Дата окончания дела")
+    case_number: Optional[str] = Field(..., description="Номер дела")
+    court_name: Optional[str] = Field(..., description="Название суда")
+    start_date: Optional[str] = Field(..., description="Дата начала дела")
+    end_date: Optional[str] = Field(..., description="Дата окончания дела")
     review: Optional[int] = Field(None, description="Количество аппеляций")
     judge: Optional[str] = Field(None, description="ФИО судьи")
     articles: Optional[List[str]] = Field(None, description="Статьи закона")
@@ -80,5 +80,5 @@ class CourtGeneralCaseFull(BaseModel):
 
 class CourtGeneralDataResponse(BaseModel):
     cases: List[CourtGeneralCase] = Field(..., description="Список дел для текущей страницы")
-    total_count: int = Field(..., description="Общее количество дел с учетом фильтров")
-    total_pages: int = Field(..., description="Общее количество страниц для пагинации")
+    total_count: int = Field(0, description="Общее количество дел с учетом фильтров")
+    total_pages: int = Field(0, description="Общее количество страниц для пагинации")

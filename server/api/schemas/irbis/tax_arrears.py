@@ -4,13 +4,13 @@ from pydantic import BaseModel, Field
 
 
 class PaymentItemCase(BaseModel):
-    name: str = Field(..., description="Наименование получателя")
-    value: str = Field(..., description="Адрес получателя")
+    name: Optional[str] = Field(..., description="Наименование получателя")
+    value: Optional[str] = Field(..., description="Адрес получателя")
 
 
 class TaxArrearsDataCase(BaseModel):
-    provider: str = Field(..., description="Провайдер")
-    money_name: str = Field(..., description="Валюта")
+    provider: Optional[str] = Field(..., description="Провайдер")
+    money_name: Optional[str] = Field(..., description="Валюта")
     value: Decimal = Field(..., description="Сумма задолженности")
     info: Optional[List[str]] = Field(default=None, description="Информация о задолженности")
     payment: List[PaymentItemCase] | None = Field(default=None, description="Информация о реквизитах")

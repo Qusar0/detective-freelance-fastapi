@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 class FSSPDataCase(BaseModel):
     """Краткая информация о деле ФССП (список)."""
     id: int = Field(..., description="ID записи ФССП в базе данных")
-    fio: str = Field(..., description="ФИО")
-    type_ip: str = Field(..., description="Тип испольнительного производства")
-    summ: float = Field(..., description="Сумма")
+    fio: Optional[str] = Field(..., description="ФИО")
+    type_ip: Optional[str] = Field(..., description="Тип испольнительного производства")
+    summ: float = Field(0, description="Сумма")
     end_cause: Optional[str] = Field(None, description="Конечная причина")
 
 
@@ -21,12 +21,12 @@ class FSSPDataRequest(BaseModel):
 class FSSPCaseFull(BaseModel):
     """Полная информация о деле."""
     id: int = Field(..., description="ID записи")
-    ip: str = Field(..., description="Испольнительное производство")
-    fio: str = Field(..., description="ФИО")
-    rosp: str = Field(None, description="Районный отдел судебных приставов")
-    type_ip: str = Field(..., description="Тип испольнительного производства")
-    summ: float = Field(..., description="Сумма задолженности")
-    rekv: str = Field(None, description="Реквизиты")
-    end_cause: str = Field(None, description="Конечная причина")
-    pristav: str = Field(None, description="Пристав")
+    ip: Optional[str] = Field(..., description="Испольнительное производство")
+    fio: Optional[str] = Field(..., description="ФИО")
+    rosp: Optional[str] = Field(None, description="Районный отдел судебных приставов")
+    type_ip: Optional[str] = Field(..., description="Тип испольнительного производства")
+    summ: float = Field(0, description="Сумма задолженности")
+    rekv: Optional[str] = Field(None, description="Реквизиты")
+    end_cause: Optional[str] = Field(None, description="Конечная причина")
+    pristav: Optional[str] = Field(None, description="Пристав")
     pristav_phones: Optional[str] = Field(..., description="Телефон приставов")

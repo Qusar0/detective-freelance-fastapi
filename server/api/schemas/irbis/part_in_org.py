@@ -29,8 +29,8 @@ class RoleObjectSchema(BaseModel):
 
 
 class IndividualObjectSchema(BaseModel):
-    name: str = Field(..., description="Полное ФИО физического лица")
-    inn: str = Field(..., description="ИНН физического лица")
+    name: Optional[str] = Field(..., description="Полное ФИО физического лица")
+    inn: Optional[str] = Field(..., description="ИНН физического лица")
     roles: List[RoleObjectSchema] = Field(..., description="Список ролей и должностей лица в организациях")
 
 

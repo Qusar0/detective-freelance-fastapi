@@ -6,9 +6,9 @@ from datetime import datetime
 class CorruptionDataCase(BaseModel):
     """Краткая информация о деле (список)."""
     id: int = Field(..., description="ID записи в базе данных")
-    full_name: str = Field(..., description="ФИО")
-    organization: str = Field(..., description="Организация")
-    position: str = Field(..., description="Должность")
+    full_name: Optional[str] = Field(..., description="ФИО")
+    organization: Optional[str] = Field(..., description="Организация")
+    position: Optional[str] = Field(..., description="Должность")
     application_date: Optional[str] = Field(None, description="Дата подачи")
 
     @validator("application_date", pre=True)
@@ -36,7 +36,7 @@ class CorruptionDataRequest(BaseModel):
 class CorruptionCaseFull(BaseModel):
     """Полная информация о деле."""
     id: int = Field(..., description="ID записи")
-    full_name: str = Field(..., description="ФИО")
+    full_name: Optional[str] = Field(..., description="ФИО")
     organization: Optional[str] = Field(None, description="Организация")
     position: Optional[str] = Field(None, description="Должность")
     normative_act: Optional[str] = Field(None, description="Нормативный акт")

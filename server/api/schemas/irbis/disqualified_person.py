@@ -5,12 +5,12 @@ from datetime import datetime
 
 class DisqDataCase(BaseModel):
     id: int = Field(..., description="ID дела в базе данных")
-    fio: str = Field(..., description="Фамилия Имя Отчество")
-    start_date_disq: str = Field(..., description="Дата начала")
-    end_date_disq: str = Field(..., description="Дата конца")
-    article: str = Field(..., description="")
-    legal_name: str = Field(..., description="Настоящее имя")
-    office: str = Field(..., description="Офис")
+    fio: Optional[str] = Field(..., description="Фамилия Имя Отчество")
+    start_date_disq: Optional[str] = Field(..., description="Дата начала")
+    end_date_disq: Optional[str] = Field(..., description="Дата конца")
+    article: Optional[str] = Field(..., description="")
+    legal_name: Optional[str] = Field(..., description="Настоящее имя")
+    office: Optional[str] = Field(..., description="Офис")
 
     @validator('start_date_disq', 'end_date_disq', pre=True)
     def parse_date(cls, value):
@@ -31,14 +31,14 @@ class DisqDataRequest(BaseModel):
 
 class DisqCaseFull(BaseModel):
     id: int = Field(..., description="Уникальный идентификатор дела в базе данных")
-    birth_date: str = Field(..., description="Дата рождения лица")
-    fio: str = Field(..., description="Фамилия, имя, отчество лица")
-    article: str = Field(..., description="Статья закона, по которой применена дисквалификация")
-    start_date_disq: str = Field(..., description="Дата начала срока дисквалификации")
-    end_date_disq: str = Field(..., description="Дата окончания срока дисквалификации")
-    bornplace: str = Field(..., description="Место рождения лица")
-    fio_judge: str = Field(..., description="Фамилия, имя, отчество судьи")
-    office_judge: str = Field(..., description="Должность судьи")
+    birth_date: Optional[str] = Field(..., description="Дата рождения лица")
+    fio: Optional[str] = Field(..., description="Фамилия, имя, отчество лица")
+    article: Optional[str] = Field(..., description="Статья закона, по которой применена дисквалификация")
+    start_date_disq: Optional[str] = Field(..., description="Дата начала срока дисквалификации")
+    end_date_disq: Optional[str] = Field(..., description="Дата окончания срока дисквалификации")
+    bornplace: Optional[str] = Field(..., description="Место рождения лица")
+    fio_judge: Optional[str] = Field(..., description="Фамилия, имя, отчество судьи")
+    office_judge: Optional[str] = Field(..., description="Должность судьи")
     legal_name: Optional[str] = Field(None, description="Прежнее юридическое название организации")
-    office: str = Field(..., description="Наименование суда или органа,")
-    department: str = Field(..., description="Отдел суда")
+    office: Optional[str] = Field(..., description="Наименование суда или органа,")
+    department: Optional[str] = Field(..., description="Отдел суда")

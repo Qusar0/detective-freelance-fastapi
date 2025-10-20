@@ -4,18 +4,18 @@ from datetime import datetime
 
 
 class PledgessGeneralPledgees(BaseModel):  # таблица pledge_parties
-    name: str = Field(..., description="Название заемщика/Занимателя")
+    name: Optional[str] = Field(..., description="Название заемщика/Занимателя")
 
 
 class PledgessGeneralPledges(BaseModel):  # таблица pledge_items
-    pledge_type: str = Field(..., description="Тип залога")
-    pledge_num: str = Field(..., description="Номер залога")
+    pledge_type: Optional[str] = Field(..., description="Тип залога")
+    pledge_num: Optional[str] = Field(..., description="Номер залога")
 
 
 class PledgessGeneralCase(BaseModel):
     case_id: int = Field(..., description="ID дела в базе данных")
-    pledge_type: str = Field(..., description="Тип залога")
-    reg_date: str = Field(..., description="Дата регистрации")
+    pledge_type: Optional[str] = Field(..., description="Тип залога")
+    reg_date: Optional[str] = Field(..., description="Дата регистрации")
 
     pledgers: List[PledgessGeneralPledgees] = Field(..., description="Заемщики")
     pledgees: List[PledgessGeneralPledgees] = Field(..., description="Организации")
@@ -46,16 +46,16 @@ class PledgePartiesSchema(BaseModel):
 
 
 class PledgeObjectSchema(BaseModel):
-    pledge_num_name: str = Field(..., description="Наименование номера записи о залоге")
-    pledge_num: str = Field(..., description="Номер записи о залоге")
-    pledge_type: str = Field(..., description="Тип предмета залога (недвижимость, транспорт и т.д.)")
+    pledge_num_name: Optional[str] = Field(..., description="Наименование номера записи о залоге")
+    pledge_num: Optional[str] = Field(..., description="Номер записи о залоге")
+    pledge_type: Optional[str] = Field(..., description="Тип предмета залога (недвижимость, транспорт и т.д.)")
 
 
 class PledgessCaseFull(BaseModel):
     case_id: int = Field(..., description="Уникальный идентификатор дела о залоге в базе данных")
-    reg_date: str = Field(..., description="Дата регистрации дела о залоге")
-    pledge_reestr_number: str = Field(..., description="Реестровый номер записи о залоге")
-    pledge_type: str = Field(..., description="Тип залогового дела")
+    reg_date: Optional[str] = Field(..., description="Дата регистрации дела о залоге")
+    pledge_reestr_number: Optional[str] = Field(..., description="Реестровый номер записи о залоге")
+    pledge_type: Optional[str] = Field(..., description="Тип залогового дела")
 
     pledgers: List[PledgePartiesSchema] = Field(..., description="Заемщики")
     pledgees: List[PledgePartiesSchema] = Field(..., description="Организации")
