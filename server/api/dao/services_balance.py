@@ -47,7 +47,7 @@ class ServicesBalanceDAO(BaseDAO):
 
     @classmethod
     async def renew_xml_balance(cls, db):
-        url = f"http://xmlriver.com/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
+        url = f"https://xmlriver.com/api/get_balance/?user={settings.xml_river_user_id}&key={settings.xml_river_api_key}"
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(url)
