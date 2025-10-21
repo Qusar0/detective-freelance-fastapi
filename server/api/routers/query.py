@@ -66,7 +66,6 @@ async def delete_query(
     query_id: int = Query(..., description="ID запроса для удаления"),
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
-    file_storage: FileStorageService = Depends(get_file_storage),
 ):
     try:
         Authorize.jwt_required()
@@ -76,24 +75,7 @@ async def delete_query(
         if not user_query:
             raise HTTPException(status_code=404, detail="Запрос не найден или недоступен")
 
-        text_data_result = await db.execute(
-            select(TextData)
-            .where(TextData.query_id == query_id)
-        )
-        text_data = text_data_result.scalar_one_or_none()
-
-        if text_data and text_data.file_path:
-            await file_storage.delete_query_data(text_data.file_path)
-
-        await db.execute(
-            delete(TextData)
-            .where(TextData.query_id == query_id),
-        )
-        await db.execute(
-            delete(Events)
-            .where(Events.query_id == query_id),
-        )
-        await db.delete(user_query)
+        await UserQueriesDAO.delete_query_info_by_id(query_id, db)
         await db.commit()
         return {"message": "Success"}
     except HTTPException as e:

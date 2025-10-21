@@ -69,9 +69,8 @@ class Pledges:
             full_data.extend(data)
             page += 1
 
-        test_pledges_full_data = []
         pledges_full = []
-        for pledge_info in test_pledges_full_data:
+        for pledge_info in full_data:
             all_pledge_parties = []
             for pledge_type in {'pledgers', 'pledgees'}:
                 info = pledge_info.get(pledge_type)

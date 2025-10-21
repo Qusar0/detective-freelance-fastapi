@@ -75,7 +75,6 @@ class ParticipationOrganization:
             full_data.extend(data)
             page += 1
 
-        full_data = []
         part_in_org_full = []
         for entry in full_data:
             org_data = entry.get("org_data")
