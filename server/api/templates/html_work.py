@@ -170,20 +170,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     <small class="prompt">Исключает из справки сервисы поиска аккаунтов в соц. сетях: socialbase.ru, bigbookname.com и другие.</small> 
                     <span style="font-size: 15px;">Скрыть архивы социальных сетей</span> 
                 </label>
-                <div class="weight-filter" style="display: flex; align-items: center; gap: 10px; margin: 6px 0; background: white; border-radius: 4px; height: 32px; padding: 0 11px;">
-                    <span style="font-weight: 600;">Фильтр:</span>
-                    
-                    <select id="weight-filter-select" onchange="updateWeightFilter()" 
-                            style="height: 26px; border: 1px solid #ddd; border-radius: 3px; padding: 0 5px; outline: none; cursor: pointer;">
-                        <option value="all">Все источники</option>
-                        <option value="weight">Вес источника</option>
-                    </select>
-                    
-                    <select id="sort-direction" onchange="updateSortDirection()" 
-                            style="height: 26px; border: 1px solid #ddd; border-radius: 3px; padding: 0 5px; outline: none; cursor: pointer; display: none;">
-                        <option value="desc">По убыванию</option>
-                        <option value="asc">По возрастанию</option>
-                    </select>
+                <div class="weight-filter">
                 </div>
                 <!-- -->
                 <div style="

@@ -154,6 +154,8 @@ async def get_query_data(
             tax_arrears=results['tax_arrears'],
             fssp=results['fssp'],
             part_in_org=results['part_in_org'],
+            social=results['social'],
+            documents=results['documents']
         )
         return case
 

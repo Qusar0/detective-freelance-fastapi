@@ -16,6 +16,7 @@ from server.api.models.irbis_models import (
     PartInOrgFullTable,
 )
 from server.api.dao.base import BaseDAO
+from server.api.dao.queries_data import QueriesDataDAO
 from loguru import logger
 
 
@@ -48,7 +49,12 @@ class StatisticsDAO(BaseDAO):
                 results[table_name] = await StatisticsDAO._get_count_for_table(
                     table, person_id, db
                 )
-
+            
+            resource_stats = await QueriesDataDAO.get_count_resource(
+                query_id=person_id,
+                db=db
+            )
+            results.update(resource_stats)
             logger.info(f"DAO: Получена статистика по irbis_person_id={person_id}")
             return results
 

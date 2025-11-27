@@ -13,3 +13,5 @@ class StatisticGeneralCase(BaseModel):
     tax_arrears: Optional[int] = Field(..., description="Количество записей о задолженностях")
     fssp: Optional[int] = Field(..., description="Количество записей о производствах")
     part_in_org: Optional[int] = Field(..., description="Количество записей об учасиии в организациях")
+    social: Optional[int] = Field(..., description="Количество записей соц. сетей")
+    documents: Optional[int] = Field(..., description="Количество записей документов")
