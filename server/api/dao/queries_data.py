@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
@@ -47,6 +47,34 @@ class QueriesDataDAO(BaseDAO):
         except SQLAlchemyError as e:
             logger.error(f"Error counting query data: {e}")
             raise
+
+    @classmethod
+    async def get_count_resource(
+        cls,
+        query_id: int,
+        db: AsyncSession,
+    ) -> dict:
+            SOCIAL_URLS = ['Вконтакте', 'Одноклассники', 'Facebook', 'Instagram', 'Telegram']
+            DOCUMENT_TYPES = ['Word', 'PDF', 'Excel', 'Txt', 'PowerPoint']
+
+            resource_stmt = select(
+                func.sum(
+                    case((QueriesData.resource_type.in_(SOCIAL_URLS), 1), else_=0)
+                ).label("count_social"),
+                func.sum(
+                    case((QueriesData.resource_type.in_(DOCUMENT_TYPES), 1), else_=0)
+                ).label("count_document")
+            ).where(
+                QueriesData.query_id == query_id
+            )
+
+            resource_result = await db.execute(resource_stmt)
+            row = resource_result.one()
+
+            result_stats = {}
+            result_stats["social"] = row.count_social or 0
+            result_stats["documents"] = row.count_document or 0
+            return result_stats
 
     @classmethod
     async def get_paginated_query_data(

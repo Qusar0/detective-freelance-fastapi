@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
 from server.api.dao.base import BaseDAO
+from server.api.dao.queries_data import QueriesDataDAO
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.models.models import KeywordType, QueriesData, Keywords, QueryDataKeywords
 
@@ -76,6 +77,13 @@ class QueryKeywordStatsDAO(BaseDAO):
 
             result_stats = all_types.copy()
             result_stats['main'] = main_count
+
+            resource_stats = await QueriesDataDAO.get_count_resource(
+                query_id=query_id,
+                db=db
+            )
+
+            result_stats.update(resource_stats)
 
             return result_stats
 
