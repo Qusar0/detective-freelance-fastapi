@@ -8,6 +8,7 @@ from server.api.dao.text_data import TextDataDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
+from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.models.models import QueriesData, QueryDataKeywords
 from server.api.templates.html_work import response_template
@@ -246,6 +247,7 @@ class NameSearchTask(BaseSearchTask):
         shared_results = {}
         existing_urls = set()
         thread_list = []
+        prohibited_sites = await ProhibitedSitesDAO.select_general_needless_sites(db)
 
         for input_data in request_input_pack:
             t = threading.Thread(
@@ -259,6 +261,7 @@ class NameSearchTask(BaseSearchTask):
                     self.stats_lock,
                     self.logger,
                     existing_urls,
+                    prohibited_sites,
                 )
             )
             thread_list.append(t)

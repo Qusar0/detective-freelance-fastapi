@@ -107,7 +107,7 @@ class NumberSearchTask(BaseSearchTask):
         all_raw_data = {}
         all_found_data = []
         urls = []
-        proh_sites = await ProhibitedSitesDAO.select_needless_sites(db)
+        proh_sites = await ProhibitedSitesDAO.select_phone_needless_sites(db)
         max_attempts = 5
         retry_delay = 2
         handling_resp = None

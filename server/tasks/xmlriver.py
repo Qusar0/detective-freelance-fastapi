@@ -161,8 +161,9 @@ def handle_xmlriver_response(  # noqa: WPS211
                 raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
             continue
 
-        title = doc["title"] or ''
-        snippet = doc.get("fullsnippet") or doc.get("passages", {}).get("passage", "")
+        title = doc.get("title", '')
+        passage_value = doc.get("passages", {}).get("passage")
+        snippet = doc.get("fullsnippet") or ("" if passage_value is None else passage_value)
         processed_snippet = ''
         pub_date = doc.get("pubDate")
         logger.debug(f"Извлечены данные: title='{title[:50]}...', snippet='{snippet[:50]}...'")
@@ -314,13 +315,14 @@ def search_worker(  # noqa: WPS211
     stats_lock,
     search_logger: SearchLogger,
     existing_urls,
+    prohibited_sites,
 ):
     """Функция для выполнения поисковых запросов в потоке."""
     try:
         do_request_to_xmlriver(
             input_data,
             all_found_info,
-            [],
+            prohibited_sites,
             urls,
             request_stats,
             stats_lock,
