@@ -27,7 +27,7 @@ class ProhibitedSitesDAO(BaseDAO):
             return user_prohibited_sites
 
     @classmethod
-    async def select_needless_sites(cls, db: AsyncSession):
+    async def select_phone_needless_sites(cls, db: AsyncSession):
         try:
             logger.debug("Запрос запрещенных сайтов для телефонов")
 
@@ -39,4 +39,19 @@ class ProhibitedSitesDAO(BaseDAO):
 
         except (SQLAlchemyError, Exception) as e:
             logger.error(f"Ошибка при получении запрещенных сайтов для телефонов: {e}")
+            return []
+
+    @classmethod
+    async def select_general_needless_sites(cls, db: AsyncSession):
+        try:
+            logger.debug("Запрос запрещенных сайтов для телефонов")
+
+            result = await db.execute(select(ProhibitedSites.site_link))
+            sites = result.scalars().all()
+
+            logger.info(f"Получено {len(sites)} запрещенных сайтов")
+            return sites
+
+        except (SQLAlchemyError, Exception) as e:
+            logger.error(f"Ошибка при получении запрещенных сайтов: {e}")
             return []

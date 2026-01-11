@@ -5,7 +5,6 @@ from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete
 from typing import List, Union
 from server.api.scripts.sse_manager import generate_sse_message_type
 from server.api.services.price import calculate_email_price, calculate_name_price, calculate_num_price
@@ -13,7 +12,6 @@ from server.bots.notification_bot import BalanceNotifier
 from server.api.database.database import get_db
 from server.api.models.models import (
     UserQueries,
-    Events,
     TextData,
     Language,
 )
