@@ -545,11 +545,17 @@ async def get_query_data(
                 keyword_type_name = None
                 resource_type = None
 
-            keywords_list = [
-                kw_assoc.original_keyword.word
-                for kw_assoc in data_item.keywords
-                if kw_assoc.original_keyword
-            ]
+            if keyword_type_name == 'free word':
+                keywords_list = [
+                    kw_assoc.keyword
+                    for kw_assoc in data_item.keywords
+                ]
+            else:
+                keywords_list = [
+                    kw_assoc.original_keyword.word
+                    for kw_assoc in data_item.keywords
+                    if kw_assoc.original_keyword
+                ]
 
             if query.query_category != 'name':
                 query_data = QueryDataResult(

@@ -1,25 +1,20 @@
 from loguru import logger
-import requests
-import time
+import asyncio
 from typing import List
 from celery import shared_task
 
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
-from server.api.dao.keywords import KeywordsDAO
+from server.api.dao.queries_data import QueriesDataDAO
 from server.api.dao.prohibited_sites import ProhibitedSitesDAO
-from server.api.models.models import QueriesData, QueryDataKeywords
 from server.api.templates.html_work import response_num_template
 from server.api.services.file_storage import FileStorageService
-from server.tasks.celery_config import (
-    get_event_loop,
-)
+from server.tasks.celery_config import get_event_loop
 from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_google_query, form_yandex_query_num
 from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
-
-from server.tasks.services import update_stats, write_urls
+from server.tasks.services import update_stats_async, write_urls, get_http_client
 from server.tasks.xmlriver import handle_xmlriver_response
 
 
@@ -68,40 +63,13 @@ class NumberSearchTask(BaseSearchTask):
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
-        await ServicesBalanceDAO.renew_lampyre_balance(db)
+        # await ServicesBalanceDAO.renew_lampyre_balance(db)
 
     async def save_raw_results(self, raw_data, db):
-        """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
-        try:
-            for url, item in raw_data.items():
-                title = item.get('raw_title') or item.get('title')
-                snippet = item.get('raw_snippet') or item.get('snippet')
-                publication_date = item.get('pubDate')
-                keyword_type = 'free word'
-
-                query_data = QueriesData(
-                    query_id=self.query_id,
-                    title=title,
-                    info=snippet,
-                    link=url,
-                    publication_date=publication_date,
-                )
-                db.add(query_data)
-                await db.flush()
-                original_keyword_id = await KeywordsDAO.get_keyword_id(db, 'free word', keyword_type)
-                query_data_keyword = QueryDataKeywords(
-                    query_data_id=query_data.id,
-                    keyword='ключевых слов нет',
-                    original_keyword_id=original_keyword_id,
-                )
-                db.add(query_data_keyword)
-            await db.commit()
-            logger.info(f"Raw data saved for query {self.query_id} - {len(raw_data)} records")
-
-        except Exception as e:
-            logger.error(f"Failed to save raw results: {e}")
-            await db.rollback()
-            raise
+        """Сохраняет результаты поиска в таблицу queries_data через DAO"""
+        await QueriesDataDAO.bulk_save_simple_results(
+            self.query_id, raw_data, 'free word', 'free word', db
+        )
 
     async def xmlriver_num_do_request(self, db):
         all_raw_data = {}
@@ -109,81 +77,88 @@ class NumberSearchTask(BaseSearchTask):
         urls = []
         proh_sites = await ProhibitedSitesDAO.select_phone_needless_sites(db)
         max_attempts = 5
-        retry_delay = 2
+        base_retry_delay = 0.5
         handling_resp = None
+        async_stats_lock = asyncio.Lock()
 
         google_urls = form_google_query(self.phone_num)
         existing_urls = set()
-        for url in google_urls:
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    response = requests.get(url=url)
-                    handling_resp = handle_xmlriver_response(
-                        response,
-                        all_found_data,
-                        proh_sites,
-                        self.phone_num,
-                        all_raw_data,
-                        existing_urls,
-                    )
 
-                    if handling_resp not in ('500', '110', '111'):
-                        urls.append(url)
-                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
-                        break
-                    else:
-                        self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+        async with get_http_client() as client:
+            # Обрабатываем Google запросы
+            for url in google_urls:
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        response = await client.get(url=url)
+                        handling_resp = await handle_xmlriver_response(
+                            response,
+                            all_found_data,
+                            proh_sites,
+                            self.phone_num,
+                            all_raw_data,
+                            existing_urls,
+                            stats_lock=async_stats_lock,
+                        )
+
+                        if handling_resp not in ('500', '110', '111'):
+                            urls.append(url)
+                            await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
+                            break
+                        else:
+                            self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                            if attempt < max_attempts:
+                                await asyncio.sleep(base_retry_delay)
+                    except Exception as e:
+                        self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
                         if attempt < max_attempts:
-                            time.sleep(retry_delay)
-                except Exception as e:
-                    self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
-                    if attempt < max_attempts:
-                        time.sleep(retry_delay)
-            else:
-                logger.error(f"Google запрос полностью провален: {url}")
-                self.logger.log_error(f"Google запрос полностью провален: {url}")
-                update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+                            await asyncio.sleep(base_retry_delay)
+                else:
+                    logger.error(f"Google запрос полностью провален: {url}")
+                    self.logger.log_error(f"Google запрос полностью провален: {url}")
+                    await update_stats_async(self.request_stats, async_stats_lock, attempt, success=False)
 
-        counter = 0
-        while True:
-            url = form_yandex_query_num(self.phone_num, page_num=counter)
+            # Обрабатываем Yandex запросы
+            counter = 0
+            while True:
+                url = form_yandex_query_num(self.phone_num, page_num=counter)
 
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    response = requests.get(url=url)
-                    handling_resp = handle_xmlriver_response(
-                        response,
-                        all_found_data,
-                        proh_sites,
-                        self.phone_num,
-                        all_raw_data,
-                        existing_urls,
-                    )
+                for attempt in range(1, max_attempts + 1):
+                    try:
+                        response = await client.get(url=url)
+                        handling_resp = await handle_xmlriver_response(
+                            response,
+                            all_found_data,
+                            proh_sites,
+                            self.phone_num,
+                            all_raw_data,
+                            existing_urls,
+                            stats_lock=async_stats_lock,
+                        )
 
-                    if handling_resp == '15':
-                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
-                        urls.append(url)
-                        break
-                    elif handling_resp in ('500', '110', '111'):
-                        self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                        if handling_resp == '15':
+                            await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
+                            urls.append(url)
+                            break
+                        elif handling_resp in ('500', '110', '111'):
+                            self.logger.log_error(f"{handling_resp} | URL: {url} | Попытка: {attempt}")
+                            if attempt < max_attempts:
+                                await asyncio.sleep(base_retry_delay)
+                        else:
+                            urls.append(url)
+                            await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
+                            counter += 1
+                            break
+                    except Exception as e:
+                        self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
                         if attempt < max_attempts:
-                            time.sleep(retry_delay)
-                    else:
-                        urls.append(url)
-                        update_stats(self.request_stats, self.stats_lock, attempt, success=True)
-                        counter += 1
-                        break
-                except Exception as e:
-                    self.logger.log_error(f"Исключение: {str(e)} | URL: {url} | Попытка: {attempt}")
-                    if attempt < max_attempts:
-                        time.sleep(retry_delay)
-            else:
-                logger.error(f"Yandex запрос полностью провален: {url}")
-                self.logger.log_error(f"Yandex запрос полностью провален: {url}")
-                update_stats(self.request_stats, self.stats_lock, attempt, success=False)
+                            await asyncio.sleep(base_retry_delay)
+                else:
+                    logger.error(f"Yandex запрос полностью провален: {url}")
+                    self.logger.log_error(f"Yandex запрос полностью провален: {url}")
+                    await update_stats_async(self.request_stats, async_stats_lock, attempt, success=False)
 
-            if handling_resp == '15':
-                break
+                if handling_resp == '15':
+                    break
 
         await write_urls(urls, "number")
         return {

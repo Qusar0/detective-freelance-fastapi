@@ -1,26 +1,28 @@
 from typing import Tuple, List
-import threading
+import asyncio
+import datetime
 from loguru import logger
 from celery import shared_task
 
-from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.language import LanguageDAO
 from server.api.dao.services_balance import ServicesBalanceDAO
 from server.api.dao.text_data import TextDataDAO
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.additional_query_word import AdditionalQueryWordDAO
 from server.api.dao.prohibited_sites import ProhibitedSitesDAO
-from server.api.models.models import QueriesData, QueryDataKeywords
+from server.api.dao.queries_data import QueriesDataDAO
+from server.api.dao.keywords import KeywordsDAO
 from server.api.templates.html_work import response_company_template
 from server.api.services.file_storage import FileStorageService
 from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
 from server.api.schemas.query import FoundInfo
+from server.tasks.services import get_http_client
 from server.tasks.forms.forms import form_extra_titles, form_titles
 from server.tasks.forms.inputs import form_input_pack_company
 from server.tasks.forms.responses import form_response_html
 from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
-from server.tasks.services import write_urls, manage_threads
+from server.tasks.services import manage_async_tasks, write_urls
 from server.tasks.xmlriver import search_worker
 
 
@@ -190,65 +192,39 @@ class CompanySearchTask(BaseSearchTask):
     ):
         shared_results = {}
         existing_urls = set()
-        thread_list = []
         prohibited_sites = await ProhibitedSitesDAO.select_general_needless_sites(db)
 
-        for input_data in request_input_pack:
-            t = threading.Thread(
-                target=search_worker,
-                args=(
+        async_stats_lock = asyncio.Lock()
+
+        start_time = datetime.datetime.now()
+        self.logger.log_error(f'Начало выполнения {start_time}')
+
+        async with get_http_client() as client:
+            tasks = [
+                search_worker(
                     input_data,
                     shared_results,
                     all_found_info,
                     urls,
                     self.request_stats,
-                    self.stats_lock,
+                    async_stats_lock,
                     self.logger,
                     existing_urls,
                     prohibited_sites,
+                    client,
                 )
-            )
-            thread_list.append(t)
+                for input_data in request_input_pack
+            ]
+            await manage_async_tasks(tasks, max_concurrent=20)
 
-        manage_threads(thread_list)
+        end_time = datetime.datetime.now()
+        self.logger.log_error(f'Конец выполнения запросов {end_time}')
+        self.logger.log_error(f'Время выполнения запросов {end_time - start_time}')
         await self.save_raw_results(shared_results, db)
 
     async def save_raw_results(self, raw_data, db):
-        """Сохраняет результаты поиска в таблицу queries_data, каждый элемент как отдельную запись"""
-        try:
-            for url, item in raw_data.items():
-                title = item.get('title')
-                snippet = item.get('snippet')
-                keywords = item.get('keywords')
-                publication_date = item.get('publication_date')
-                resource_type = item.get('resource_type')
-
-                query_data = QueriesData(
-                    query_id=self.query_id,
-                    title=title,
-                    info=snippet,
-                    link=url,
-                    publication_date=publication_date,
-                    resource_type=resource_type,
-                )
-
-                db.add(query_data)
-                await db.flush()
-                for keyword, original_keyword, keyword_type in keywords:
-                    original_keyword_id = await KeywordsDAO.get_keyword_id(db, original_keyword, keyword_type)
-                    query_data_keyword = QueryDataKeywords(
-                        query_data_id=query_data.id,
-                        keyword=keyword,
-                        original_keyword_id=original_keyword_id,
-                    )
-                    db.add(query_data_keyword)
-            await db.commit()
-            logger.info(f"Сохраненные необработанные данные для запроса {self.query_id} - {len(raw_data)} записей")
-
-        except Exception as e:
-            logger.error(f"Не удалось сохранить необработанные данные: {e}")
-            await db.rollback()
-            raise
+        """Сохраняет результаты поиска в таблицу queries_data через DAO"""
+        await QueriesDataDAO.bulk_save_query_results(self.query_id, raw_data, db)
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
