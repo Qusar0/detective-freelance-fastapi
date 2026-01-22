@@ -17,11 +17,11 @@ subscribers: Dict[str, List[asyncio.Queue]] = {}
 
 async def publish_event(channel: str, data: dict):
     message = json.dumps(data)
-    
+
     if channel in subscribers:
         for queue in subscribers[channel]:
             await queue.put(data)
-    
+
     r.publish(channel, message)
 
 
@@ -47,13 +47,13 @@ async def add_subscriber(channel: str, queue: asyncio.Queue):
 
 async def redis_listener():
     pubsub = r.pubsub()
-    
+
     while True:
         channels = list(subscribers.keys())
-        
+
         if channels:
             pubsub.subscribe(*channels)
-            
+
             while True:
                 message = pubsub.get_message()
                 if message and message['type'] == 'message':

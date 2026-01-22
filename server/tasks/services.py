@@ -5,8 +5,24 @@ import datetime
 import threading
 import asyncio
 import httpx
+import redis.asyncio as redis
+from server.api.conf.config import settings
 from contextlib import asynccontextmanager
 from loguru import logger
+
+
+_redis_client = None
+
+
+async def get_redis_client():
+    """Получает или создает Redis клиент."""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = await redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+        )
+    return _redis_client
 
 
 @asynccontextmanager
@@ -90,17 +106,33 @@ def manage_threads(threads):
 
 
 async def manage_async_tasks(tasks, max_concurrent=20):
-    """Управляет выполнением асинхронных задач с ограничением параллелизма."""
+    """Управляет выполнением асинхронных задач с ограничением параллелизма.
+
+    Использует Redis для ограничения одновременных задач до 20 для всех сервисов вместе.
+    """
     try:
-        semaphore = asyncio.Semaphore(max_concurrent)
+        redis_client = await get_redis_client()
+        semaphore_key = "global_task_semaphore"
+        max_slots = max_concurrent
 
-        async def run_with_semaphore(task):
-            async with semaphore:
+        async def run_with_redis_semaphore(task, task_id):
+            """Выполняет задачу с получением слота из Redis."""
+            while True:
+                current_count = await redis_client.incr(semaphore_key)
+                if current_count <= max_slots:
+                    break
+                await redis_client.decr(semaphore_key)
+                await asyncio.sleep(0.1)
+
+            try:
+                logger.debug(f"Задача {task_id} запущена. Активных задач: {current_count}/{max_slots}")
                 return await task
+            finally:
+                await redis_client.decr(semaphore_key)
+                logger.debug(f"Задача {task_id} завершена. Слот освобожден")
 
-        logger.debug(f"Управление {len(tasks)} задачами, максимум {max_concurrent} одновременно")
-
-        results = await asyncio.gather(*[run_with_semaphore(task) for task in tasks], return_exceptions=True)
+        task_list = [run_with_redis_semaphore(task, i) for i, task in enumerate(tasks)]
+        results = await asyncio.gather(*task_list, return_exceptions=True)
 
         logger.success(f"Все {len(tasks)} задач успешно завершены")
         return results
