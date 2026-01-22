@@ -48,6 +48,7 @@ pydantic[email]
 pytz==2021.1
 recordtype==1.4
 redis==4.5.5
+redis[asyncio]==4.5.5
 requests==2.28.2
 rsa==4.9
 six==1.15.0

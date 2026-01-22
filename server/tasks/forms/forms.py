@@ -173,7 +173,7 @@ async def form_name_cases(full_name: List[str], language: str = None) -> List[Li
                 if case in data:
                     cases.add(data[case])
         except (httpx.HTTPError, KeyError) as e:
-            logger.error(f"Ошибка при работе с Морфером для языка {language}: {e}")
+            logger.error(f"Ошибка при работе с Морфером для языка {language}: {str(e)}")
 
     name_cases = [name.split(" ") for name in cases]
     name_cases.insert(0, full_name)
