@@ -78,7 +78,7 @@ class EmailSearchTask(BaseSearchTask):
         all_found_data = []
         urls = []
         max_attempts = 5
-        base_retry_delay = 0.5
+        base_retry_delay = 2
         handling_resp = None
         async_stats_lock = asyncio.Lock()
 
