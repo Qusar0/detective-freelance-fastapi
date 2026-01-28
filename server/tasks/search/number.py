@@ -77,7 +77,7 @@ class NumberSearchTask(BaseSearchTask):
         urls = []
         proh_sites = await ProhibitedSitesDAO.select_phone_needless_sites(db)
         max_attempts = 5
-        base_retry_delay = 0.5
+        base_retry_delay = 2
         handling_resp = None
         async_stats_lock = asyncio.Lock()
 

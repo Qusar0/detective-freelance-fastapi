@@ -215,7 +215,7 @@ class CompanySearchTask(BaseSearchTask):
                 )
                 for input_data in request_input_pack
             ]
-            await manage_async_tasks(tasks, max_concurrent=20)
+            await manage_async_tasks(tasks)
 
         end_time = datetime.datetime.now()
         self.logger.log_error(f'Конец выполнения запросов {end_time}')

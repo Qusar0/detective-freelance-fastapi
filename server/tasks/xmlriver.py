@@ -28,7 +28,7 @@ async def do_request_to_xmlriver(
 ):
     url, keyword, original_keyword, keyword_type, name_case = input_data
     max_attempts = 5
-    base_retry_delay = 0.5
+    base_retry_delay = 2
 
     async def process_request(target_url, existing_urls: Set[str]):
         for attempt in range(1, max_attempts + 1):
