@@ -1,6 +1,7 @@
 import os
 import asyncio
 import datetime
+import threading
 import aiofiles
 import httpx
 import redis.asyncio as redis
@@ -26,11 +27,8 @@ async def get_redis_client():
 @asynccontextmanager
 async def get_http_client():
     async with httpx.AsyncClient(
-        timeout=30.0,
-        limits=httpx.Limits(
-            max_keepalive_connections=20,
-            max_connections=20,
-        ),
+        timeout=60.0,
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=20),
     ) as client:
         yield client
 
@@ -129,4 +127,105 @@ async def write_urls(urls, type_name: str):
         logger.success(f"Успешно записано {len(urls)} URL в файл {filename}")
 
     except Exception as e:
-        logger.error(f"Ошибка при записи URL: {e}")
+        logger.error(f"Ошибка при записи URL в файл: {e}")
+
+
+def manage_threads(threads):
+    try:
+        active_threads = []
+        max_threads = 20
+
+        logger.debug(f"Управление {len(threads)} потоками, максимум {max_threads} одновременно")
+
+        for i, thread in enumerate(threads):
+            # Если достигнуто максимальное количество потоков, ждем, пока хотя бы один завершится
+            while threading.active_count() >= max_threads:
+                time.sleep(0.1)
+
+            logger.debug(f"Запуск потока {i+1}/{len(threads)}")
+            thread.start()
+            active_threads.append(thread)
+
+        logger.info("Все потоки запущены, ожидание завершения...")
+
+        for i, thread in enumerate(active_threads):
+            thread.join()
+            logger.debug(f"Поток {i+1}/{len(active_threads)} завершен")
+        logger.success("Все потоки успешно завершены")
+
+    except Exception as e:
+        logger.error(f"Ошибка при управлении потоками: {e}")
+
+
+async def manage_async_tasks(tasks, max_concurrent=20):
+    """Управляет выполнением асинхронных задач с ограничением параллелизма.
+
+    Использует Redis для ограничения одновременных задач до 20 для всех сервисов вместе.
+    """
+    try:
+        redis_client = await get_redis_client()
+        semaphore_key = "global_task_semaphore"
+        max_slots = max_concurrent
+
+        async def run_with_redis_semaphore(task, task_id):
+            """Выполняет задачу с получением слота из Redis."""
+            while True:
+                current_count = await redis_client.incr(semaphore_key)
+                if current_count <= max_slots:
+                    break
+                await redis_client.decr(semaphore_key)
+                await asyncio.sleep(0.1)
+
+            try:
+                logger.debug(f"Задача {task_id} запущена. Активных задач: {current_count}/{max_slots}")
+                return await task
+            finally:
+                await redis_client.decr(semaphore_key)
+                logger.debug(f"Задача {task_id} завершена. Слот освобожден")
+
+        task_list = [run_with_redis_semaphore(task, i) for i, task in enumerate(tasks)]
+        results = await asyncio.gather(*task_list, return_exceptions=True)
+
+        logger.success(f"Все {len(tasks)} задач успешно завершены")
+        return results
+
+    except Exception as e:
+        logger.error(f"Ошибка при управлении асинхронными задачами: {e}")
+        raise
+
+
+async def get_search_engine_semaphores():
+    """Возвращает семафоры для каждой поисковой системы.
+
+    Google: 20 одновременных запросов
+    Yandex: 10 одновременных запросов
+    """
+    redis_client = await get_redis_client()
+    return {
+        'google': {
+            'redis_client': redis_client,
+            'key': 'google_task_semaphore',
+            'max_slots': 20,
+        },
+        'yandex': {
+            'redis_client': redis_client,
+            'key': 'yandex_task_semaphore',
+            'max_slots': 10,
+        },
+    }
+
+
+async def acquire_search_engine_semaphore(semaphore_key: str, semaphore_config: dict):
+    """Получает слот семафора для поисковой системы."""
+    while True:
+        current_count = await semaphore_config['redis_client'].incr(semaphore_key)
+        if current_count <= semaphore_config['max_slots']:
+            return current_count
+        await semaphore_config['redis_client'].decr(semaphore_key)
+        await asyncio.sleep(0.1)
+
+
+async def release_search_engine_semaphore(semaphore_key: str, redis_client):
+    """Освобождает слот семафора для поисковой системы."""
+    await redis_client.decr(semaphore_key)
+

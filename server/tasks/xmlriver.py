@@ -10,7 +10,8 @@ import httpx
 from server.tasks.celery_config import SEARCH_ENGINES
 from server.tasks.forms.sites import form_page_query
 from server.logger import SearchLogger
-from server.tasks.services import update_stats_async
+from server.tasks.services import get_search_engine_semaphores
+from server.tasks.services import update_stats_async, acquire_search_engine_semaphore, release_search_engine_semaphore
 from server.api.schemas.query import FoundInfo, NumberInfo
 
 
@@ -27,13 +28,13 @@ async def do_request_to_xmlriver(
     client: httpx.AsyncClient,
 ):
     url, keyword, original_keyword, keyword_type, name_case = input_data
-    max_attempts = 5
-    base_retry_delay = 2
+    max_attempts = 3
+    base_retry_delay = 0.5
 
     async def process_request(target_url, existing_urls: Set[str]):
         for attempt in range(1, max_attempts + 1):
             try:
-                response = await client.get(target_url, timeout=30.0)
+                response = await client.get(target_url, timeout=60.0)
 
                 handling_resp = await handle_xmlriver_response(
                     response,
@@ -68,18 +69,47 @@ async def do_request_to_xmlriver(
         search_logger.log_error(f"Запрос полностью провален: {target_url}")
         return False
 
+    semaphores = await get_search_engine_semaphores()
     if SEARCH_ENGINES['google'] in url:
-        logger.info(f"Обработка Google запроса: {url}")
-        await process_request(url, existing_urls)
+        logger.info(f'Обработка Google запроса: {url}')
+        if semaphores and 'google' in semaphores:
+            current_count = await acquire_search_engine_semaphore(
+                semaphores['google']['key'],
+                semaphores['google']
+            )
+            logger.debug(f'Google: получен слот {current_count}/20')
+            try:
+                await process_request(url, existing_urls)
+            finally:
+                await release_search_engine_semaphore(
+                    semaphores['google']['key'],
+                    semaphores['google']['redis_client']
+                )
+                logger.debug(f'Google: слот освобожден')
 
     elif SEARCH_ENGINES['yandex'] in url:
         logger.info(f"Обработка Yandex запроса: {url}")
         page_num = 0
         success = True
         while success:
-            new_url = form_page_query(url, page_num)
-            success = await process_request(new_url, existing_urls)
-            page_num += 1
+            if semaphores and 'yandex' in semaphores:
+                current_count = await acquire_search_engine_semaphore(
+                    semaphores['yandex']['key'],
+                    semaphores['yandex']
+                )
+                logger.debug(f'Yandex: получен слот {current_count}/10')
+                try:
+                    new_url = form_page_query(url, page_num)
+                    success = await process_request(new_url, existing_urls)
+                finally:
+                    await release_search_engine_semaphore(
+                        semaphores['yandex']['key'],
+                        semaphores['yandex']['redis_client']
+                    )
+                    logger.debug(f'Yandex: слот освобожден')
+                page_num += 1
+            else:
+                success = False
 
 
 async def handle_xmlriver_response(  # noqa: WPS211
