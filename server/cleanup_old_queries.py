@@ -1,6 +1,6 @@
 # Скрипт для периодической очистки данных старых запросов
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from server.api.database.database import async_session
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.models.models import UserQueries
@@ -14,7 +14,7 @@ async def cleanup_old_queries():
         try:
             async with async_session() as session:
                 async with session.begin():
-                    now = datetime.now()
+                    now = datetime.now(timezone.utc)
                     two_hours_ago = now - timedelta(hours=2)
 
                     result = await session.execute(

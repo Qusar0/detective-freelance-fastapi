@@ -1,7 +1,6 @@
 import os
 import asyncio
 import datetime
-import threading
 import aiofiles
 import httpx
 import redis.asyncio as redis
@@ -33,24 +32,6 @@ async def get_http_client():
         yield client
 
 
-SEARCH_LIMITS = {
-    "google": 20,
-    "yandex": 7,
-}
-
-google_semaphore = asyncio.Semaphore(SEARCH_LIMITS["google"])
-yandex_semaphore = asyncio.Semaphore(SEARCH_LIMITS["yandex"])
-
-
-def _get_semaphore(engine: str) -> asyncio.Semaphore:
-    if engine == "google":
-        return google_semaphore
-    elif engine == "yandex":
-        return yandex_semaphore
-    else:
-        raise ValueError(f"Unknown engine: {engine}")
-
-
 async def update_stats_async(request_stats, stats_lock, attempt, success=True):
     async with stats_lock:
         request_stats['total_requests'] += 1
@@ -63,61 +44,12 @@ async def update_stats_async(request_stats, stats_lock, attempt, success=True):
             request_stats['failed_after_max_retries'] += 1
 
 
-async def run_with_engine_limit(task, task_id: int):
-    engine = _detect_engine_from_task(task)
-    semaphore = _get_semaphore(engine)
-
-    async with semaphore:
-        logger.info(
-            f"Задача {task_id} → {engine} "
-            f"(active: {SEARCH_LIMITS[engine] - semaphore._value}/"
-            f"{SEARCH_LIMITS[engine]})"
-        )
-        return await task
-
-
-def _detect_engine_from_task(task):
-    """Определяет search engine из задачи.
-
-    Пытается получить информацию о task из его closure переменных.
-    По умолчанию возвращает 'google'.
-    """
-    try:
-        if hasattr(task, 'cr_frame') and task.cr_frame:
-            frame_locals = task.cr_frame.f_locals
-            if 'input_data' in frame_locals:
-                input_data = frame_locals['input_data']
-                if isinstance(input_data, tuple) and len(input_data) > 0:
-                    url = input_data[0]
-                    if 'search_yandex' in url or 'yandex' in url.lower():
-                        return 'yandex'
-    except Exception as e:
-        logger.debug(f"Не удалось определить engine из задачи: {e}")
-
-    return "google"
-
-
-async def manage_async_tasks(tasks):
-    wrapped_tasks = [
-        run_with_engine_limit(task, i)
-        for i, task in enumerate(tasks)
-    ]
-
-    results = await asyncio.gather(
-        *wrapped_tasks,
-        return_exceptions=True,
-    )
-
-    logger.success(f"Завершено задач: {len(results)}")
-    return results
-
-
 async def write_urls(urls, type_name: str):
     try:
         log_dir = "./url_logs"
         os.makedirs(log_dir, exist_ok=True)
 
-        filename = f'{log_dir}/{type}-{datetime.datetime.now()}.txt'
+        filename = f'{log_dir}/{type_name}-{datetime.datetime.now()}.txt'
         logger.info(f"Запись {len(urls)} URL в файл: {filename}")
 
         async with aiofiles.open(filename, 'w') as f:
@@ -128,33 +60,6 @@ async def write_urls(urls, type_name: str):
 
     except Exception as e:
         logger.error(f"Ошибка при записи URL в файл: {e}")
-
-
-def manage_threads(threads):
-    try:
-        active_threads = []
-        max_threads = 20
-
-        logger.debug(f"Управление {len(threads)} потоками, максимум {max_threads} одновременно")
-
-        for i, thread in enumerate(threads):
-            # Если достигнуто максимальное количество потоков, ждем, пока хотя бы один завершится
-            while threading.active_count() >= max_threads:
-                time.sleep(0.1)
-
-            logger.debug(f"Запуск потока {i+1}/{len(threads)}")
-            thread.start()
-            active_threads.append(thread)
-
-        logger.info("Все потоки запущены, ожидание завершения...")
-
-        for i, thread in enumerate(active_threads):
-            thread.join()
-            logger.debug(f"Поток {i+1}/{len(active_threads)} завершен")
-        logger.success("Все потоки успешно завершены")
-
-    except Exception as e:
-        logger.error(f"Ошибка при управлении потоками: {e}")
 
 
 async def manage_async_tasks(tasks, max_concurrent=20):

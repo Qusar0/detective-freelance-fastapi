@@ -101,6 +101,8 @@ class NumberSearchTask(BaseSearchTask):
                         )
 
                         if handling_resp not in ('500', '110', '111'):
+                            async with async_stats_lock:
+                                self.request_stats['total_http_requests'] += 1
                             urls.append(url)
                             await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
                             break
@@ -136,6 +138,8 @@ class NumberSearchTask(BaseSearchTask):
                         )
 
                         if handling_resp == '15':
+                            async with async_stats_lock:
+                                self.request_stats['total_http_requests'] += 1
                             await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
                             urls.append(url)
                             break
@@ -144,6 +148,8 @@ class NumberSearchTask(BaseSearchTask):
                             if attempt < max_attempts:
                                 await asyncio.sleep(base_retry_delay)
                         else:
+                            async with async_stats_lock:
+                                self.request_stats['total_http_requests'] += 1
                             urls.append(url)
                             await update_stats_async(self.request_stats, async_stats_lock, attempt, success=True)
                             counter += 1

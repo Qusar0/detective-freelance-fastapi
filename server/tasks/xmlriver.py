@@ -50,9 +50,14 @@ async def do_request_to_xmlriver(
                 )
 
                 if handling_resp == '15':
+                    async with stats_lock:
+                        request_stats['total_http_requests'] += 1
+                    urls.append(target_url)
                     return False
 
                 if handling_resp not in ('500', '110', '111'):
+                    async with stats_lock:
+                        request_stats['total_http_requests'] += 1
                     urls.append(target_url)
                     await update_stats_async(request_stats, stats_lock, attempt, success=True)
                     return True

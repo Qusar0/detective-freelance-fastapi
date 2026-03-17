@@ -10,6 +10,9 @@ from server.api.dao.base import BaseDAO
 from server.api.dao.keywords import KeywordsDAO
 from server.api.dao.user_queries import UserQueriesDAO
 
+SOCIAL_RESOURCE_TYPES = ['Вконтакте', 'Одноклассники', 'Facebook', 'Instagram', 'Telegram']
+DOCUMENT_RESOURCE_TYPES = ['Word', 'PDF', 'Excel', 'Txt', 'PowerPoint']
+
 
 class QueriesDataDAO(BaseDAO):
     model = QueriesData
@@ -97,13 +100,10 @@ class QueriesDataDAO(BaseDAO):
         if not keyword_type_category:
             return base_query
 
-        SOCIAL_URLS = ['Вконтакте', 'Одноклассники', 'Facebook', 'Instagram', 'Telegram']
-        DOCUMENT_TYPES = ['Word', 'PDF', 'Excel', 'Txt', 'PowerPoint']
-
         if keyword_type_category == 'socials':
-            return base_query.where(QueriesData.resource_type.in_(SOCIAL_URLS))
+            return base_query.where(QueriesData.resource_type.in_(SOCIAL_RESOURCE_TYPES))
         elif keyword_type_category == 'documents':
-            return base_query.where(QueriesData.resource_type.in_(DOCUMENT_TYPES))
+            return base_query.where(QueriesData.resource_type.in_(DOCUMENT_RESOURCE_TYPES))
         elif keyword_type_category == 'main':
             keyword_count_subquery = (
                 select(func.count(QueryDataKeywords.id))

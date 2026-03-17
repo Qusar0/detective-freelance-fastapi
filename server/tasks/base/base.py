@@ -19,6 +19,7 @@ class BaseSearchTask(ABC):
         self.money_to_return = 0
         self.request_stats = {
             'total_requests': 0,
+            'total_http_requests': 0,
             'success_first_try': 0,
             'success_after_retry': defaultdict(int),
             'failed_after_max_retries': 0,
@@ -85,7 +86,8 @@ class BaseSearchTask(ABC):
 
             stats_text = [
                 f"=== СТАТИСТИКА ЗАПРОСА ID: {self.query_id} ===",
-                f"Общее количество запросов: {total}",
+                f"Уникальных URL обработано: {total}",
+                f"Реальных HTTP-запросов отправлено (с ретраями): {self.request_stats['total_http_requests']}",
                 f"Успешно с 1 попытки: \
                 {self.request_stats['success_first_try']} \
                 ({self.request_stats['success_first_try'] / total * 100:.1f}%)",

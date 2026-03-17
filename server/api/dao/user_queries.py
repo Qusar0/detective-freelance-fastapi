@@ -1,5 +1,5 @@
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,7 +90,7 @@ class UserQueriesDAO(BaseDAO):
                 for table in tables:
                     await db.execute(delete(table).where(table.query_id == query_id))
 
-                user_query.deleted_at = datetime.now()
+                user_query.deleted_at = datetime.now(timezone.utc)
                 logger.info(f"Данные для query {query_id} удалены. Установлен deleted_at: {user_query.deleted_at}.")
         except SQLAlchemyError as e:
             logger.error(f"Ошибка базы данных при удалении query {query_id}: {str(e)}")

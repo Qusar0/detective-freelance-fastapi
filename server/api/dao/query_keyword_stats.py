@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from server.api.dao.base import BaseDAO
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.models.models import KeywordType, QueriesData, Keywords, QueryDataKeywords
+from server.api.dao.queries_data import SOCIAL_RESOURCE_TYPES, DOCUMENT_RESOURCE_TYPES
 
 
 class QueryKeywordStatsDAO(BaseDAO):
@@ -74,8 +75,25 @@ class QueryKeywordStatsDAO(BaseDAO):
             )
             main_count = main_count_result.scalar() or 0
 
+            socials_count_result = await db.execute(
+                select(func.count(distinct(QueriesData.id)))
+                .where(
+                    QueriesData.query_id == query_id,
+                    QueriesData.resource_type.in_(SOCIAL_RESOURCE_TYPES),
+                )
+            )
+            documents_count_result = await db.execute(
+                select(func.count(distinct(QueriesData.id)))
+                .where(
+                    QueriesData.query_id == query_id,
+                    QueriesData.resource_type.in_(DOCUMENT_RESOURCE_TYPES),
+                )
+            )
+
             result_stats = all_types.copy()
             result_stats['main'] = main_count
+            result_stats['socials'] = socials_count_result.scalar() or 0
+            result_stats['documents'] = documents_count_result.scalar() or 0
 
             return result_stats
 
