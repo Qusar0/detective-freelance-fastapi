@@ -133,4 +133,3 @@ async def acquire_search_engine_semaphore(semaphore_key: str, semaphore_config: 
 async def release_search_engine_semaphore(semaphore_key: str, redis_client):
     """Освобождает слот семафора для поисковой системы."""
     await redis_client.decr(semaphore_key)
-

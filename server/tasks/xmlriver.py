@@ -90,7 +90,7 @@ async def do_request_to_xmlriver(
                     semaphores['google']['key'],
                     semaphores['google']['redis_client']
                 )
-                logger.debug(f'Google: слот освобожден')
+                logger.debug('Google: слот освобожден')
 
     elif SEARCH_ENGINES['yandex'] in url:
         logger.info(f"Обработка Yandex запроса: {url}")
@@ -111,7 +111,7 @@ async def do_request_to_xmlriver(
                         semaphores['yandex']['key'],
                         semaphores['yandex']['redis_client']
                     )
-                    logger.debug(f'Yandex: слот освобожден')
+                    logger.debug('Yandex: слот освобожден')
                 page_num += 1
             else:
                 success = False
