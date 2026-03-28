@@ -26,52 +26,41 @@ from server.api.templates.email_message import (
     get_reset_password_email,
 )
 from server.api.conf.config import settings
+from server.api.utils.route_handler import handle_route_errors
 
 
 router = APIRouter(prefix="/v1/auth", tags=['Auth'])
 
 
 @router.get("/confirm/{token}", response_model=StatusMessage)
+@handle_route_errors("Ошибка подтверждения email")
 async def confirm_email(token: str, db: AsyncSession = Depends(get_db)):
-    try:
-        logger.info("Подтверждение токена пользователя")
-        email = confirm_token(token)
-        if not email:
-            logger.warning("Токен пользователя просрочен или неверен")
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid or expired token",
-            )
+    logger.info("Подтверждение токена пользователя")
+    email = confirm_token(token)
+    if not email:
+        logger.warning("Токен пользователя просрочен или неверен")
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
 
-        result = await db.execute(
-            select(Users)
-            .where(Users.email == email),
-        )
-        user = result.scalars().first()
+    result = await db.execute(select(Users).where(Users.email == email))
+    user = result.scalars().first()
 
-        if not user:
-            logger.warning(f"Пользователя с email {email} не существует")
-            raise HTTPException(status_code=404, detail="User not found")
+    if not user:
+        logger.warning(f"Пользователя с email {email} не существует")
+        raise HTTPException(status_code=404, detail="User not found")
 
-        if user.is_confirmed:
-            return {"status": "success", "message": "Email already confirmed"}
+    if user.is_confirmed:
+        return {"status": "success", "message": "Email already confirmed"}
 
-        user.is_confirmed = True
-        await db.commit()
-
-        return {"status": "success", "message": "Email confirmed successfully"}
-
-    except Exception as e:
-        logger.error(f"Error confirming email: {str(e)}")
-        raise HTTPException(status_code=422, detail="Invalid input")
+    user.is_confirmed = True
+    await db.commit()
+    return {"status": "success", "message": "Email confirmed successfully"}
 
 
 @router.post("/register", response_model=StatusMessage)
+@handle_route_errors("Ошибка при регистрации пользователя")
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     logger.info("Регистрация нового пользователя")
-    result = await db.execute(
-        select(Users).where(Users.email == data.email)
-    )
+    result = await db.execute(select(Users).where(Users.email == data.email))
     existing_user = result.scalars().first()
 
     if existing_user:
@@ -86,16 +75,9 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
             "message": "На ваш email отправлена информация о существующем аккаунте.",
         }
 
-    role = await db.scalar(
-        select(UserRole)
-        .where(UserRole.role_name == 'user'),
-    )
+    role = await db.scalar(select(UserRole).where(UserRole.role_name == 'user'))
     hashed_password = bcrypt.hash(data.password)
-    user = Users(
-        email=data.email,
-        password=hashed_password,
-        user_role_id=role.id,
-    )
+    user = Users(email=data.email, password=hashed_password, user_role_id=role.id)
 
     db.add(user)
     await db.commit()
@@ -114,6 +96,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
+@handle_route_errors("Ошибка при авторизации")
 async def login(
     data: LoginRequest,
     db: AsyncSession = Depends(get_db),
@@ -130,14 +113,8 @@ async def login(
     access_expires = 900  # 15 минут
     refresh_expires = 2592000 if data.stay_logged_in else 86400  # 30 дней или 1 день
 
-    access_token = Authorize.create_access_token(
-        subject=str(user.id),
-        expires_time=access_expires,
-    )
-    refresh_token = Authorize.create_refresh_token(
-        subject=str(user.id),
-        expires_time=refresh_expires,
-    )
+    access_token = Authorize.create_access_token(subject=str(user.id), expires_time=access_expires)
+    refresh_token = Authorize.create_refresh_token(subject=str(user.id), expires_time=refresh_expires)
 
     response = JSONResponse(
         content={
@@ -150,11 +127,11 @@ async def login(
 
     Authorize.set_access_cookies(access_token, response, max_age=access_expires)
     Authorize.set_refresh_cookies(refresh_token, response, max_age=refresh_expires)
-
     return response
 
 
 @router.post("/refresh", response_model=AuthResponse)
+@handle_route_errors("Ошибка при обновлении токена")
 async def refresh(
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
@@ -181,7 +158,6 @@ async def refresh(
     )
     Authorize.set_access_cookies(access_token, response, max_age=900)
     Authorize.set_refresh_cookies(refresh_token, response, max_age=604800)
-
     return response
 
 
@@ -193,6 +169,7 @@ async def logout(Authorize: AuthJWT = Depends()):
 
 
 @router.post("/forgot_password", response_model=StatusMessage)
+@handle_route_errors("Ошибка при запросе сброса пароля")
 async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
     logger.info(f"Пользователь {email} запросил ссылку на создание нового пароля")
     result = await db.execute(select(Users).where(Users.email == email))
@@ -206,7 +183,6 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
         }
 
     token = generate_conformation_token(email)
-
     reset_url = f"{settings.frontend_url}/reset-password?token={token}"
     email_content = get_reset_password_email(email, reset_url)
     await send_email(**email_content)
@@ -218,28 +194,23 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/reset_password", response_model=StatusMessage)
+@handle_route_errors("Ошибка при сбросе пароля")
 async def reset_password(
     data: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        logger.info("Пользователь сбросил пароль")
-        email = confirm_token(data.token)
-        if not email:
-            logger.warning("Токен пользователя просрочен или неверен")
-            raise HTTPException(status_code=400, detail="Недействительный или просроченный токен")
+    logger.info("Пользователь сбросил пароль")
+    email = confirm_token(data.token)
+    if not email:
+        logger.warning("Токен пользователя просрочен или неверен")
+        raise HTTPException(status_code=400, detail="Недействительный или просроченный токен")
 
-        result = await db.execute(select(Users).where(Users.email == email))
-        user = result.scalars().first()
-        if not user:
-            logger.warning("Пользователь не найден")
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    result = await db.execute(select(Users).where(Users.email == email))
+    user = result.scalars().first()
+    if not user:
+        logger.warning("Пользователь не найден")
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        user.password = bcrypt.hash(data.new_password)
-        await db.commit()
-
-        return {"status": "success", "message": "Пароль успешно изменён"}
-
-    except Exception as e:
-        logger.error(f"Ошибка при сбросе пароля: {str(e)}")
-        raise HTTPException(status_code=422, detail="Неверный ввод")
+    user.password = bcrypt.hash(data.new_password)
+    await db.commit()
+    return {"status": "success", "message": "Пароль успешно изменён"}

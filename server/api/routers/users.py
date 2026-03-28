@@ -23,6 +23,7 @@ from server.api.scripts.sse_manager import generate_sse_message_type, publish_ev
 from typing import Dict
 from passlib.hash import bcrypt
 from server.api.dao.user_language import UserLanguageDAO
+from server.api.utils.route_handler import handle_route_errors
 
 
 router = APIRouter(
@@ -32,335 +33,234 @@ router = APIRouter(
 
 
 @router.get("/is_authenticated", response_model=AuthStatusResponse)
-def is_authenticated(Authorize: AuthJWT = Depends()):
-    try:
-        Authorize.jwt_required()
-        return {"status": "success", "message": "User authenticated"}
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
+@handle_route_errors("Ошибка аутентификации")
+async def is_authenticated(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_required()
+    return {"status": "success", "message": "User authenticated"}
 
 
 @router.get("/get_events")
+@handle_route_errors("Ошибка получения событий")
 async def get_events(
     Authorize: AuthJWT = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        result = await db.execute(
-            select(Events)
-            .join(UserQueries, UserQueries.query_id == Events.query_id)
-            .where(UserQueries.user_id == user_id)
-            .order_by(Events.created_time.desc())
-        )
-        event_rows = result.scalars().all()
+    result = await db.execute(
+        select(Events)
+        .join(UserQueries, UserQueries.query_id == Events.query_id)
+        .where(UserQueries.user_id == user_id)
+        .order_by(Events.created_time.desc())
+    )
+    event_rows = result.scalars().all()
 
-        events: Dict[int, Dict] = {}
-        for idx, row in enumerate(event_rows):
-            event_data = dict(row.additional_data)
-            event_data.update({
-                "event_id": row.event_id,
-                "event_type": row.event_type,
-                "created_time": str(row.created_time),
-                "event_status": row.event_status
-            })
-            events[idx] = event_data
-
-        return events
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning(f"Ошибка получения событий: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    events: Dict[int, Dict] = {}
+    for idx, row in enumerate(event_rows):
+        event_data = dict(row.additional_data)
+        event_data.update({
+            "event_id": row.event_id,
+            "event_type": row.event_type,
+            "created_time": str(row.created_time),
+            "event_status": row.event_status
+        })
+        events[idx] = event_data
+    return events
 
 
 @router.post("/change_event_status", status_code=200)
+@handle_route_errors("Ошибка изменения статуса события")
 async def change_event_status(
     payload: ChangeEventStatusRequest,
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends()
 ):
-    try:
-        Authorize.jwt_required()
+    Authorize.jwt_required()
 
-        event_id = payload.event_id
+    result = await db.execute(select(Events).where(Events.event_id == payload.event_id))
+    event = result.scalar_one_or_none()
 
-        result = await db.execute(
-            select(Events)
-            .where(Events.event_id == event_id),
-        )
-        event = result.scalar_one_or_none()
+    if not event:
+        raise HTTPException(status_code=404, detail="Событие не найдено")
 
-        if not event:
-            raise HTTPException(
-                status_code=404,
-                detail="Событие не найдено",
-            )
-
-        event.event_status = "seen"
-        await db.commit()
-
-        return {"message": "Статус успешно изменен"}
-
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.error("Ошибка изменения статуса события: " + str(e))
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    event.event_status = "seen"
+    await db.commit()
+    return {"message": "Статус успешно изменен"}
 
 
 @router.get("/get_balance")
+@handle_route_errors("Ошибка получения баланса")
 async def get_balance(
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        result = await db.execute(
-            select(UserBalances)
-            .where(UserBalances.user_id == user_id),
-        )
-        balance_entry = result.scalar_one_or_none()
+    result = await db.execute(select(UserBalances).where(UserBalances.user_id == user_id))
+    balance_entry = result.scalar_one_or_none()
 
-        if not balance_entry:
-            raise HTTPException(status_code=404, detail="Balance not found")
+    if not balance_entry:
+        raise HTTPException(status_code=404, detail="Balance not found")
 
-        return round(float(balance_entry.balance), 2)
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.info("Ошибка получения баланса: " + str(e))
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    return round(float(balance_entry.balance), 2)
 
 
 @router.get("/is_confirmed", response_model=ConfirmResponse)
+@handle_route_errors("Ошибка проверки подтверждения email")
 async def is_user_confirmed_endpoint(
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends()
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        result = await db.execute(select(Users).where(Users.id == user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    result = await db.execute(select(Users).where(Users.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        if not user.is_confirmed:
-            await send_confirmation_email(user)
-            raise HTTPException(
-                status_code=401,
-                detail="На ваш email повторно выслано сообщение с подтверждением почты"
-            )
-
-        return ConfirmResponse(status="Confirmed", message="User confirmed")
-
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.error(f"Ошибка проверки подтверждения email: {e}")
+    if not user.is_confirmed:
+        await send_confirmation_email(user)
         raise HTTPException(
-            status_code=500,
-            detail="Ошибка при проверке или отправке подтверждения",
+            status_code=401,
+            detail="На ваш email повторно выслано сообщение с подтверждением почты"
         )
+
+    return ConfirmResponse(status="Confirmed", message="User confirmed")
 
 
 @router.post("/top_up_balance", response_model=TopUpBalanceResponse)
+@handle_route_errors("Ошибка при пополнении баланса")
 async def top_up_balance(
     params: TopUpBalanceQueryParams = Body(...),
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends()
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        result = await db.execute(
-            select(Users)
-            .where(Users.id == user_id),
-        )
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    result = await db.execute(select(Users).where(Users.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        if not user.is_confirmed:
-            await send_confirmation_email(user)
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "status": "error",
-                    "message": "Для пополнения баланса необходимо подтвердить email. Ссылка отправлена повторно.",
-                }
-            )
-
-        payment = PaymentHistory(
-            transaction_id=params.transaction_id,
-            currency=params.currency,
-            payment_amount=params.payment_amount,
-            operation_type=params.operation_type,
-            invoice_id=params.invoice_id,
-            user_id=params.account_id,
-            email=params.email,
-            date_time=params.date_time.replace(tzinfo=None),
-            ip_address=params.ip_address,
-            status=params.status,
-        )
-        db.add(payment)
-
-        if params.status == "Completed":
-            result = await db.execute(
-                select(UserBalances)
-                .where(UserBalances.user_id == params.account_id),
-            )
-            user_balance = result.scalar_one_or_none()
-            if not user_balance:
-                raise HTTPException(
-                    status_code=404,
-                    detail="User balance not found",
-                )
-
-            user_balance.balance += params.payment_amount
-            db.add(user_balance)
-
-        await db.commit()
-
-        channel = await generate_sse_message_type(user_id, db)
-
-        await publish_event(channel, {
-            "event_type": "balance",
-            "balance": user_balance.balance,
-        })
-
-        return {
-            "status": "success",
-            "message": "Баланс успешно пополнен",
-            "data": {
-                "new_balance": round(float(user_balance.balance), 2),
-                "transaction_id": params.transaction_id,
-                "amount": params.payment_amount,
-                "currency": params.currency,
-                "operation_date": params.date_time,
-                "invoice_id": params.invoice_id,
+    if not user.is_confirmed:
+        await send_confirmation_email(user)
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "status": "error",
+                "message": "Для пополнения баланса необходимо подтвердить email. Ссылка отправлена повторно.",
             }
+        )
+
+    payment = PaymentHistory(
+        transaction_id=params.transaction_id,
+        currency=params.currency,
+        payment_amount=params.payment_amount,
+        operation_type=params.operation_type,
+        invoice_id=params.invoice_id,
+        user_id=params.account_id,
+        email=params.email,
+        date_time=params.date_time.replace(tzinfo=None),
+        ip_address=params.ip_address,
+        status=params.status,
+    )
+    db.add(payment)
+
+    if params.status == "Completed":
+        result = await db.execute(
+            select(UserBalances).where(UserBalances.user_id == params.account_id)
+        )
+        user_balance = result.scalar_one_or_none()
+        if not user_balance:
+            raise HTTPException(status_code=404, detail="User balance not found")
+
+        user_balance.balance += params.payment_amount
+        db.add(user_balance)
+
+    await db.commit()
+
+    channel = await generate_sse_message_type(user_id, db)
+    await publish_event(channel, {
+        "event_type": "balance",
+        "balance": user_balance.balance,
+    })
+
+    return {
+        "status": "success",
+        "message": "Баланс успешно пополнен",
+        "data": {
+            "new_balance": round(float(user_balance.balance), 2),
+            "transaction_id": params.transaction_id,
+            "amount": params.payment_amount,
+            "currency": params.currency,
+            "operation_date": params.date_time,
+            "invoice_id": params.invoice_id,
         }
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning(f"Ошибка при пополнении баланса: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    }
 
 
 @router.post("/change_password")
+@handle_route_errors("Ошибка при смене пароля")
 async def change_password(
     data: ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends()
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        result = await db.execute(select(Users).where(Users.id == user_id))
-        user = result.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
+    result = await db.execute(select(Users).where(Users.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        if not bcrypt.verify(data.old_password, user.password):
-            raise HTTPException(status_code=403, detail="Доступ запрещен")
+    if not bcrypt.verify(data.old_password, user.password):
+        raise HTTPException(status_code=403, detail="Доступ запрещен")
 
-        user.password = bcrypt.hash(data.new_password)
-        db.add(user)
-        await db.commit()
+    user.password = bcrypt.hash(data.new_password)
+    db.add(user)
+    await db.commit()
 
-        email_content = get_password_changed_email(user.email)
-        await send_email(**email_content)
-
-        return {"status": "success", "message": "Пароль успешно изменён"}
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        await db.rollback()
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning(f"Ошибка при смене пароля: {e}")
-        await db.rollback()
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    email_content = get_password_changed_email(user.email)
+    await send_email(**email_content)
+    return {"status": "success", "message": "Пароль успешно изменён"}
 
 
 @router.get("/default_language", response_model=GetDefaultLanguageResponse)
+@handle_route_errors("Ошибка при получении языка по умолчанию")
 async def get_default_language(
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
 ):
     """Получает язык по умолчанию пользователя."""
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
-        return {
-            "status": "success",
-            "default_language_code": default_language_code
-        }
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning(f"Ошибка при получении языка по-умолчанию: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    default_language_code = await UserLanguageDAO.get_user_default_language(db, user_id)
+    return {"status": "success", "default_language_code": default_language_code}
 
 
 @router.post("/set_default_language", response_model=SetDefaultLanguageResponse)
+@handle_route_errors("Ошибка при установке языка по умолчанию")
 async def set_default_language(
     request: SetDefaultLanguageRequest,
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
 ):
     """Устанавливает язык по умолчанию пользователя."""
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)
-        if not success:
-            raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
+    success = await UserLanguageDAO.set_user_default_language(db, user_id, request.default_language_code)
+    if not success:
+        raise HTTPException(status_code=400, detail="Язык не найден или ошибка при обновлении")
 
-        return SetDefaultLanguageResponse(
-            status='success',
-            message='Язык по умолчанию обновлен',
-            default_language_code=request.default_language_code,
-        )
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning(f"Ошибка при получении языка по-умолчанию: {e}")
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+    return SetDefaultLanguageResponse(
+        status='success',
+        message='Язык по умолчанию обновлен',
+        default_language_code=request.default_language_code,
+    )

@@ -2,7 +2,6 @@ from loguru import logger
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_jwt_auth import AuthJWT
-from fastapi_jwt_auth.exceptions import MissingTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.database.database import get_db
@@ -12,47 +11,30 @@ from server.api.schemas.telegram import (
 )
 from server.api.dao.telegram_notifications import TelegramNorificationsDAO
 from server.bots.support_bot import send_message_async
+from server.api.utils.route_handler import handle_route_errors
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 
 
 @router.get("/connect_tg")
+@handle_route_errors("Ошибка при сохранении связи")
 async def connect_tg(
     chat: int = Query(..., description="ID чата Telegram"),
     db: AsyncSession = Depends(get_db),
     Authorize: AuthJWT = Depends(),
 ):
-    try:
-        Authorize.jwt_required()
-        user_id = int(Authorize.get_jwt_subject())
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
 
-        success = await TelegramNorificationsDAO.save_user_and_chat(user_id, chat, db)
-        if not success:
-            raise HTTPException(status_code=422, detail="Пользователь уже привязан")
-        return {
-            "status": "success",
-            "message": "Телеграмм аккаунт успешно привязан",
-        }
-    except HTTPException as e:
-        logger.error(f"HTTPException: {e.detail}, статус: {e.status_code}")
-        raise e
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning("Ошибка при сохранении связи: " + str(e))
-        raise HTTPException(status_code=422, detail="Неверные данные")
+    success = await TelegramNorificationsDAO.save_user_and_chat(user_id, chat, db)
+    if not success:
+        raise HTTPException(status_code=422, detail="Пользователь уже привязан")
+    return {"status": "success", "message": "Телеграмм аккаунт успешно привязан"}
 
 
 @router.post("/write_support", response_model=WriteSupportResponse)
+@handle_route_errors("Ошибка при отправке сообщения")
 async def write_support(payload: WriteSupportRequest, Authorize: AuthJWT = Depends()):
-    try:
-        Authorize.jwt_required()
-        await send_message_async(payload.theme, payload.description, payload.contacts)
-        return {"status": "message sent."}
-    except MissingTokenError:
-        logger.error('Неавторизованный пользователь')
-        raise HTTPException(status_code=401, detail="Неавторизованный пользователь")
-    except Exception as e:
-        logger.warning("Ошибка при отправке сообщения: " + str(e))
-        raise HTTPException(status_code=422, detail="Ошибка отправки")
+    Authorize.jwt_required()
+    await send_message_async(payload.theme, payload.description, payload.contacts)
+    return {"status": "message sent."}

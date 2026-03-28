@@ -31,6 +31,7 @@ services:
         labels: "service=web"
     depends_on:
       - redis
+      - minio
 
   celery_num:
     build:
@@ -58,6 +59,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   celery_telegram:
     build:
@@ -79,6 +81,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   celery_irbis:
     build:
@@ -100,6 +103,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   celery_name:
     build:
@@ -121,6 +125,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   celery_email:
     build:
@@ -142,6 +147,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   celery_company:
     build:
@@ -163,6 +169,7 @@ services:
     depends_on:
       - redis
       - web
+      - minio
 
   minio:
     image: minio/minio
