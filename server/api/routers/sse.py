@@ -1,7 +1,6 @@
-from loguru import logger
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from fastapi_jwt_auth import AuthJWT
 

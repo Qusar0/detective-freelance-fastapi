@@ -59,7 +59,6 @@ router = APIRouter(
 )
 
 
-
 @router.post("/delete_query")
 @handle_route_errors("Ошибка удаления запроса")
 async def delete_query(

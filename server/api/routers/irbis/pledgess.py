@@ -101,7 +101,12 @@ async def get_full_case_info(
             for p in case.parties if p.type == 'pledgees'
         ],
         pledges=[
-            PledgeObjectSchema(id=p.id, pledge_num_name=p.pledge_num_name, pledge_num=p.pledge_num, pledge_type=p.pledge_type)
+            PledgeObjectSchema(
+                id=p.id,
+                pledge_num_name=p.pledge_num_name,
+                pledge_num=p.pledge_num,
+                pledge_type=p.pledge_type,
+            )
             for p in case.pledges
         ]
     )
