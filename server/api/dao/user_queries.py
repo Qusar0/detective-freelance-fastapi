@@ -15,7 +15,7 @@ from server.api.models.models import (
 from server.api.models.irbis_models import IrbisPerson
 from server.api.dao.base import BaseDAO
 from server.api.models.models import UserQueries
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import get_file_storage
 
 
 class UserQueriesDAO(BaseDAO):
@@ -67,7 +67,7 @@ class UserQueriesDAO(BaseDAO):
         try:
             user_query = await cls.get_user_query(query_id, db)
             if user_query:
-                file_storage = FileStorageService()
+                file_storage = get_file_storage()
                 result = await db.execute(select(TextData).where(TextData.query_id == query_id))
                 text_data = result.scalars().first()
 

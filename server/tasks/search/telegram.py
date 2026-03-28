@@ -6,7 +6,7 @@ from server.api.dao.text_data import TextDataDAO
 from server.api.templates.html_work import response_tg_template
 from server.api.scripts.ibhldr_script import get_groups_ibhldr_method, get_interests, get_phones, get_profiles
 from server.api.scripts.tgdev_io_scripts import get_groups_tgdev_method
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import get_file_storage
 from server.tasks.celery_config import (
     get_event_loop,
 )
@@ -62,7 +62,7 @@ class TelegramSearchTask(BaseSearchTask):
             phones_html,
         )
 
-        file_storage = FileStorageService()
+        file_storage = get_file_storage()
 
         await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 

@@ -13,7 +13,7 @@ from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.dao.queries_data import QueriesDataDAO
 from server.api.dao.keywords import KeywordsDAO
 from server.api.templates.html_work import response_company_template
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import get_file_storage
 from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
 from server.api.schemas.query import FoundInfo
 from server.tasks.services import get_http_client
@@ -139,7 +139,7 @@ class CompanySearchTask(BaseSearchTask):
                 fullname_counters,
                 company_titles,
             )
-            file_storage = FileStorageService()
+            file_storage = get_file_storage()
 
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
             await write_urls(urls, "company")

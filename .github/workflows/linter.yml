@@ -26,4 +26,4 @@ jobs:
           pip uninstall -y flake8-docstrings
 
       - name: Run Flake8
-        run: python3.10 -m flake8 --config=server/.flake8
+        run: python3.10 -m flake8 --config=.flake8

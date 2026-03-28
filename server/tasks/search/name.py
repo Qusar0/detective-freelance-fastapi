@@ -14,7 +14,7 @@ from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.dao.query_search_category import QuerySearchCategoryDAO
 from server.api.dao.queries_data import QueriesDataDAO
 from server.api.templates.html_work import response_template
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import get_file_storage
 from server.tasks.celery_config import SEARCH_ENGINES, get_event_loop
 from server.api.schemas.query import FoundInfo
 from server.tasks.services import get_http_client
@@ -97,7 +97,7 @@ class NameSearchTask(BaseSearchTask):
             items, filters, fullname_counters = form_response_html(all_found_info)
             html = response_template(titles, items, filters, fullname_counters)
 
-            file_storage = FileStorageService()
+            file_storage = get_file_storage()
 
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 

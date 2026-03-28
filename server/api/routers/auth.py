@@ -127,10 +127,16 @@ async def login(
         logger.warning(f"Пользователь {data.email} указал неверные данные при авторизации")
         raise HTTPException(status_code=422, detail="Неверные данные")
 
-    expires = 604800 if data.stay_logged_in else 21600
+    access_expires = 900  # 15 минут
+    refresh_expires = 2592000 if data.stay_logged_in else 86400  # 30 дней или 1 день
+
     access_token = Authorize.create_access_token(
         subject=str(user.id),
-        expires_time=expires,
+        expires_time=access_expires,
+    )
+    refresh_token = Authorize.create_refresh_token(
+        subject=str(user.id),
+        expires_time=refresh_expires,
     )
 
     response = JSONResponse(
@@ -142,7 +148,39 @@ async def login(
         }
     )
 
-    Authorize.set_access_cookies(access_token, response, max_age=expires)
+    Authorize.set_access_cookies(access_token, response, max_age=access_expires)
+    Authorize.set_refresh_cookies(refresh_token, response, max_age=refresh_expires)
+
+    return response
+
+
+@router.post("/refresh", response_model=AuthResponse)
+async def refresh(
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    Authorize.jwt_refresh_token_required()
+    user_id = Authorize.get_jwt_subject()
+    logger.info(f"Обновление access токена для пользователя {user_id}")
+
+    result = await db.execute(select(Users).where(Users.id == int(user_id)))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    access_token = Authorize.create_access_token(subject=user_id, expires_time=900)
+    refresh_token = Authorize.create_refresh_token(subject=user_id, expires_time=604800)
+
+    response = JSONResponse(
+        content={
+            "message": "token refreshed",
+            "user_id": user.id,
+            "email": user.email,
+            "created": str(user.created)
+        }
+    )
+    Authorize.set_access_cookies(access_token, response, max_age=900)
+    Authorize.set_refresh_cookies(refresh_token, response, max_age=604800)
 
     return response
 

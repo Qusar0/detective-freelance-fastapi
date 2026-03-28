@@ -8,7 +8,7 @@ from server.api.dao.text_data import TextDataDAO
 from server.api.dao.queries_data import QueriesDataDAO
 from server.api.dao.prohibited_sites import ProhibitedSitesDAO
 from server.api.templates.html_work import response_num_template
-from server.api.services.file_storage import FileStorageService
+from server.api.services.file_storage import get_file_storage
 from server.tasks.celery_config import get_event_loop
 from server.tasks.forms.responses import form_number_response_html
 from server.tasks.forms.sites import form_google_query, form_yandex_query_num
@@ -53,7 +53,7 @@ class NumberSearchTask(BaseSearchTask):
         )
         self.save_stats_to_file('search_num.log')
         try:
-            file_storage = FileStorageService()
+            file_storage = get_file_storage()
             await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
