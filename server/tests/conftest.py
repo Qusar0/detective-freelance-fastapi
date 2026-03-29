@@ -51,4 +51,4 @@ sys.modules["aiogram.contrib.fsm_storage.memory"] = MagicMock()
 
 sys.modules["celery"] = MagicMock()
 
-import pytest  # noqa: E402
+import pytest  # noqa: E402, F401
