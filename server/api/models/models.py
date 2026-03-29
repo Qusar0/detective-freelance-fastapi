@@ -1,7 +1,9 @@
 import datetime
 import decimal
+from enum import Enum
 from typing import List, Optional
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -15,6 +17,12 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, relationship, mapped_column, DeclarativeBase
+
+
+class BalanceTransactionType(str, Enum):
+    PAYMENT = 'payment'
+    REFUND = 'refund'
+    TOP_UP = 'top_up'
 
 
 class Base(DeclarativeBase):
@@ -137,7 +145,7 @@ class PaymentHistory(Base):
         primary_key=True,
         autoincrement=True,
     )
-    transaction_id: Mapped[Optional[int]] = mapped_column(Integer)
+    transaction_id: Mapped[Optional[int]] = mapped_column(BigInteger)
     currency: Mapped[Optional[str]] = mapped_column(Text)
     payment_amount: Mapped[Optional[decimal.Decimal]] = mapped_column(Numeric)
     operation_type: Mapped[Optional[str]] = mapped_column(Text)
@@ -277,6 +285,32 @@ class UserBalances(Base):
         return f"Баланс пользователя ({self.id})"
 
 
+class UserBalanceHistory(Base):
+    __tablename__ = 'user_balance_history'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    amount: Mapped[float] = mapped_column(Double(53), nullable=False)
+    timestamp: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
+    query_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('user_queries.query_id', ondelete='SET NULL'),
+        nullable=True,
+    )
+
+    user: Mapped['Users'] = relationship('Users', back_populates='balance_histories')
+    query: Mapped[Optional['UserQueries']] = relationship(
+        'UserQueries', back_populates='unified_balance_histories'
+    )
+
+    def __str__(self):
+        return f"История баланса пользователя ({self.id})"
+
+
 class UserQueries(Base):
     __tablename__ = 'user_queries'
 
@@ -341,6 +375,10 @@ class UserQueries(Base):
     )
     events: Mapped['Events'] = relationship('Events', back_populates='query')
     irbis_person: Mapped['IrbisPerson'] = relationship('IrbisPerson', back_populates='query')  # noqa: F821
+    unified_balance_histories: Mapped[List['UserBalanceHistory']] = relationship(
+        'UserBalanceHistory',
+        back_populates='query',
+    )
 
     def __str__(self):
         return f"Запрос ({self.query_id})"
@@ -425,6 +463,11 @@ class Users(Base):
     default_language: Mapped['Language'] = relationship(
         'Language',
         back_populates='users_with_default_language'
+    )
+    balance_histories: Mapped[List['UserBalanceHistory']] = relationship(
+        'UserBalanceHistory',
+        back_populates='user',
+        cascade='all, delete-orphan',
     )
 
     def __str__(self):

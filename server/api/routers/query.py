@@ -179,7 +179,7 @@ async def find_by_name(
     )
 
     await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
-    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, user_id, db)
     await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
     start_search_by_name.apply_async(args=(search_filters,), queue='name_tasks')
@@ -205,7 +205,7 @@ async def find_by_number(
     user_query_id = await UserQueriesDAO.save_user_query(user_id, search_number, 'number', db)
 
     await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
-    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, user_id, db)
     await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
     start_search_by_num.apply_async(
@@ -235,7 +235,7 @@ async def find_by_email(
     user_query_id = await UserQueriesDAO.save_user_query(user_id, search_email, 'email', db)
 
     await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
-    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, user_id, db)
     await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
     start_search_by_email.apply_async(
@@ -291,7 +291,7 @@ async def find_by_company(
     )
 
     await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
-    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, user_id, db)
     await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
     start_search_by_company.apply_async(args=(search_filters,), queue='company_tasks')
@@ -329,7 +329,7 @@ async def find_by_irbis(
     }
 
     await UserBalancesDAO.subtract_balance(user_id, price, channel, db)
-    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, db)
+    await BalanceHistoryDAO.save_payment_to_history(price, user_query_id, user_id, db)
     await QueriesBalanceDAO.save_query_balance(user_query_id, price, db)
 
     start_search_by_irbis.apply_async(args=(search_filters,), queue='irbis_tasks')
