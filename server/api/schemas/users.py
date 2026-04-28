@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, constr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -91,3 +91,20 @@ class SetDefaultLanguageResponse(BaseModel):
 class GetDefaultLanguageResponse(BaseModel):
     status: str = Field(..., example="success")
     default_language_code: str = Field(..., description="Код языка по умолчанию (например, 'ru', 'en', 'uk')")
+
+
+class BalanceHistoryItem(BaseModel):
+    id: int
+    transaction_type: str
+    amount: float
+    timestamp: datetime
+    query_id: Optional[int] = None
+    query_title: Optional[str] = None
+
+
+class BalanceHistoryResponse(BaseModel):
+    items: List[BalanceHistoryItem]
+    total: int
+    page: int
+    size: int
+    total_pages: int

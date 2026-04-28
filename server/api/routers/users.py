@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import get_db
@@ -11,9 +11,10 @@ from server.api.schemas.users import (
     ChangePasswordRequest,
     SetDefaultLanguageRequest,
     SetDefaultLanguageResponse,
-    GetDefaultLanguageResponse
+    GetDefaultLanguageResponse,
+    BalanceHistoryResponse,
 )
-from server.api.models.models import Users, UserQueries, Events, PaymentHistory, UserBalances
+from server.api.models.models import Users, UserQueries, Events, PaymentHistory, UserBalances, BalanceTransactionType
 from sqlalchemy import select
 from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
@@ -21,6 +22,7 @@ from server.api.scripts.sse_manager import generate_sse_message_type, publish_ev
 from typing import Dict
 from passlib.hash import bcrypt
 from server.api.dao.user_language import UserLanguageDAO
+from server.api.dao.user_balance_history import UserBalanceHistoryDAO
 from server.api.utils.route_handler import handle_route_errors
 
 
@@ -179,6 +181,13 @@ async def top_up_balance(
         user_balance.balance += params.payment_amount
         db.add(user_balance)
 
+        unified_entry = UserBalanceHistoryDAO.make_entry(
+            user_id=user_id,
+            transaction_type=BalanceTransactionType.TOP_UP,
+            amount=float(params.payment_amount),
+        )
+        db.add(unified_entry)
+
     await db.commit()
 
     channel = await generate_sse_message_type(user_id, db)
@@ -262,3 +271,17 @@ async def set_default_language(
         message='Язык по умолчанию обновлен',
         default_language_code=request.default_language_code,
     )
+
+
+@router.get("/balance_history", response_model=BalanceHistoryResponse)
+@handle_route_errors("Ошибка при получении истории баланса")
+async def get_balance_history(
+    page: int = Query(default=0, ge=0),
+    size: int = Query(default=20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    Authorize: AuthJWT = Depends(),
+):
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
+    result = await UserBalanceHistoryDAO.get_user_history(user_id, page, size, db)
+    return BalanceHistoryResponse(**result)
