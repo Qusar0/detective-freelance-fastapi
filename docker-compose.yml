@@ -10,7 +10,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uvicorn server.__main__:app --host 0.0.0.0 --port 8001
+    command: uvicorn server.__main__:app --host 0.0.0.0 --port 8001 --proxy-headers --forwarded-allow-ips=*
     working_dir: /app/server
     volumes:
       - ./server:/app/server
