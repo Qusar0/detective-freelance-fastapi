@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
+from server.api.security import oauth2_scheme
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import get_db
@@ -28,7 +29,8 @@ from server.api.utils.route_handler import handle_route_errors
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users"]
+    tags=["Users"],
+    dependencies=[Depends(oauth2_scheme)],
 )
 
 

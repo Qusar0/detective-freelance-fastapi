@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from server.api.security import oauth2_scheme
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.database.database import get_db
@@ -25,7 +26,11 @@ from server.api.utils.route_handler import handle_route_errors
 from loguru import logger
 
 
-router = APIRouter(prefix="/irbis", tags=["Irbis"])
+router = APIRouter(
+    prefix="/irbis",
+    tags=["Irbis"],
+    dependencies=[Depends(oauth2_scheme)],
+)
 
 router.include_router(court_general_router)
 router.include_router(arbitration_court_router)

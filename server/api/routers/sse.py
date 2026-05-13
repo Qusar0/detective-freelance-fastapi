@@ -1,6 +1,7 @@
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Request
+from server.api.security import oauth2_scheme
 from fastapi.responses import StreamingResponse
 from fastapi_jwt_auth import AuthJWT
 
@@ -13,7 +14,11 @@ from server.api.scripts.sse_manager import (
 from server.api.utils.route_handler import handle_route_errors
 
 
-router = APIRouter(prefix="/sse", tags=['SSE'])
+router = APIRouter(
+    prefix="/sse",
+    tags=["SSE"],
+    dependencies=[Depends(oauth2_scheme)],
+)
 
 
 @router.get("/{channel}")

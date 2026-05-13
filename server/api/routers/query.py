@@ -1,5 +1,6 @@
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from server.api.security import oauth2_scheme
 from fastapi.responses import PlainTextResponse
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +56,8 @@ from server.tasks.search.number import start_search_by_num
 
 router = APIRouter(
     prefix="/queries",
-    tags=["Query"]
+    tags=["Query"],
+    dependencies=[Depends(oauth2_scheme)],
 )
 
 

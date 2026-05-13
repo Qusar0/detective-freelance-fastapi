@@ -19,6 +19,7 @@ class AuthResponse(BaseModel):
     user_id: int
     email: EmailStr
     created: str
+    access_token: Optional[str] = None
 
 
 class StatusMessage(BaseModel):

@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     algorithm: str = Field("HS256", env="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(21600, env="JWT_ACCESS_TOKEN_EXPIRES")
     refresh_token_expire_minutes: int = Field(604800, env="JWT_REFRESH_TOKEN_EXPIRES")
-    authjwt_token_location: set = {"cookies"}
+    authjwt_token_location: set = {"cookies", "headers"}
     authjwt_cookie_csrf_protect: bool = False
 
     # Mail

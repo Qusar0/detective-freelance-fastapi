@@ -1,5 +1,10 @@
+from datetime import datetime, timedelta
+from uuid import uuid4
+
+import jwt as pyjwt
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi_jwt_auth import AuthJWT
@@ -121,13 +126,40 @@ async def login(
             "message": "login successful",
             "user_id": user.id,
             "email": user.email,
-            "created": str(user.created)
+            "created": str(user.created),
+            "access_token": access_token,
         }
     )
 
     Authorize.set_access_cookies(access_token, response, max_age=access_expires)
     Authorize.set_refresh_cookies(refresh_token, response, max_age=refresh_expires)
     return response
+
+
+@router.post("/token", include_in_schema=False)
+async def login_form(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    """Endpoint для Swagger UI."""
+    result = await db.execute(select(Users).where(Users.email == form_data.username))
+    user = result.scalars().first()
+
+    if not user or not bcrypt.verify(form_data.password, user.password):
+        raise HTTPException(status_code=401, detail="Неверные данные")
+
+    now = datetime.utcnow()
+    payload = {
+        "sub": str(user.id),
+        "type": "access",
+        "fresh": False,
+        "iat": now,
+        "jti": str(uuid4()),
+        "nbf": now,
+        "exp": now + timedelta(seconds=900),
+    }
+    access_token = pyjwt.encode(payload, settings.authjwt_secret_key, algorithm=settings.algorithm)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/refresh", response_model=AuthResponse)
