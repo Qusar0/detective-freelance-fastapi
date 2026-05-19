@@ -170,7 +170,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                     <small class="prompt">Исключает из справки сервисы поиска аккаунтов в соц. сетях: socialbase.ru, bigbookname.com и другие.</small> 
                     <span style="font-size: 15px;">Скрыть архивы социальных сетей</span> 
                 </label>
-                <div class="weight-filter" style="display: flex; align-items: center; gap: 10px; margin: 6px 0; background: white; border-radius: 4px; height: 32px; padding: 0 11px;">
+                <div class="weight-filter" style="display: none; align-items: center; gap: 10px; margin: 6px 0; background: white; border-radius: 4px; height: 32px; padding: 0 11px;">
                     <span style="font-weight: 600;">Фильтр:</span>
                     
                     <select id="weight-filter-select" onchange="updateWeightFilter()" 
@@ -620,6 +620,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 $('.weight-filter').style.display = new_tab_index == 1 ? 'none' : 'flex';
 
                 $('#container').style.display = new_tab_index == 1 ? '' : 'none'
+                if (new_tab_index == 1 && typeof mainChart !== 'undefined') mainChart.reflow();
                 document.querySelector('.minus-keywords-block').parentElement.style.display = new_tab_index == 1 ? 'flex' : 'none';
                 document.querySelector('#minus-social-resources').parentElement.style.display = new_tab_index == 1 ? 'inline-flex' : 'none';
 
@@ -810,7 +811,11 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                             }}
                             tab_pages[tab_name].count = Math.ceil(temp_items?.length / range);
 
-                            $(`.tab-${{tab_indexes[tab_name]}} .tab-count`).innerHTML = seriesData[tab_indexes[tab_name] - 2].y = temp_items?.length ?? 0;
+                            const _seriesIdx = tab_indexes[tab_name] - 2;
+                            if (_seriesIdx >= 0 && _seriesIdx < seriesData.length) {{
+                                seriesData[_seriesIdx].y = temp_items?.length ?? 0;
+                            }}
+                            $(`.tab-${{tab_indexes[tab_name]}} .tab-count`).innerHTML = temp_items?.length ?? 0;
                         }}
                     }}
                 }});
@@ -1239,6 +1244,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
                 }}
 
                 temp_pagination_count = Math.ceil(temp_items?.length / range) || 1;
+                tab_pages[tab_name].count = temp_pagination_count;
 
                 if (tab_pages[tab_name].page > temp_pagination_count) tab_pages[tab_name].page = temp_pagination_count;
 
@@ -1387,7 +1393,7 @@ def response_template(titles, items, filters, fullname_counters, extra_titles=""
             );
             // Data retrieved from https://netmarketshare.com/
             // Build the chart
-            Highcharts.chart('container', {{
+            var mainChart = Highcharts.chart('container', {{
                 chart: {{
                     plotBackgroundColor: null,
                     plotBorderWidth: null,
@@ -2040,6 +2046,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                 if (selected_tab_index == new_tab_index) return
 
                 $('#container').style.display = new_tab_index == 1 ? '' : 'none'
+                if (new_tab_index == 1 && typeof mainChart !== 'undefined') mainChart.reflow();
                 document.querySelector('.minus-keywords-block').parentElement.style.display = new_tab_index == 1 ? 'flex' : 'none';
                 document.querySelector('#minus-social-resources').parentElement.style.display = new_tab_index == 1 ? 'inline-flex' : 'none';
 
@@ -2224,7 +2231,11 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                             }}
                             tab_pages[tab_name].count = Math.ceil(temp_items?.length / range);
 
-                            $(`.tab-${{tab_indexes[tab_name]}} .tab-count`).innerHTML = seriesData[tab_indexes[tab_name] - 2].y = temp_items?.length ?? 0;
+                            const _seriesIdx = tab_indexes[tab_name] - 2;
+                            if (_seriesIdx >= 0 && _seriesIdx < seriesData.length) {{
+                                seriesData[_seriesIdx].y = temp_items?.length ?? 0;
+                            }}
+                            $(`.tab-${{tab_indexes[tab_name]}} .tab-count`).innerHTML = temp_items?.length ?? 0;
                         }}
                     }}
                 }});
@@ -2647,6 +2658,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
                 }}
 
                 temp_pagination_count = Math.ceil(temp_items?.length / range) || 1;
+                tab_pages[tab_name].count = temp_pagination_count;
 
                 if (tab_pages[tab_name].page > temp_pagination_count) tab_pages[tab_name].page = temp_pagination_count;
 
@@ -2793,7 +2805,7 @@ def response_company_template(titles, items, filters, fullname_counters, extra_t
             );
             // Data retrieved from https://netmarketshare.com/
             // Build the chart
-            Highcharts.chart('container', {{
+            var mainChart = Highcharts.chart('container', {{
                 chart: {{
                     plotBackgroundColor: null,
                     plotBorderWidth: null,
@@ -3529,6 +3541,7 @@ def response_num_template(title, items, filters, lampyre_html, tags, osint_html)
                 }}
 
                 temp_pagination_count = Math.ceil(temp_items?.length / range) || 1;
+                tab_pages[tab_name].count = temp_pagination_count;
 
                 if (tab_pages[tab_name].page > temp_pagination_count) tab_pages[tab_name].page = temp_pagination_count;
 
@@ -4257,6 +4270,7 @@ def response_email_template(title, items, filters, leak_html, acc_search_html, f
                 }}
 
                 temp_pagination_count = Math.ceil(temp_items?.length / range) || 1;
+                tab_pages[tab_name].count = temp_pagination_count;
 
                 if (tab_pages[tab_name].page > temp_pagination_count) tab_pages[tab_name].page = temp_pagination_count;
 

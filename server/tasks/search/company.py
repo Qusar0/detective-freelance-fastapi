@@ -223,6 +223,13 @@ class CompanySearchTask(BaseSearchTask):
         end_time = datetime.datetime.now()
         self.logger.log_error(f'Конец выполнения запросов {end_time}')
         self.logger.log_error(f'Время выполнения запросов {end_time - start_time}')
+
+        for found_info in all_found_info:
+            if hasattr(found_info, 'kwds_list') and found_info.uri in shared_results:
+                data = shared_results[found_info.uri]
+                found_info.kwds_list = list({orig_kwd for _, orig_kwd, _ in data['keywords']})
+                found_info.weight = len(found_info.kwds_list)
+
         await self.save_raw_results(shared_results)
 
     async def save_raw_results(self, raw_data):
