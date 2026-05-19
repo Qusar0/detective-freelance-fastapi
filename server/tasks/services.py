@@ -27,7 +27,7 @@ async def get_redis_client():
 async def get_http_client():
     async with httpx.AsyncClient(
         timeout=60.0,
-        limits=httpx.Limits(max_keepalive_connections=20, max_connections=20),
+        limits=httpx.Limits(max_keepalive_connections=10, max_connections=10),
     ) as client:
         yield client
 
@@ -110,7 +110,7 @@ async def get_search_engine_semaphores():
         'google': {
             'redis_client': redis_client,
             'key': 'google_task_semaphore',
-            'max_slots': 20,
+            'max_slots': 10,
         },
         'yandex': {
             'redis_client': redis_client,

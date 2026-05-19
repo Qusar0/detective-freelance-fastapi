@@ -29,6 +29,7 @@ from server.tasks.celery_config import get_event_loop
 from server.logger import SearchLogger
 from server.api.dao.irbis.match_type import MatchTypeDAO
 from server.api.dao.irbis.person_regions import PersonRegionsDAO
+from server.api.database.database import async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -58,7 +59,11 @@ class IrbisSearchTask(BaseSearchTask):
 
         self.logger = SearchLogger(self.query_id, 'search_irbis.log')
 
-    async def _process_search(self, db: AsyncSession):
+    async def _process_search(self):
+        async with async_session() as db:
+            await self._run_irbis_search(db)
+
+    async def _run_irbis_search(self, db: AsyncSession):
         try:
             self.person_uuid = await self.person.get_person_uuid()
             sleep(10)

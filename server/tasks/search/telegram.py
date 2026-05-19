@@ -11,6 +11,7 @@ from server.tasks.celery_config import (
     get_event_loop,
 )
 from server.tasks.base.base import BaseSearchTask
+from server.api.database.database import async_session
 
 
 class TelegramSearchTask(BaseSearchTask):
@@ -20,7 +21,7 @@ class TelegramSearchTask(BaseSearchTask):
         self.tg_user_id = str(search_filters[1])
         self.methods_type = search_filters[4]
 
-    async def _process_search(self, db):
+    async def _process_search(self):
         interests_html, groups1_html, groups2_html, profiles_html, phones_html = '', '', '', '', ''
 
         if 'interests' in self.methods_type:
@@ -63,8 +64,8 @@ class TelegramSearchTask(BaseSearchTask):
         )
 
         file_storage = get_file_storage()
-
-        await TextDataDAO.save_html(html, self.query_id, db, file_storage)
+        async with async_session() as db:
+            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
 
 @shared_task(bind=True, acks_late=True)

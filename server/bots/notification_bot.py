@@ -19,11 +19,23 @@ dp = Dispatcher(bot, storage=storage)
 async def send_connects(message: Message):
     chat_id = message.chat.id
     url = f"{settings.frontend_url}/connect_tg?chat={chat_id}"
-    await message.reply(f"Привет, для подписки на уведомления перейди по ссылке: {url}")
+    text = (
+        "👋 <b>Добро пожаловать!</b>\n\n"
+        "Этот бот будет отправлять вам уведомления о завершении поисковых запросов "
+        "в системе <b>ИАС Детектив</b>.\n\n"
+        "Для подключения уведомлений перейдите по ссылке ниже:\n"
+        f"🔗 {url}"
+    )
+    await message.reply(text)
 
 
 async def send_notification(chat_id: int, text: str):
-    await bot.send_message(chat_id, f'Ваш запрос по этому объекту "{text}" обработан')
+    message = (
+        "✅ <b>Запрос выполнен</b>\n\n"
+        f"Поиск по объекту <b>«{text}»</b> завершён.\n"
+        "Результаты доступны в вашем личном кабинете."
+    )
+    await bot.send_message(chat_id, message)
 
 
 async def send_balance_alert(chat_id: int, text: str):
@@ -58,9 +70,11 @@ class BalanceNotifier:
                             service.service_name not in cls._notified_services
                         ]):
                             message = (
-                                f"⚠️ <strong>Внимание!</strong> Баланс сервиса <strong>{service.service_name}</strong> "
-                                f"опустился ниже <strong>{service.balance_threshold}</strong>. \
-                                Текущий баланс: <strong>{service.balance}</strong>"
+                                f"⚠️ <b>Низкий баланс сервиса</b>\n\n"
+                                f"Сервис: <b>{service.service_name}</b>\n"
+                                f"Текущий баланс: <b>{service.balance}</b>\n"
+                                f"Порог уведомления: <b>{service.balance_threshold}</b>\n\n"
+                                f"Пополните баланс сервиса во избежание сбоев в работе системы."
                             )
                             await send_balance_alert(settings.admin_chat_id, message)
                             cls._notified_services.add(service.service_name)

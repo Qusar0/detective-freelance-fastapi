@@ -25,6 +25,7 @@ from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import manage_async_tasks, write_urls
 from server.tasks.xmlriver import search_worker
+from server.api.database.database import async_session
 
 
 class NameSearchTask(BaseSearchTask):
@@ -41,15 +42,16 @@ class NameSearchTask(BaseSearchTask):
         self.languages = search_filters[10] if len(search_filters) > 10 else ['ru']
         self.logger = SearchLogger(self.query_id, 'search_name.log')
 
-    async def _process_search(self, db):
+    async def _process_search(self):
         all_found_info: List[FoundInfo] = []
         request_input_pack: List[tuple] = []
         urls = []
 
         try:
-            await self._save_general_info(db)
+            async with async_session() as db:
+                await self._save_general_info(db)
+                keywords = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
 
-            keywords = await KeywordsDAO.get_default_keywords(db, self.default_keywords_type, self.languages)
             keywords_from_db = keywords[1]
             titles = []
 
@@ -75,7 +77,6 @@ class NameSearchTask(BaseSearchTask):
                 request_input_pack,
                 all_found_info,
                 urls,
-                db,
             )
 
             titles.extend(
@@ -88,18 +89,18 @@ class NameSearchTask(BaseSearchTask):
                 ),
             )
 
-            languages_names = await LanguageDAO.get_languages_by_code(db, self.languages)
-            titles.append(languages_names)
+            async with async_session() as db:
+                languages_names = await LanguageDAO.get_languages_by_code(db, self.languages)
+                titles.append(languages_names)
 
-            self.save_stats_to_file('search_name.log')
-            await write_urls(urls, "name")
+                self.save_stats_to_file('search_name.log')
+                await write_urls(urls, "name")
 
-            items, filters, fullname_counters = form_response_html(all_found_info)
-            html = response_template(titles, items, filters, fullname_counters)
+                items, filters, fullname_counters = form_response_html(all_found_info)
+                html = response_template(titles, items, filters, fullname_counters)
 
-            file_storage = get_file_storage()
-
-            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
+                file_storage = get_file_storage()
+                await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             logger.error(f"Возникла ошибка в поиске по имени: {str(e)}")
@@ -245,11 +246,12 @@ class NameSearchTask(BaseSearchTask):
         request_input_pack,
         all_found_info,
         urls,
-        db,
     ):
         shared_results = {}
         existing_urls = set()
-        prohibited_sites = await ProhibitedSitesDAO.select_general_needless_sites(db)
+
+        async with async_session() as db:
+            prohibited_sites = await ProhibitedSitesDAO.select_general_needless_sites(db)
 
         async_stats_lock = asyncio.Lock()
 
@@ -277,14 +279,14 @@ class NameSearchTask(BaseSearchTask):
         end_time = datetime.datetime.now()
         self.logger.log_error(f'Конец выполнения запросов {end_time}')
         self.logger.log_error(f'Время выполнения запросов {end_time - start_time}')
-        await self.save_raw_results(shared_results, db)
+        await self.save_raw_results(shared_results)
         end_time = datetime.datetime.now()
         self.logger.log_error(f'Конец выполнения сохранения {end_time}')
         self.logger.log_error(f'Время выполнения сохранения {end_time - start_time}')
 
-    async def save_raw_results(self, raw_data, db):
-        """Сохраняет результаты поиска в таблицу queries_data через DAO"""
-        await QueriesDataDAO.bulk_save_query_results(self.query_id, raw_data, db)
+    async def save_raw_results(self, raw_data):
+        async with async_session() as db:
+            await QueriesDataDAO.bulk_save_query_results(self.query_id, raw_data, db)
 
 
 @shared_task(bind=True, acks_late=True, queue='name_tasks')

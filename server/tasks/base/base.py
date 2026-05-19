@@ -34,20 +34,27 @@ class BaseSearchTask(ABC):
                 return
             if user_query.query_status == "done":
                 return
-
             self.user_id = user_query.user_id
 
+        search_failed = False
+        try:
+            await self._process_search()
+        except Exception as e:
+            logger.error(f"В задаче celery возникла ошибка: {str(e)}")
+            search_failed = True
+
+        async with async_session() as db:
+            user_query = await UserQueriesDAO.get_user_query(self.query_id, db)
             try:
-                await self._process_search(db)
-                await self._handle_success(user_query, db)
-            except Exception as e:
-                logger.error(f"В задаче celery возникла ошибка: {str(e)}")
-                await self._handle_error(user_query, db)
+                if search_failed:
+                    await self._handle_error(user_query, db)
+                else:
+                    await self._handle_success(user_query, db)
             finally:
                 await self._update_balances(db)
 
     @abstractmethod
-    async def _process_search(self, db):
+    async def _process_search(self):
         pass
 
     async def _handle_success(self, user_query, db):

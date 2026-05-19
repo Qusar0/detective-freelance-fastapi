@@ -16,6 +16,7 @@ from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import update_stats_async, write_urls, get_http_client
 from server.tasks.xmlriver import handle_xmlriver_response
+from server.api.database.database import async_session
 
 
 class EmailSearchTask(BaseSearchTask):
@@ -25,15 +26,15 @@ class EmailSearchTask(BaseSearchTask):
         self.methods_type = methods_type
         self.logger = SearchLogger(self.query_id, 'search_email.log')
 
-    async def _process_search(self, db):
+    async def _process_search(self):
         mentions_html, leaks_html, acc_search_html, fitness_tracker, acc_checker = '', '', '', '', ''
         filters = {"free_kwds": ""}
         mentions_html = {"all": ""}
 
         if 'mentions' in self.methods_type:
             try:
-                result = await self.xmlriver_email_do_request(db)
-                await self.save_raw_results(result['raw_data'], db)
+                result = await self.xmlriver_email_do_request()
+                await self.save_raw_results(result['raw_data'])
                 mentions_html, filters = result['processed_data']
             except Exception as e:
                 self.money_to_return += 5
@@ -61,19 +62,19 @@ class EmailSearchTask(BaseSearchTask):
 
         self.save_stats_to_file('search_email.log')
         file_storage = get_file_storage()
-        await TextDataDAO.save_html(html, self.query_id, db, file_storage)
+        async with async_session() as db:
+            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
-        # await ServicesBalanceDAO.renew_lampyre_balance(db)
 
-    async def save_raw_results(self, raw_data, db):
-        """Сохраняет сырые результаты поиска в базу данных через DAO"""
-        await QueriesDataDAO.bulk_save_simple_results(
-            self.query_id, raw_data, 'free word', 'free word', db
-        )
+    async def save_raw_results(self, raw_data):
+        async with async_session() as db:
+            await QueriesDataDAO.bulk_save_simple_results(
+                self.query_id, raw_data, 'free word', 'free word', db
+            )
 
-    async def xmlriver_email_do_request(self, db):
+    async def xmlriver_email_do_request(self):
         all_raw_data = {}
         all_found_data = []
         urls = []
@@ -86,7 +87,6 @@ class EmailSearchTask(BaseSearchTask):
         existing_urls = set()
 
         async with get_http_client() as client:
-            # Обрабатываем Google запрос
             for attempt in range(1, max_attempts + 1):
                 try:
                     response = await client.get(url=url)
@@ -117,7 +117,6 @@ class EmailSearchTask(BaseSearchTask):
                 self.logger.log_error(f"Google запрос полностью провален: {url}")
                 await update_stats_async(self.request_stats, async_stats_lock, attempt, success=False)
 
-            # Обрабатываем Yandex запросы
             counter = 0
             while True:
                 url = form_yandex_query_email(self.email, page_num=counter)

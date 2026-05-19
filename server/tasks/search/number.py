@@ -16,6 +16,7 @@ from server.logger import SearchLogger
 from server.tasks.base.base import BaseSearchTask
 from server.tasks.services import update_stats_async, write_urls, get_http_client
 from server.tasks.xmlriver import handle_xmlriver_response
+from server.api.database.database import async_session
 
 
 class NumberSearchTask(BaseSearchTask):
@@ -25,15 +26,15 @@ class NumberSearchTask(BaseSearchTask):
         self.methods_type = methods_type
         self.logger = SearchLogger(self.query_id, 'search_num.log')
 
-    async def _process_search(self, db):
+    async def _process_search(self):
         items, filters = {}, {}
         lampyre_html, acc_search_html = '', ''
         parsed_data = {}
 
         if 'mentions' in self.methods_type:
             try:
-                result = await self.xmlriver_num_do_request(db)
-                await self.save_raw_results(result['raw_data'], db)
+                result = await self.xmlriver_num_do_request()
+                await self.save_raw_results(result['raw_data'])
 
                 items, filters = result['processed_data']
 
@@ -54,7 +55,8 @@ class NumberSearchTask(BaseSearchTask):
         self.save_stats_to_file('search_num.log')
         try:
             file_storage = get_file_storage()
-            await TextDataDAO.save_html(html, self.query_id, db, file_storage)
+            async with async_session() as db:
+                await TextDataDAO.save_html(html, self.query_id, db, file_storage)
 
         except Exception as e:
             logger.error(f"{str(e)}")
@@ -63,29 +65,29 @@ class NumberSearchTask(BaseSearchTask):
 
     async def _update_balances(self, db):
         await ServicesBalanceDAO.renew_xml_balance(db)
-        # await ServicesBalanceDAO.renew_lampyre_balance(db)
 
-    async def save_raw_results(self, raw_data, db):
-        """Сохраняет результаты поиска в таблицу queries_data через DAO"""
-        await QueriesDataDAO.bulk_save_simple_results(
-            self.query_id, raw_data, 'free word', 'free word', db
-        )
+    async def save_raw_results(self, raw_data):
+        async with async_session() as db:
+            await QueriesDataDAO.bulk_save_simple_results(
+                self.query_id, raw_data, 'free word', 'free word', db
+            )
 
-    async def xmlriver_num_do_request(self, db):
+    async def xmlriver_num_do_request(self):
         all_raw_data = {}
         all_found_data = []
         urls = []
-        proh_sites = await ProhibitedSitesDAO.select_phone_needless_sites(db)
         max_attempts = 5
         base_retry_delay = 2
         handling_resp = None
         async_stats_lock = asyncio.Lock()
 
+        async with async_session() as db:
+            proh_sites = await ProhibitedSitesDAO.select_phone_needless_sites(db)
+
         google_urls = form_google_query(self.phone_num)
         existing_urls = set()
 
         async with get_http_client() as client:
-            # Обрабатываем Google запросы
             for url in google_urls:
                 for attempt in range(1, max_attempts + 1):
                     try:
@@ -119,7 +121,6 @@ class NumberSearchTask(BaseSearchTask):
                     self.logger.log_error(f"Google запрос полностью провален: {url}")
                     await update_stats_async(self.request_stats, async_stats_lock, attempt, success=False)
 
-            # Обрабатываем Yandex запросы
             counter = 0
             while True:
                 url = form_yandex_query_num(self.phone_num, page_num=counter)
