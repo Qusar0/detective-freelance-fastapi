@@ -2,6 +2,7 @@ from loguru import logger
 from typing import Tuple, List
 import asyncio
 import datetime
+import json
 
 from celery import shared_task
 
@@ -249,6 +250,7 @@ class NameSearchTask(BaseSearchTask):
     ):
         shared_results = {}
         existing_urls = set()
+        audit_log = {}
 
         async with async_session() as db:
             prohibited_sites = await ProhibitedSitesDAO.select_general_needless_sites(db)
@@ -257,6 +259,7 @@ class NameSearchTask(BaseSearchTask):
 
         start_time = datetime.datetime.now()
         self.logger.log_error(f'Начало выполнения {start_time}')
+        logger.info(f"Запрос {self.query_id}: запланировано {len(request_input_pack)} запросов к xmlriver")
 
         async with get_http_client() as client:
             tasks = [
@@ -271,6 +274,7 @@ class NameSearchTask(BaseSearchTask):
                     existing_urls,
                     prohibited_sites,
                     client,
+                    audit_log,
                 )
                 for input_data in request_input_pack
             ]
@@ -287,6 +291,33 @@ class NameSearchTask(BaseSearchTask):
                 found_info.weight = len(found_info.kwds_list)
 
         await self.save_raw_results(shared_results)
+
+        serialized_audit = {
+            key: {
+                'query_url': entry['query_url'],
+                'keyword': entry['keyword'],
+                'original_keyword': entry['original_keyword'],
+                'keyword_type': entry['keyword_type'],
+                'engine': entry['engine'],
+                'total': len(entry['results']),
+                'accepted_count': sum(1 for r in entry['results'] if r['status'] == 'accepted'),
+                'filtered_count': sum(1 for r in entry['results'] if r['status'] == 'filtered'),
+                'results': sorted(
+                    entry['results'],
+                    key=lambda r: (0 if r['status'] == 'accepted' else 1, r['url']),
+                ),
+            }
+            for key, entry in audit_log.items()
+        }
+        try:
+            file_storage = get_file_storage()
+            await file_storage.save_audit_data(
+                self.query_id,
+                json.dumps(serialized_audit, ensure_ascii=False),
+            )
+        except Exception as e:
+            logger.error(f"Не удалось сохранить аудит поиска: {e}")
+
         end_time = datetime.datetime.now()
         self.logger.log_error(f'Конец выполнения сохранения {end_time}')
         self.logger.log_error(f'Время выполнения сохранения {end_time - start_time}')

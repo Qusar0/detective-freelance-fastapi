@@ -64,7 +64,10 @@ class BaseSearchTask(ABC):
 
         chat_id = await TelegramNorificationsDAO.is_user_subscribed_on_tg(self.user_id, db)
         if chat_id:
-            await send_notification(chat_id, user_query.query_title)
+            try:
+                await send_notification(chat_id, user_query.query_title)
+            except Exception as e:
+                logger.warning(f"Telegram уведомление не отправлено: {e}")
 
     async def _handle_error(self, user_query, db):
         channel = await generate_sse_message_type(user_id=self.user_id, db=db)

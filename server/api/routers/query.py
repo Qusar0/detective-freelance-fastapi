@@ -1,7 +1,7 @@
 from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from server.api.security import oauth2_scheme
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -35,6 +35,8 @@ from server.api.schemas.query import (
     NameQueryDataResult,
 )
 
+import json
+from server.api.models.models import Users, UserRole
 from server.api.dao.queries_balance import QueriesBalanceDAO
 from server.api.dao.user_queries import UserQueriesDAO
 from server.api.dao.user_balances import UserBalancesDAO
@@ -543,3 +545,27 @@ async def get_general_query_data(
         keyword_stats=keyword_stats,
         free_words=free_words,
     )
+
+
+@router.get("/search_audit/{query_id}")
+@handle_route_errors("Ошибка при получении аудита поиска")
+async def get_search_audit(
+    query_id: int,
+    Authorize: AuthJWT = Depends(),
+    db: AsyncSession = Depends(get_db),
+):
+    Authorize.jwt_required()
+    user_id = int(Authorize.get_jwt_subject())
+
+    result = await db.execute(
+        select(UserRole.role_name)
+        .join(Users, Users.user_role_id == UserRole.id)
+        .where(Users.id == user_id)
+    )
+    role_name = result.scalar_one_or_none()
+    if role_name != "admin":
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+
+    file_storage = get_file_storage()
+    raw = await file_storage.get_audit_data(query_id)
+    return JSONResponse(content=json.loads(raw))

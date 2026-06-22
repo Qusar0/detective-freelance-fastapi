@@ -26,8 +26,22 @@ async def do_request_to_xmlriver(
     existing_urls,
     results_container,
     client: httpx.AsyncClient,
+    audit_log: Optional[Dict[str, Any]] = None,
 ):
     url, keyword, original_keyword, keyword_type, name_case = input_data
+    engine_name = 'google' if SEARCH_ENGINES['google'] in url else 'yandex'
+    audit_key = url
+    if audit_log is not None:
+        async with stats_lock:
+            if audit_key not in audit_log:
+                audit_log[audit_key] = {
+                    'query_url': url,
+                    'keyword': keyword,
+                    'original_keyword': original_keyword,
+                    'keyword_type': keyword_type,
+                    'engine': engine_name,
+                    'results': [],
+                }
     max_attempts = 3
     base_retry_delay = 0.5
 
@@ -47,6 +61,8 @@ async def do_request_to_xmlriver(
                     keyword_type,
                     original_keyword,
                     stats_lock,
+                    audit_log,
+                    audit_key,
                 )
 
                 if handling_resp == '15':
@@ -128,6 +144,8 @@ async def handle_xmlriver_response(  # noqa: WPS211
     keyword_type: Optional[str] = None,
     original_keyword: Optional[str] = None,
     stats_lock: Optional[asyncio.Lock] = None,
+    audit_log: Optional[Dict[str, Any]] = None,
+    audit_key: Optional[str] = None,
 ) -> Union[str, None]:
     """Обрабатывает ответ от XMLriver API."""
     SOCIAL_URLS = {
@@ -161,9 +179,6 @@ async def handle_xmlriver_response(  # noqa: WPS211
             logger.warning(f"Обнаружена ошибка в ответе: {error_code}")
             return error_code
 
-        if response_data.get('fixtype') == 'quotes':
-            return '15'
-
         groups = response_data["results"]["grouping"]["group"]
         groups = [groups] if isinstance(groups, dict) else groups
 
@@ -180,11 +195,25 @@ async def handle_xmlriver_response(  # noqa: WPS211
                 if url in existing_urls:
                     raw_data[url]['weight'] += 1
                     raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
+                    if audit_log is not None and audit_key:
+                        audit_log[audit_key]['results'].append({
+                            'url': url,
+                            'title': raw_data[url].get('title', ''),
+                            'status': 'filtered',
+                            'reason': 'duplicate',
+                        })
                     continue
         else:
             if url in existing_urls:
                 raw_data[url]['weight'] += 1
                 raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
+                if audit_log is not None and audit_key:
+                    audit_log[audit_key]['results'].append({
+                        'url': url,
+                        'title': raw_data[url].get('title', ''),
+                        'status': 'filtered',
+                        'reason': 'duplicate',
+                    })
                 continue
 
         title = doc.get("title", '')
@@ -201,6 +230,13 @@ async def handle_xmlriver_response(  # noqa: WPS211
 
         # Проверяем на запрещенные сайты
         if any(site.lower() in site_url.lower() for site in prohibited_sites):
+            if audit_log is not None and audit_key:
+                audit_log[audit_key]['results'].append({
+                    'url': url,
+                    'title': title,
+                    'status': 'filtered',
+                    'reason': 'prohibited_site',
+                })
             continue
 
         if snippet:
@@ -271,6 +307,13 @@ async def handle_xmlriver_response(  # noqa: WPS211
                         }
                         existing_urls.add(url)
                         all_found_data.append(found_info)
+                        if audit_log is not None and audit_key:
+                            audit_log[audit_key]['results'].append({
+                                'url': url,
+                                'title': title,
+                                'status': 'accepted',
+                                'reason': None,
+                            })
                     else:
                         raw_data[url]['weight'] += 1
                         raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
@@ -288,6 +331,13 @@ async def handle_xmlriver_response(  # noqa: WPS211
                     }
                     existing_urls.add(url)
                     all_found_data.append(found_info)
+                    if audit_log is not None and audit_key:
+                        audit_log[audit_key]['results'].append({
+                            'url': url,
+                            'title': title,
+                            'status': 'accepted',
+                            'reason': None,
+                        })
                 else:
                     raw_data[url]['weight'] += 1
                     raw_data[url]['keywords'].add((keyword, original_keyword, keyword_type))
@@ -355,6 +405,7 @@ async def search_worker(  # noqa: WPS211
     existing_urls,
     prohibited_sites,
     client: httpx.AsyncClient,
+    audit_log: Optional[Dict[str, Any]] = None,
 ):
     """Асинхронная функция для выполнения поисковых запросов."""
     try:
@@ -369,6 +420,7 @@ async def search_worker(  # noqa: WPS211
             existing_urls,
             results_container,
             client,
+            audit_log,
         )
     except Exception as e:
         logger.error(f"Ошибка в рабочем потоке: {str(e)}")

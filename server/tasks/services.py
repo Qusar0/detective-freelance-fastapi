@@ -72,21 +72,24 @@ async def manage_async_tasks(tasks, max_concurrent=20):
         semaphore_key = "global_task_semaphore"
         max_slots = max_concurrent
 
+        local_semaphore = asyncio.Semaphore(max_slots)
+
         async def run_with_redis_semaphore(task, task_id):
             """Выполняет задачу с получением слота из Redis."""
-            while True:
-                current_count = await redis_client.incr(semaphore_key)
-                if current_count <= max_slots:
-                    break
-                await redis_client.decr(semaphore_key)
-                await asyncio.sleep(0.1)
+            async with local_semaphore:
+                while True:
+                    current_count = await redis_client.incr(semaphore_key)
+                    if current_count <= max_slots:
+                        break
+                    await redis_client.decr(semaphore_key)
+                    await asyncio.sleep(0.1)
 
-            try:
-                logger.debug(f"Задача {task_id} запущена. Активных задач: {current_count}/{max_slots}")
-                return await task
-            finally:
-                await redis_client.decr(semaphore_key)
-                logger.debug(f"Задача {task_id} завершена. Слот освобожден")
+                try:
+                    logger.debug(f"Задача {task_id} запущена. Активных задач: {current_count}/{max_slots}")
+                    return await task
+                finally:
+                    await redis_client.decr(semaphore_key)
+                    logger.debug(f"Задача {task_id} завершена. Слот освобожден")
 
         task_list = [run_with_redis_semaphore(task, i) for i, task in enumerate(tasks)]
         results = await asyncio.gather(*task_list, return_exceptions=True)

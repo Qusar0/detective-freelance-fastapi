@@ -30,6 +30,7 @@ class StatusMessage(BaseModel):
 class AuthStatusResponse(BaseModel):
     status: str
     message: str
+    role: Optional[str] = None
 
 
 class TopUpBalanceResponseData(BaseModel):

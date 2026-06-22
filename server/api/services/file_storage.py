@@ -66,6 +66,33 @@ class FileStorageService:
             logger.error(f"Не удалось удалить файл с данными очереди из S3: {e}")
             raise HTTPException(status_code=500, detail="Failed to delete query data")
 
+    async def save_audit_data(self, query_id: int, data: str) -> str:
+        key = f"audit_{query_id}.json"
+        try:
+            async with self._session.client("s3", endpoint_url=self.endpoint) as client:
+                try:
+                    await client.create_bucket(Bucket=self.bucket)
+                except ClientError as e:
+                    if e.response["Error"]["Code"] not in (
+                        "BucketAlreadyOwnedByYou",
+                        "BucketAlreadyExists",
+                    ):
+                        raise
+                await client.put_object(
+                    Bucket=self.bucket,
+                    Key=key,
+                    Body=data.encode("utf-8"),
+                    ContentType="application/json; charset=utf-8",
+                )
+            return key
+        except Exception as e:
+            logger.error(f"Не удалось сохранить аудит в S3: {e}")
+            raise HTTPException(status_code=500, detail="Failed to save audit data")
+
+    async def get_audit_data(self, query_id: int) -> str:
+        key = f"audit_{query_id}.json"
+        return await self.get_query_data(key)
+
 
 def get_file_storage() -> FileStorageService:
     return FileStorageService(

@@ -15,7 +15,7 @@ from server.api.schemas.users import (
     GetDefaultLanguageResponse,
     BalanceHistoryResponse,
 )
-from server.api.models.models import Users, UserQueries, Events, PaymentHistory, UserBalances, BalanceTransactionType
+from server.api.models.models import Users, UserQueries, Events, PaymentHistory, UserBalances, BalanceTransactionType, UserRole
 from sqlalchemy import select
 from server.api.services.mail import send_confirmation_email, send_email
 from server.api.templates.email_message import get_password_changed_email
@@ -36,9 +36,16 @@ router = APIRouter(
 
 @router.get("/is_authenticated", response_model=AuthStatusResponse)
 @handle_route_errors("Ошибка аутентификации")
-async def is_authenticated(Authorize: AuthJWT = Depends()):
+async def is_authenticated(Authorize: AuthJWT = Depends(), db: AsyncSession = Depends(get_db)):
     Authorize.jwt_required()
-    return {"status": "success", "message": "User authenticated"}
+    user_id = int(Authorize.get_jwt_subject())
+    result = await db.execute(
+        select(UserRole.role_name)
+        .join(Users, Users.user_role_id == UserRole.id)
+        .where(Users.id == user_id)
+    )
+    role_name = result.scalar_one_or_none()
+    return {"status": "success", "message": "User authenticated", "role": role_name}
 
 
 @router.get("/get_events")

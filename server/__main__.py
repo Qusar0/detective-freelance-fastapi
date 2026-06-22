@@ -14,7 +14,20 @@ from server.api.scripts.sse_manager import redis_listener
 from server.api.services.file_storage import FileStorageService, get_file_storage
 
 
-app = FastAPI()
+app = FastAPI(
+    title="ИАС Детектив",
+    description="""
+Система предоставляет REST API для сбора и аналитики общедоступных сведений о физических лицах и организациях.
+    """,
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "Auth", "description": "Регистрация, вход, сброс пароля, JWT-токены"},
+        {"name": "Users", "description": "Баланс, история транзакций, настройки пользователя"},
+        {"name": "Query", "description": "Поисковые запросы по всем типам"},
+        {"name": "Telegram", "description": "Привязка Telegram-аккаунта, служба поддержки"},
+        {"name": "SSE", "description": "Server-Sent Events — уведомления в реальном времени"},
+    ],
+)
 app.dependency_overrides[FileStorageService] = get_file_storage
 
 setup_admin(app)

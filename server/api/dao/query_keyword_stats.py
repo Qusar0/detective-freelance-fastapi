@@ -90,10 +90,16 @@ class QueryKeywordStatsDAO(BaseDAO):
                 )
             )
 
+            all_materials_result = await db.execute(
+                select(func.count(distinct(QueriesData.id)))
+                .where(QueriesData.query_id == query_id)
+            )
+
             result_stats = all_types.copy()
             result_stats['main'] = main_count
             result_stats['socials'] = socials_count_result.scalar() or 0
             result_stats['documents'] = documents_count_result.scalar() or 0
+            result_stats['all_materials'] = all_materials_result.scalar() or 0
 
             return result_stats
 
